@@ -20,10 +20,18 @@ class StockAdmin(admin.ModelAdmin):
     list_filter = ['product__joint']
 
 
+# ✅ FIX: Added proper StockTakeItemInline and removed invalid `inlines_pass = True`
+class StockTakeItemInline(admin.TabularInline):
+    model = StockTakeItem
+    extra = 0
+    readonly_fields = ['product', 'system_count', 'actual_count']
+    can_delete = False
+
+
 @admin.register(StockTake)
 class StockTakeAdmin(admin.ModelAdmin):
     list_display = ['joint', 'conducted_by', 'conducted_at']
-    inlines_pass = True
+    inlines = [StockTakeItemInline]  # ✅ FIX: was `inlines_pass = True` (invalid attribute)
 
 
 @admin.register(StockTransfer)

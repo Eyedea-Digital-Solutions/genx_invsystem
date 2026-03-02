@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Sum, Count, Q
+from django.db.models import Q
 from django.utils import timezone
 from django.conf import settings
 
@@ -14,34 +14,26 @@ from inventory.models import Joint, Product
 @login_required
 def dashboard(request):
     """
-    Main dashboard showing:
-    - Today's sales summary
-    - Low stock alerts
-    - Recent sales
-    - Quick stats per joint
+    Main dashboard showing today's sales summary, low stock alerts,
+    recent sales, and per-joint stats.
     """
     today = timezone.now().date()
-    
-    # Today's sales
+
     today_sales = Sale.objects.filter(sale_date__date=today)
     today_total = sum(sale.total_amount for sale in today_sales)
     today_count = today_sales.count()
 
-    # This month's sales
     month_start = today.replace(day=1)
     month_sales = Sale.objects.filter(sale_date__date__gte=month_start)
     month_total = sum(sale.total_amount for sale in month_sales)
 
-    # Low stock items
     low_stock = Product.objects.select_related('stock', 'joint').filter(
         is_active=True,
         stock__quantity__lte=settings.LOW_STOCK_THRESHOLD
     )
 
-    # Recent sales (last 10)
     recent_sales = Sale.objects.select_related('joint', 'sold_by').prefetch_related('items').order_by('-created_at')[:10]
 
-    # Per-joint stats today
     joint_stats = []
     for joint in Joint.objects.all():
         joint_today_sales = today_sales.filter(joint=joint)
@@ -68,12 +60,9 @@ def dashboard(request):
 @login_required
 def make_sale(request):
     """
-    The main sale creation page.
-    Staff selects a joint, adds products, and the system:
-    1. Creates a Sale record
-    2. Deducts stock automatically
-    3. Creates an audit log entry
-    4. Redirects to receipt page
+    Main sale creation page.
+    Items are fully validated BEFORE the Sale is written to the database,
+    eliminating the need to create-then-delete on error.
     """
     joints = Joint.objects.all()
 
@@ -81,63 +70,65 @@ def make_sale(request):
         sale_form = SaleForm(request.POST)
 
         if sale_form.is_valid():
+
+            # ✅ FIX: Parse and validate ALL items first, before touching the DB.
+            # Previously the Sale was saved, then items checked, then deleted on
+            # error — creating unnecessary DB writes and a messy atomic block.
+            items_data = []
+            errors = []
+            i = 0
+            while f'product_{i}' in request.POST:
+                product_id = request.POST.get(f'product_{i}')
+                quantity_str = request.POST.get(f'quantity_{i}')
+                unit_price_str = request.POST.get(f'unit_price_{i}')
+
+                if product_id and quantity_str and unit_price_str:
+                    try:
+                        product = Product.objects.select_related('stock').get(pk=product_id)
+                        qty = int(quantity_str)
+                        price = float(unit_price_str)
+
+                        if qty < 1:
+                            errors.append(f"Quantity for '{product.name}' must be at least 1.")
+                        elif product.current_stock < qty:
+                            errors.append(
+                                f"Not enough stock for '{product.name}'. "
+                                f"Available: {product.current_stock}, Requested: {qty}"
+                            )
+                        else:
+                            items_data.append({
+                                'product': product,
+                                'quantity': qty,
+                                'unit_price': price,
+                            })
+                    except Product.DoesNotExist:
+                        errors.append(f"Product ID {product_id} not found.")
+                    except (ValueError, TypeError):
+                        errors.append("Invalid quantity or price value.")
+                i += 1
+
+            if errors:
+                for err in errors:
+                    messages.error(request, err)
+                return render(request, 'make_sale.html', {
+                    'sale_form': sale_form,
+                    'joints': joints,
+                })
+
+            if not items_data:
+                messages.error(request, "Please add at least one product to the sale.")
+                return render(request, 'make_sale.html', {
+                    'sale_form': sale_form,
+                    'joints': joints,
+                })
+
+            # Everything valid — now write to DB in a single clean atomic block
             with transaction.atomic():
-                # Save the sale (don't commit yet — need to add items)
                 sale = sale_form.save(commit=False)
                 sale.sold_by = request.user
                 sale.sale_type = 'system'
                 sale.save()
 
-                # Process sale items from POST data
-                items_data = []
-                i = 0
-                errors = []
-                while f'product_{i}' in request.POST:
-                    product_id = request.POST.get(f'product_{i}')
-                    quantity = request.POST.get(f'quantity_{i}')
-                    unit_price = request.POST.get(f'unit_price_{i}')
-
-                    if product_id and quantity and unit_price:
-                        try:
-                            product = Product.objects.select_related('stock').get(pk=product_id)
-                            qty = int(quantity)
-                            price = float(unit_price)
-
-                            # Check stock availability
-                            if product.current_stock < qty:
-                                errors.append(
-                                    f"Not enough stock for '{product.name}'. "
-                                    f"Available: {product.current_stock}, Requested: {qty}"
-                                )
-                            else:
-                                items_data.append({
-                                    'product': product,
-                                    'quantity': qty,
-                                    'unit_price': price,
-                                })
-                        except Product.DoesNotExist:
-                            errors.append(f"Product not found.")
-                    i += 1
-
-                if errors:
-                    # Roll back and show errors
-                    sale.delete()
-                    for err in errors:
-                        messages.error(request, err)
-                    return render(request, 'make_sale.html', {
-                        'sale_form': sale_form,
-                        'joints': joints,
-                    })
-
-                if not items_data:
-                    sale.delete()
-                    messages.error(request, "Please add at least one product to the sale.")
-                    return render(request, 'make_sale.html', {
-                        'sale_form': sale_form,
-                        'joints': joints,
-                    })
-
-                # Create SaleItems and deduct stock
                 sale_items_snapshot = []
                 for item_data in items_data:
                     SaleItem.objects.create(
@@ -146,7 +137,6 @@ def make_sale(request):
                         quantity=item_data['quantity'],
                         unit_price=item_data['unit_price'],
                     )
-                    # AUTO-DEDUCT STOCK — This is the key feature!
                     item_data['product'].stock.deduct(item_data['quantity'])
 
                     sale_items_snapshot.append({
@@ -156,7 +146,6 @@ def make_sale(request):
                         'unit_price': str(item_data['unit_price']),
                     })
 
-                # Create immutable audit log
                 SaleAuditLog.objects.create(
                     sale=sale,
                     action='created',
@@ -169,13 +158,12 @@ def make_sale(request):
                     }
                 )
 
-                # If EcoCash or mixed payment, create the EcoCash transaction record
                 if sale.payment_method in ['ecocash', 'mixed']:
                     from ecocash.services import create_ecocash_payment
                     create_ecocash_payment(sale)
 
-                messages.success(request, f"Sale recorded! Receipt: {sale.receipt_number}")
-                return redirect('sales:sale_receipt', pk=sale.pk)
+            messages.success(request, f"Sale recorded! Receipt: {sale.receipt_number}")
+            return redirect('sales:sale_receipt', pk=sale.pk)
 
     else:
         sale_form = SaleForm()
@@ -190,7 +178,7 @@ def make_sale(request):
 def manual_sale(request):
     """
     Record a sale that was made manually (with a physical receipt).
-    Staff uploads a photo of the receipt. Stock can be manually specified.
+    Stock is still deducted where items are provided.
     """
     if request.method == 'POST':
         form = ManualSaleForm(request.POST, request.FILES)
@@ -201,7 +189,6 @@ def manual_sale(request):
                 sale.sale_type = 'manual'
                 sale.save()
 
-                # For manual sales, still try to record items if provided
                 i = 0
                 while f'product_{i}' in request.POST:
                     product_id = request.POST.get(f'product_{i}')
@@ -210,21 +197,22 @@ def manual_sale(request):
 
                     if product_id and quantity and unit_price:
                         try:
-                            product = Product.objects.get(pk=product_id)
+                            product = Product.objects.select_related('stock').get(pk=product_id)
                             qty = int(quantity)
+                            price = float(unit_price)
                             SaleItem.objects.create(
                                 sale=sale,
                                 product=product,
                                 quantity=qty,
-                                unit_price=float(unit_price),
+                                unit_price=price,
                             )
-                            # Deduct stock even for manual sales
                             product.stock.deduct(qty)
-                        except (Product.DoesNotExist, ValueError):
-                            pass
+                        except Product.DoesNotExist:
+                            messages.warning(request, f"Product ID {product_id} not found — skipped.")
+                        except ValueError:
+                            messages.warning(request, "Invalid quantity or price value — item skipped.")
                     i += 1
 
-                # Audit log
                 SaleAuditLog.objects.create(
                     sale=sale,
                     action='manual_sale_recorded',
@@ -236,13 +224,12 @@ def manual_sale(request):
                     }
                 )
 
-                # If EcoCash payment, create the EcoCash transaction record
                 if sale.payment_method in ['ecocash', 'mixed']:
                     from ecocash.services import create_ecocash_payment
                     create_ecocash_payment(sale)
 
-                messages.success(request, f"Manual sale recorded! Receipt: {sale.receipt_number}")
-                return redirect('sales:sale_receipt', pk=sale.pk)
+            messages.success(request, f"Manual sale recorded! Receipt: {sale.receipt_number}")
+            return redirect('sales:sale_receipt', pk=sale.pk)
     else:
         form = ManualSaleForm()
 
@@ -252,10 +239,7 @@ def manual_sale(request):
 
 @login_required
 def sale_receipt(request, pk):
-    """
-    Shows the receipt for a completed sale.
-    Can be printed by the user.
-    """
+    """Shows the receipt for a completed sale."""
     sale = get_object_or_404(
         Sale.objects.select_related('joint', 'sold_by').prefetch_related('items__product'),
         pk=pk
@@ -267,11 +251,10 @@ def sale_receipt(request, pk):
 def sale_list(request):
     """
     Shows all sales with filtering options.
-    Admin/Manager can see all; Staff only sees their own sales.
+    Managers see all; staff only see their own.
     """
     sales = Sale.objects.select_related('joint', 'sold_by').prefetch_related('items').order_by('-sale_date')
 
-    # Staff only see their own sales
     if not request.user.is_manager_role:
         sales = sales.filter(sold_by=request.user)
 
@@ -292,7 +275,6 @@ def sale_list(request):
                 Q(sold_by__username__icontains=form.cleaned_data['sold_by'])
             )
 
-    # Evaluate the queryset once to avoid hitting DB twice (once for total, once for template)
     sales_list = list(sales)
     context = {
         'sales': sales_list,
@@ -309,7 +291,6 @@ def sale_detail(request, pk):
         Sale.objects.select_related('joint', 'sold_by').prefetch_related('items__product'),
         pk=pk
     )
-    # Staff can only view their own sales
     if not request.user.is_manager_role and sale.sold_by != request.user:
         messages.error(request, "You can only view your own sales.")
         return redirect('sales:sale_list')
@@ -324,10 +305,7 @@ def sale_detail(request, pk):
 
 @login_required
 def reports(request):
-    """
-    Generates sales and stock reports.
-    Only accessible to managers and admins.
-    """
+    """Generates sales and stock reports. Managers and admins only."""
     if not request.user.is_manager_role:
         messages.error(request, "You don't have permission to view reports.")
         return redirect('sales:dashboard')
@@ -335,7 +313,6 @@ def reports(request):
     today = timezone.now().date()
     month_start = today.replace(day=1)
 
-    # Monthly sales by joint
     joints = Joint.objects.all()
     joint_reports = []
     for joint in joints:
@@ -346,7 +323,6 @@ def reports(request):
             'total': sum(sale.total_amount for sale in month_joint_sales),
         })
 
-    # Sales by payment method this month
     payment_breakdown = {}
     for method, label in Sale.PAYMENT_CHOICES:
         count = Sale.objects.filter(
@@ -355,7 +331,6 @@ def reports(request):
         ).count()
         payment_breakdown[label] = count
 
-    # Top selling products this month
     from django.db.models import Sum as DjSum
     top_products = SaleItem.objects.filter(
         sale__sale_date__date__gte=month_start
@@ -363,7 +338,6 @@ def reports(request):
         total_qty=DjSum('quantity')
     ).order_by('-total_qty')[:10]
 
-    # Staff performance this month
     from users.models import User
     staff_performance = []
     for user in User.objects.filter(is_active=True):

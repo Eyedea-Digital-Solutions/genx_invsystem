@@ -19,7 +19,6 @@ class ProductForm(forms.ModelForm):
         cleaned_data = super().clean()
         joint = cleaned_data.get('joint')
         code = cleaned_data.get('code')
-        # If joint uses product codes, code is required
         if joint and joint.uses_product_codes and not code:
             self.add_error('code', 'This joint requires a product code.')
         return cleaned_data
@@ -72,6 +71,13 @@ class StockTransferForm(forms.ModelForm):
 
         if from_joint and to_joint and from_joint == to_joint:
             raise forms.ValidationError("From and To joints must be different.")
+
+        # ✅ FIX: Validate the product actually belongs to the source joint
+        if product and from_joint and product.joint != from_joint:
+            raise forms.ValidationError(
+                f"'{product.name}' belongs to {product.joint.display_name}, "
+                f"not {from_joint.display_name}. Please select the correct source joint."
+            )
 
         if product and quantity:
             if product.current_stock < quantity:

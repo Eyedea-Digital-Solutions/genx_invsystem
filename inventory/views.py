@@ -59,7 +59,6 @@ def product_create(request):
     if request.method == 'POST' and form.is_valid():
         with transaction.atomic():
             product = form.save()
-            # Create a stock record for the new product starting at 0
             Stock.objects.create(product=product, quantity=0)
         messages.success(request, f"Product '{product.name}' added successfully!")
         return redirect('inventory:product_list')
@@ -117,8 +116,6 @@ def stock_take_list(request):
 def stock_take_create(request):
     """
     Start a new stock take for a joint.
-    This creates a stock take record and allows the user to enter actual counts
-    for each product in the joint.
     """
     if not request.user.is_manager_role:
         messages.error(request, "Only managers and admins can conduct stock takes.")
@@ -135,7 +132,6 @@ def stock_take_create(request):
                 stock_take.conducted_by = request.user
                 stock_take.save()
 
-                # Process each product count
                 for product in products:
                     actual_key = f'actual_{product.pk}'
                     actual_count = int(request.POST.get(actual_key, 0))
@@ -148,19 +144,16 @@ def stock_take_create(request):
                         actual_count=actual_count
                     )
 
-                    # Update the actual stock count to match physical count
                     product.stock.quantity = actual_count
                     product.stock.save()
 
             messages.success(request, f"Stock take for {joint.display_name} completed successfully!")
             return redirect('inventory:stock_take_list')
     else:
-        # Pre-populate joint from GET param if provided
         joint_id = request.GET.get('joint')
         initial = {'joint': joint_id} if joint_id else {}
         form = StockTakeForm(initial=initial)
 
-    # Load products for the selected joint (if GET param provided)
     joint_id = request.GET.get('joint')
     products = []
     if joint_id:
@@ -189,17 +182,48 @@ def transfer_create(request):
 
     form = StockTransferForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
+        source_product = form.cleaned_data['product']
+        to_joint = form.cleaned_data['to_joint']
+        quantity = form.cleaned_data['quantity']
+
+        # ✅ FIX: Find the matching product at the destination joint so we can
+        # add the transferred quantity there. Previously stock was only deducted
+        # from the source — it simply disappeared.
+        dest_product = None
+        if source_product.code:
+            dest_product = Product.objects.filter(
+                joint=to_joint, code=source_product.code
+            ).select_related('stock').first()
+        if not dest_product:
+            dest_product = Product.objects.filter(
+                joint=to_joint, name=source_product.name
+            ).select_related('stock').first()
+
+        if not dest_product:
+            messages.error(
+                request,
+                f"No matching product for '{source_product.name}' found at "
+                f"{to_joint.display_name}. Add the product there first, then retry the transfer."
+            )
+            return render(request, 'transfer_form.html', {'form': form})
+
         with transaction.atomic():
             transfer = form.save(commit=False)
             transfer.transferred_by = request.user
             transfer.status = 'completed'
             transfer.save()
 
-            # Deduct from source
-            transfer.product.stock.deduct(transfer.quantity)
+            # Deduct from source joint
+            source_product.stock.deduct(quantity)
+            # ✅ FIX: Add to destination joint (was completely missing before)
+            dest_product.stock.add(quantity)
 
-            messages.success(request, f"Transfer of {transfer.quantity}x {transfer.product.name} completed!")
-            return redirect('inventory:inventory_dashboard')
+        messages.success(
+            request,
+            f"Transferred {quantity}× {source_product.name} "
+            f"from {transfer.from_joint.display_name} to {to_joint.display_name}."
+        )
+        return redirect('inventory:inventory_dashboard')
 
     return render(request, 'transfer_form.html', {'form': form})
 
