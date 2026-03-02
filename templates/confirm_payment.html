@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Confirm EcoCash Payment{% endblock %}
+{% block page_title %}Confirm EcoCash Payment{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white"><h6 class="mb-0">Payment Details</h6></div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5">Receipt</dt>
+                    <dd class="col-7">{{ ecocash_tx.sale.receipt_number }}</dd>
+                    <dt class="col-5">Amount</dt>
+                    <dd class="col-7 fw-bold text-primary fs-5">${{ ecocash_tx.amount|floatformat:2 }}</dd>
+                    <dt class="col-5">Pay to</dt>
+                    <dd class="col-7 font-monospace fw-bold">{{ ecocash_tx.econet_number }}</dd>
+                    <dt class="col-5">Reference</dt>
+                    <dd class="col-7">
+                        <span class="badge bg-primary font-monospace">{{ ecocash_tx.sale.receipt_number }}</span>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-check-circle me-2"></i>Enter Transaction Reference</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Ask the customer for the EcoCash transaction code from their SMS receipt
+                    (usually starts with MMM or similar).
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">EcoCash Transaction Code *</label>
+                        {{ form.transaction_reference }}
+                        {% if form.transaction_reference.errors %}
+                        <div class="text-danger small">{{ form.transaction_reference.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success px-4">
+                            <i class="bi bi-check-circle me-1"></i>Confirm Payment
+                        </button>
+                        <a href="{% url 'ecocash:pending_payments' %}" class="btn btn-outline-secondary">Back</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

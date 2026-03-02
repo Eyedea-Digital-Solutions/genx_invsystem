@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block auth_content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
+    <div class="card shadow-lg border-0" style="width: 420px; border-radius: 16px; overflow: hidden;">
+        
+        <!-- Header -->
+        <div class="card-header text-center p-4" style="background: #1a1a2e; border: none;">
+            <div class="mb-3">
+                <i class="bi bi-shop text-white" style="font-size: 40px;"></i>
+            </div>
+            <h4 class="text-white mb-1 fw-bold">Multi-Joint POS</h4>
+            <p class="mb-0" style="color: #e94560; font-size: 13px;">Eyedentity · GenX Zimbabwe · Armor Sole</p>
+        </div>
+
+        <!-- Form -->
+        <div class="card-body p-4">
+            <h6 class="text-muted mb-4 text-center">Sign in to your account</h6>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Username</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="text-danger small mt-1">{{ form.username.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Password</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <div class="text-danger small mt-1">{{ form.password.errors }}</div>
+                    {% endif %}
+                </div>
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                </button>
+            </form>
+        </div>
+
+        <div class="card-footer text-center bg-light text-muted" style="font-size: 12px; border-top: 1px solid #eee;">
+            Shop 15 | Summer City Mall, 63 Speke Avenue | Harare
+        </div>
+    </div>
+</div>
+{% endblock %}

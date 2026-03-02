@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+{% block page_title %}Products{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex gap-2">
+        {% for joint in joints %}
+        <a href="?joint={{ joint.pk }}" 
+           class="btn btn-sm {% if selected_joint == joint.pk|stringformat:'s' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            {{ joint.display_name }}
+        </a>
+        {% endfor %}
+        {% if selected_joint %}<a href="?" class="btn btn-sm btn-outline-danger">Clear</a>{% endif %}
+    </div>
+    {% if user.is_manager_role %}
+    <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus me-1"></i>Add Product
+    </a>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Code</th>
+                    <th>Product Name</th>
+                    <th>Joint</th>
+                    <th>Price</th>
+                    <th class="text-center">Stock</th>
+                    <th>Status</th>
+                    {% if user.is_manager_role %}<th>Actions</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td class="text-muted font-monospace">{{ product.code|default:"—" }}</td>
+                    <td><strong>{{ product.name }}</strong></td>
+                    <td>{{ product.joint.display_name }}</td>
+                    <td>${{ product.price|floatformat:2 }}</td>
+                    <td class="text-center">
+                        <span class="fw-bold {% if product.current_stock == 0 %}text-danger{% elif product.is_low_stock %}text-warning{% else %}text-success{% endif %}">
+                            {{ product.current_stock }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if product.current_stock == 0 %}
+                        <span class="out-of-stock-badge">OUT OF STOCK</span>
+                        {% elif product.is_low_stock %}
+                        <span class="low-stock-badge">LOW STOCK</span>
+                        {% else %}
+                        <span class="badge bg-success bg-opacity-10 text-success">In Stock</span>
+                        {% endif %}
+                    </td>
+                    {% if user.is_manager_role %}
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="{% url 'inventory:product_edit' product.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn btn-sm btn-outline-success">+Stock</a>
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-5">No products found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

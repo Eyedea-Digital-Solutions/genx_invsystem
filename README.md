@@ -140,26 +140,4 @@ For production (hosting on a server), you'll want to:
 
 ---
 
-## Project Structure
-
-```
-inventory_system/
-├── inventory_system/     # Project config
-│   ├── settings.py       # All configuration
-│   └── urls.py           # Main URL routing
-├── users/                # Custom user model, login
-├── inventory/            # Products, stock, stock takes, transfers
-├── sales/                # Sales, receipts, reports
-├── ecocash/              # EcoCash payment tracking
-├── templates/            # All HTML pages
-│   ├── base.html         # Main layout (sidebar etc)
-│   ├── users/
-│   ├── inventory/
-│   ├── sales/
-│   └── ecocash/
-├── media/                # Uploaded receipt photos
-├── static/               # CSS, JS, images
-├── requirements.txt
-└── manage.py
-```
 # genx_invsystem

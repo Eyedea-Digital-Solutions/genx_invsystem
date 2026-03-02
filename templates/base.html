@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GenX Inventory{% endblock %} | Multi-Joint POS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            --primary: #1a1a2e;
+            --accent: #e94560;
+            --accent2: #16213e;
+        }
+        body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
+        
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--primary);
+            min-height: 100vh;
+            position: fixed;
+            left: 0; top: 0;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .sidebar-brand {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-brand h5 { color: white; margin: 0; font-weight: 700; }
+        .sidebar-brand small { color: var(--accent); font-size: 11px; }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.7);
+            padding: 10px 20px;
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border-left: 3px solid var(--accent);
+        }
+        .sidebar .nav-section {
+            color: rgba(255,255,255,0.4);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 15px 20px 5px;
+        }
+
+        /* Main content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 0;
+        }
+        .top-bar {
+            background: white;
+            padding: 15px 25px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .content-area { padding: 25px; }
+
+        /* Cards */
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: none;
+        }
+        .stat-card .stat-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+        .stat-card .stat-value { font-size: 28px; font-weight: 700; }
+
+        /* Alerts - low stock */
+        .low-stock-badge { 
+            background: #fff3cd; 
+            color: #856404;
+            border: 1px solid #ffc107;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .out-of-stock-badge {
+            background: #f8d7da;
+            color: #842029;
+            border: 1px solid #dc3545;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Receipt */
+        @media print {
+            .sidebar, .top-bar, .no-print { display: none !important; }
+            .main-content { margin-left: 0 !important; }
+            .receipt-card { box-shadow: none !important; }
+        }
+
+        /* Joint colors */
+        .joint-eyedentity { border-left: 4px solid #6f42c1; }
+        .joint-genx { border-left: 4px solid #0d6efd; }
+        .joint-armor_sole { border-left: 4px solid #fd7e14; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if user.is_authenticated %}
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <h5><i class="bi bi-shop"></i> Multi-Joint POS</h5>
+        <small>Eyedentity · GenX · Armor Sole</small>
+    </div>
+
+    <nav class="mt-2">
+        <div class="nav-section">Main</div>
+        <a href="{% url 'sales:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+
+        <div class="nav-section">Sales</div>
+        <a href="{% url 'sales:make_sale' %}" class="nav-link {% if request.resolver_match.url_name == 'make_sale' %}active{% endif %}">
+            <i class="bi bi-cart-plus"></i> New Sale
+        </a>
+        <a href="{% url 'sales:manual_sale' %}" class="nav-link {% if request.resolver_match.url_name == 'manual_sale' %}active{% endif %}">
+            <i class="bi bi-camera"></i> Record Manual Sale
+        </a>
+        <a href="{% url 'sales:sale_list' %}" class="nav-link {% if request.resolver_match.url_name == 'sale_list' %}active{% endif %}">
+            <i class="bi bi-list-ul"></i> Sales History
+        </a>
+
+        <div class="nav-section">EcoCash</div>
+        <a href="{% url 'ecocash:pending_payments' %}" class="nav-link {% if request.resolver_match.app_name == 'ecocash' %}active{% endif %}">
+            <i class="bi bi-phone"></i> EcoCash Payments
+        </a>
+
+        {% if user.is_manager_role %}
+        <div class="nav-section">Inventory</div>
+        <a href="{% url 'inventory:inventory_dashboard' %}" class="nav-link">
+            <i class="bi bi-boxes"></i> Stock Overview
+        </a>
+        <a href="{% url 'inventory:product_list' %}" class="nav-link">
+            <i class="bi bi-tags"></i> Products
+        </a>
+        <a href="{% url 'inventory:stock_take_list' %}" class="nav-link">
+            <i class="bi bi-clipboard-check"></i> Stock Takes
+        </a>
+        <a href="{% url 'inventory:transfer_create' %}" class="nav-link">
+            <i class="bi bi-arrow-left-right"></i> Transfer Stock
+        </a>
+        <div class="nav-section">Reports</div>
+        <a href="{% url 'sales:reports' %}" class="nav-link">
+            <i class="bi bi-bar-chart"></i> Reports
+        </a>
+        {% endif %}
+
+        {% if user.is_admin_role %}
+        <div class="nav-section">Admin</div>
+        <a href="{% url 'users:user_list' %}" class="nav-link">
+            <i class="bi bi-people"></i> Manage Users
+        </a>
+        <a href="/admin/" class="nav-link">
+            <i class="bi bi-gear"></i> Django Admin
+        </a>
+        {% endif %}
+
+        <div class="nav-section">Account</div>
+        <a href="{% url 'users:logout' %}" class="nav-link text-danger">
+            <i class="bi bi-box-arrow-right"></i> Logout
+        </a>
+    </nav>
+</div>
+
+<!-- Main content -->
+<div class="main-content">
+    <div class="top-bar">
+        <div>
+            <h6 class="mb-0 text-muted">{% block page_title %}{% endblock %}</h6>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-end">
+                <div class="fw-bold text-sm">{{ user.get_full_name|default:user.username }}</div>
+                <div class="text-muted" style="font-size:12px;">{{ user.get_role_display }}</div>
+            </div>
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                 style="width:36px; height:36px; font-weight:700;">
+                {{ user.username|first|upper }}
+            </div>
+        </div>
+    </div>
+
+    <div class="content-area">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+{% else %}
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

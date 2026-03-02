@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}New Sale{% endblock %}
+{% block page_title %}Record a New Sale{% endblock %}
+
+{% block content %}
+<form method="post" id="sale-form">
+    {% csrf_token %}
+    <div class="row g-4">
+        
+        <!-- Left: Sale details -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Sale Details</h6></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Joint (Shop)</label>
+                        {{ sale_form.joint }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Method</label>
+                        {{ sale_form.payment_method }}
+                    </div>
+
+                    <!-- EcoCash info (shown when EcoCash is selected) -->
+                    <div id="ecocash-info" class="alert alert-info d-none">
+                        <strong><i class="bi bi-phone me-1"></i>EcoCash Payment</strong><br>
+                        <small>After saving the sale, you'll get payment instructions to show the customer.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Customer Name <span class="text-muted">(optional)</span></label>
+                        {{ sale_form.customer_name }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Notes</label>
+                        {{ sale_form.notes }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Products -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-cart me-2"></i>Products</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-row-btn">
+                        <i class="bi bi-plus"></i> Add Product
+                    </button>
+                </div>
+                <div class="card-body">
+                    <table class="table" id="items-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40%">Product</th>
+                                <th>Qty</th>
+                                <th>Unit Price ($)</th>
+                                <th>Total</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-body">
+                            <!-- Rows added dynamically -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end fw-bold">TOTAL:</td>
+                                <td class="fw-bold text-primary fs-5" id="grand-total">$0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div id="no-products-msg" class="text-center text-muted py-3">
+                        <i class="bi bi-arrow-up-circle me-1"></i>Select a joint above, then add products.
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 text-end">
+                <a href="{% url 'sales:dashboard' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+                <button type="submit" class="btn btn-primary btn-lg px-5" id="submit-btn">
+                    <i class="bi bi-check-circle me-2"></i>Complete Sale & Print Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Hidden row template -->
+<template id="row-template">
+    <tr class="item-row">
+        <td>
+            <select name="product_INDEX" class="form-select product-select" required>
+                <option value="">-- Select product --</option>
+            </select>
+            <input type="hidden" name="unit_price_INDEX" class="price-hidden">
+            <div class="text-muted small stock-info mt-1"></div>
+        </td>
+        <td>
+            <input type="number" name="quantity_INDEX" class="form-control qty-input" min="1" value="1" required>
+        </td>
+        <td>
+            <input type="number" name="unit_price_INPUT_INDEX" class="form-control price-input" step="0.01" min="0.01" required>
+        </td>
+        <td>
+            <span class="fw-semibold line-total text-primary">$0.00</span>
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-row">
+                <i class="bi bi-x"></i>
+            </button>
+        </td>
+    </tr>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let rowIndex = 0;
+let products = [];
+
+// Load products when joint changes
+document.getElementById('id_joint').addEventListener('change', function() {
+    const jointId = this.value;
+    if (!jointId) return;
+    
+    fetch(`{% url 'inventory:get_products_by_joint' %}?joint_id=${jointId}`)
+        .then(r => r.json())
+        .then(data => {
+            products = data.products;
+            document.getElementById('items-body').innerHTML = '';
+            rowIndex = 0;
+            addRow();
+            document.getElementById('no-products-msg').classList.add('d-none');
+        });
+});
+
+// Show EcoCash info
+document.getElementById('id_payment_method').addEventListener('change', function() {
+    const info = document.getElementById('ecocash-info');
+    info.classList.toggle('d-none', this.value !== 'ecocash');
+});
+
+// Add a new row
+document.getElementById('add-row-btn').addEventListener('click', addRow);
+
+function addRow() {
+    if (products.length === 0) {
+        alert('Please select a joint first to load products.');
+        return;
+    }
+    
+    const template = document.getElementById('row-template');
+    const clone = template.content.cloneNode(true);
+    const i = rowIndex++;
+    
+    // Build the HTML with the index baked in
+    const tr = document.createElement('tr');
+    tr.className = 'item-row';
+    tr.innerHTML = `
+        <td>
+            <select name="product_${i}" class="form-select product-select" required>
+                <option value="">-- Select product --</option>
+                ${products.map(p => `<option value="${p.id}" 
+                    data-price="${p.price}" 
+                    data-stock="${p.stock__quantity}"
+                    data-code="${p.code || ''}">${p.code ? '['+p.code+'] ' : ''}${p.name} - $${parseFloat(p.price).toFixed(2)}</option>`).join('')}
+            </select>
+            <div class="text-muted small stock-info mt-1"></div>
+        </td>
+        <td><input type="number" name="quantity_${i}" class="form-control qty-input" min="1" value="1" required></td>
+        <td><input type="number" name="unit_price_${i}" class="form-control price-input" step="0.01" min="0.01" placeholder="0.00" required></td>
+        <td><span class="fw-semibold line-total text-primary">$0.00</span></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger remove-row"><i class="bi bi-x"></i></button></td>
+    `;
+    
+    // Product selection event
+    const sel = tr.querySelector('.product-select');
+    const priceInput = tr.querySelector('.price-input');
+    const stockInfo = tr.querySelector('.stock-info');
+    const qtyInput = tr.querySelector('.qty-input');
+    
+    sel.addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        if (opt.value) {
+            const price = parseFloat(opt.dataset.price);
+            const stock = parseInt(opt.dataset.stock);
+            priceInput.value = price.toFixed(2);
+            stockInfo.innerHTML = stock <= 3 
+                ? `<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Only ${stock} in stock</span>`
+                : `<span class="text-success"><i class="bi bi-check"></i> ${stock} in stock</span>`;
+            qtyInput.max = stock;
+        }
+        updateLineTotals();
+    });
+    
+    priceInput.addEventListener('input', updateLineTotals);
+    qtyInput.addEventListener('input', function() {
+        const sel2 = tr.querySelector('.product-select');
+        const opt = sel2.options[sel2.selectedIndex];
+        if (opt.value) {
+            const stock = parseInt(opt.dataset.stock);
+            if (parseInt(this.value) > stock) {
+                this.value = stock;
+                alert(`Only ${stock} units available in stock.`);
+            }
+        }
+        updateLineTotals();
+    });
+    
+    // Remove row
+    tr.querySelector('.remove-row').addEventListener('click', function() {
+        tr.remove();
+        updateGrandTotal();
+    });
+    
+    document.getElementById('items-body').appendChild(tr);
+    updateLineTotals();
+}
+
+function updateLineTotals() {
+    document.querySelectorAll('.item-row').forEach(row => {
+        const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+        const price = parseFloat(row.querySelector('.price-input').value) || 0;
+        const total = qty * price;
+        row.querySelector('.line-total').textContent = `$${total.toFixed(2)}`;
+    });
+    updateGrandTotal();
+}
+
+function updateGrandTotal() {
+    let grand = 0;
+    document.querySelectorAll('.line-total').forEach(el => {
+        grand += parseFloat(el.textContent.replace('$', '')) || 0;
+    });
+    document.getElementById('grand-total').textContent = `$${grand.toFixed(2)}`;
+}
+
+// Validate before submit
+document.getElementById('sale-form').addEventListener('submit', function(e) {
+    const rows = document.querySelectorAll('.item-row');
+    if (rows.length === 0) {
+        e.preventDefault();
+        alert('Please add at least one product to the sale.');
+        return;
+    }
+    const joint = document.getElementById('id_joint').value;
+    if (!joint) {
+        e.preventDefault();
+        alert('Please select a joint (shop).');
+    }
+});
+</script>
+{% endblock %}

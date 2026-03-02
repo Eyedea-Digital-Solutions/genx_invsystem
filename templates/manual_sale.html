@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Record Manual Sale{% endblock %}
+{% block page_title %}Record Manual Sale{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            Use this form to record a sale that was already made using a physical receipt book.
+            Upload a photo of the manual receipt, and the system will create a digital record.
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-camera me-2"></i>Manual Sale Entry</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Joint (Shop) *</label>
+                            {{ form.joint }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Payment Method *</label>
+                            {{ form.payment_method }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Customer Name</label>
+                            {{ form.customer_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date & Time of Sale *</label>
+                            {{ form.sale_date }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Receipt Photo *</label>
+                            {{ form.manual_receipt_image }}
+                            {% if form.manual_receipt_image.errors %}
+                                <div class="text-danger small">{{ form.manual_receipt_image.errors }}</div>
+                            {% endif %}
+                            <div class="text-muted small mt-1">Take a clear photo of the manual receipt book page.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notes</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+
+                    <!-- Optional: Add items to also deduct from stock -->
+                    <hr class="my-4">
+                    <h6 class="mb-3">Deduct from Stock (optional but recommended)</h6>
+                    <p class="text-muted small">If you want the system to automatically deduct stock for this manual sale, add the items below.</p>
+                    
+                    <div id="manual-items">
+                        <!-- Items added dynamically same as main sale form -->
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="add-manual-item">
+                        <i class="bi bi-plus"></i> Add Item
+                    </button>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-save me-2"></i>Save Manual Sale
+                        </button>
+                        <a href="{% url 'sales:dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+let idx = 0;
+let products = [];
+
+document.getElementById('id_joint').addEventListener('change', function() {
+    const jointId = this.value;
+    if (!jointId) return;
+    fetch(`{% url 'inventory:get_products_by_joint' %}?joint_id=${jointId}`)
+        .then(r => r.json())
+        .then(data => { products = data.products; });
+});
+
+document.getElementById('add-manual-item').addEventListener('click', function() {
+    if (products.length === 0) {
+        alert('Please select a joint first.');
+        return;
+    }
+    const container = document.getElementById('manual-items');
+    const div = document.createElement('div');
+    div.className = 'row g-2 mb-2 align-items-center';
+    div.innerHTML = `
+        <div class="col-md-5">
+            <select name="product_${idx}" class="form-select">
+                <option value="">-- Product --</option>
+                ${products.map(p => `<option value="${p.id}" data-price="${p.price}">${p.code ? '['+p.code+'] ' : ''}${p.name}</option>`).join('')}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="number" name="quantity_${idx}" class="form-control" placeholder="Qty" min="1" value="1">
+        </div>
+        <div class="col-md-3">
+            <input type="number" name="unit_price_${idx}" class="form-control" placeholder="Price $" step="0.01">
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="this.closest('.row').remove()">Remove</button>
+        </div>
+    `;
+    // Auto-fill price on product select
+    div.querySelector('select').addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        if (opt.value) div.querySelector('input[name^="unit_price"]').value = parseFloat(opt.dataset.price).toFixed(2);
+    });
+    container.appendChild(div);
+    idx++;
+});
+</script>
+{% endblock %}
+{% endblock %}
