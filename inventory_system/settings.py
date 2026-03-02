@@ -100,8 +100,8 @@ LOGOUT_REDIRECT_URL = '/users/login/'
 LOW_STOCK_THRESHOLD = 3
 
 # EcoCash settings (configure with your actual Econet number)
-ECOCASH_ECONET_NUMBER = '0777000000'  # Replace with actual number
-ECOCASH_MERCHANT_NAME = 'GenX Zimbabwe'
+ECOCASH_ECONET_NUMBER = '0775897955'  # Replace with actual number
+ECOCASH_MERCHANT_NAME = 'Muchinazvo Shiripinda'
 
 # Receipt numbering
 RECEIPT_PREFIX = {

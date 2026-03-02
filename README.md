@@ -90,8 +90,8 @@ Then open your browser at: **http://127.0.0.1:8000**
 Open `inventory_system/settings.py` and update:
 
 ```python
-ECOCASH_ECONET_NUMBER = '0777000000'  # ← Replace with YOUR EcoCash number
-ECOCASH_MERCHANT_NAME = 'GenX Zimbabwe'
+ECOCASH_ECONET_NUMBER = '0775897955'  
+ECOCASH_MERCHANT_NAME = 'Muchinazvo Shiripinda'
 ```
 
 ### How EcoCash Payments Work:
