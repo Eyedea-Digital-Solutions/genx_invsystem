@@ -1,19 +1,14 @@
+
 from pathlib import Path
 import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ✅ FIX: Read SECRET_KEY from environment variable in production.
-# The fallback value is insecure — never deploy with it.
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-change-this-in-production-use-env-variable'
-)
+SECRET_KEY = 'django-insecure-change-this-in-production-use-env-variable'
 
-# ✅ FIX: Read DEBUG from environment (defaults True for local dev only)
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = True  # Set to False in production
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = ['*']  # Restrict in production
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -22,7 +17,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+   
     'inventory',
     'users',
     'sales',
@@ -65,15 +60,15 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
         # For production, switch to PostgreSQL:
         # 'ENGINE': 'django.db.backends.postgresql',
-        # 'NAME': os.environ.get('DB_NAME', 'inventory_db'),
-        # 'USER': os.environ.get('DB_USER', ''),
-        # 'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        # 'HOST': os.environ.get('DB_HOST', 'localhost'),
-        # 'PORT': os.environ.get('DB_PORT', '5432'),
+        # 'NAME': 'inventory_db',
+        # 'USER': 'your_db_user',
+        # 'PASSWORD': 'your_db_password',
+        # 'HOST': 'localhost',
+        # 'PORT': '5432',
     }
 }
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'users.User'  # Use our custom User model
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -88,13 +83,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-
-# ✅ FIX: Only include the static source directory if it actually exists.
-# Without this guard, `python manage.py collectstatic` (and Django's dev
-# server in some configs) raises SuspiciousFileOperation / ValueError.
-_STATIC_SRC = BASE_DIR / 'static'
-STATICFILES_DIRS = [_STATIC_SRC] if _STATIC_SRC.exists() else []
-
+STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
@@ -102,6 +91,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Login settings
 LOGIN_URL = '/users/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/users/login/'
@@ -109,11 +99,11 @@ LOGOUT_REDIRECT_URL = '/users/login/'
 # Low stock alert threshold
 LOW_STOCK_THRESHOLD = 3
 
-# EcoCash settings
-ECOCASH_ECONET_NUMBER = os.environ.get('ECOCASH_ECONET_NUMBER', '0775897955')
-ECOCASH_MERCHANT_NAME = os.environ.get('ECOCASH_MERCHANT_NAME', 'Muchinazvo Shiripinda')
+# EcoCash settings (configure with your actual Econet number)
+ECOCASH_ECONET_NUMBER = '0775897955'  # Replace with actual number
+ECOCASH_MERCHANT_NAME = 'Muchinazvo Shiripinda'
 
-# Receipt numbering prefix per joint
+# Receipt numbering
 RECEIPT_PREFIX = {
     'eyedentity': 'EYE',
     'genx': 'GNX',
