@@ -4,8 +4,11 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
+# In development, allow all. In production set ALLOWED_HOSTS env var explicitly.
+_allowed = os.environ.get('ALLOWED_HOSTS', '')
+ALLOWED_HOSTS = _allowed.split(',') if _allowed else ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -57,11 +60,11 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
         # For production, switch to PostgreSQL:
         # 'ENGINE': 'django.db.backends.postgresql',
-        # 'NAME': 'inventory_db',
-        # 'USER': 'your_db_user',
-        # 'PASSWORD': 'your_db_password',
-        # 'HOST': 'localhost',
-        # 'PORT': '5432',
+        # 'NAME': os.environ.get('DB_NAME', 'inventory_db'),
+        # 'USER': os.environ.get('DB_USER'),
+        # 'PASSWORD': os.environ.get('DB_PASSWORD'),
+        # 'HOST': os.environ.get('DB_HOST', 'localhost'),
+        # 'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -80,8 +83,13 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+# Only include the static source dir if it actually exists
+_STATIC_SRC = BASE_DIR / 'static'
+STATICFILES_DIRS = [_STATIC_SRC] if _STATIC_SRC.exists() else []
+
+# staticfiles/ is created by collectstatic — whitenoise needs the dir to exist at startup
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+os.makedirs(STATIC_ROOT, exist_ok=True)
 
 STORAGES = {
     "default": {
@@ -94,6 +102,7 @@ STORAGES = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+os.makedirs(MEDIA_ROOT, exist_ok=True)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

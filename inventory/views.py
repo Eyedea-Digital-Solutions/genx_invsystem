@@ -230,13 +230,18 @@ def transfer_create(request):
 
 @login_required
 def get_products_by_joint(request):
-    """AJAX endpoint: returns products for a selected joint (used in sale form)."""
+    """AJAX endpoint: returns products for a selected joint (used in sale form).
+
+    Return all active products for the joint (including out-of-stock). The
+    frontend renders out-of-stock items as disabled, so filtering here by
+    stock would prevent the user from seeing products that exist but have
+    zero quantity.
+    """
     joint_id = request.GET.get('joint_id')
     if joint_id:
         products = Product.objects.select_related('stock').filter(
             joint_id=joint_id,
             is_active=True,
-            stock__quantity__gt=0
         ).values('id', 'name', 'code', 'price', 'stock__quantity')
         return JsonResponse({'products': list(products)})
     return JsonResponse({'products': []})

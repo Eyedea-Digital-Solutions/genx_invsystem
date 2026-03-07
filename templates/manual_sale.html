@@ -2,47 +2,92 @@
 {% block title %}Record Manual Sale{% endblock %}
 {% block page_title %}Record Manual Sale{% endblock %}
 
+{% block extra_css %}
+<style>
+.item-row {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    position: relative;
+}
+.item-row .remove-item-btn {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+}
+.item-number {
+    width: 22px;
+    height: 22px;
+    background: #1a1a2e;
+    color: #fff;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 6px;
+}
+.stock-pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 4px;
+}
+.stock-ok { background: #d1e7dd; color: #0a3622; }
+.stock-low { background: #fff3cd; color: #664d03; }
+.stock-zero { background: #f8d7da; color: #58151c; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle me-2"></i>
-            Use this form to record a sale that was already made using a physical receipt book.
-            Upload a photo of the manual receipt, and the system will create a digital record.
+    <div class="col-md-9">
+        <div class="alert alert-info d-flex gap-2 align-items-start">
+            <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+            <div>Use this form to record a sale that was already made using a physical receipt book.
+            Upload a photo of the manual receipt — the system will create a digital record and optionally deduct stock.</div>
         </div>
 
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="bi bi-camera me-2"></i>Manual Sale Entry</h6>
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0"><i class="bi bi-camera me-2 text-primary"></i>Manual Sale Entry</h6>
             </div>
             <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="manual-sale-form">
                     {% csrf_token %}
 
-                    <div class="row g-3">
+                    <!-- Sale Details -->
+                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Joint (Shop) *</label>
+                            <label class="form-label fw-semibold">Joint (Shop) <span class="text-danger">*</span></label>
                             {{ form.joint }}
+                            {% if form.joint.errors %}<div class="text-danger small mt-1">{{ form.joint.errors }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Payment Method *</label>
+                            <label class="form-label fw-semibold">Payment Method <span class="text-danger">*</span></label>
                             {{ form.payment_method }}
+                            {% if form.payment_method.errors %}<div class="text-danger small mt-1">{{ form.payment_method.errors }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Customer Name</label>
+                            <label class="form-label fw-semibold">Customer Name <span class="text-muted">(optional)</span></label>
                             {{ form.customer_name }}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Date & Time of Sale *</label>
+                            <label class="form-label fw-semibold">Date &amp; Time of Sale <span class="text-danger">*</span></label>
                             {{ form.sale_date }}
+                            {% if form.sale_date.errors %}<div class="text-danger small mt-1">{{ form.sale_date.errors }}</div>{% endif %}
                         </div>
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Receipt Photo *</label>
+                            <label class="form-label fw-semibold">Receipt Photo <span class="text-danger">*</span></label>
                             {{ form.manual_receipt_image }}
                             {% if form.manual_receipt_image.errors %}
-                                <div class="text-danger small">{{ form.manual_receipt_image.errors }}</div>
+                                <div class="text-danger small mt-1">{{ form.manual_receipt_image.errors }}</div>
                             {% endif %}
-                            <div class="text-muted small mt-1">Take a clear photo of the manual receipt book page.</div>
+                            <div class="form-text">Take a clear photo of the manual receipt book page.</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Notes</label>
@@ -50,18 +95,35 @@
                         </div>
                     </div>
 
-                    <!-- Optional: Add items to also deduct from stock -->
-                    <hr class="my-4">
-                    <h6 class="mb-3">Deduct from Stock (optional but recommended)</h6>
-                    <p class="text-muted small">If you want the system to automatically deduct stock for this manual sale, add the items below.</p>
-                    
-                    <div id="manual-items">
-                        <!-- Items added dynamically same as main sale form -->
-                    </div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="add-manual-item">
-                        <i class="bi bi-plus"></i> Add Item
-                    </button>
+                    <!-- Stock deduction section -->
+                    <div class="border-top pt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                <h6 class="mb-0">Deduct from Stock <span class="text-muted fw-normal">(optional but recommended)</span></h6>
+                                <p class="text-muted small mb-0">If you want the system to automatically deduct stock for this manual sale, add the items below.</p>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="add-manual-item">
+                                <i class="bi bi-plus-lg me-1"></i> Add Item
+                            </button>
+                        </div>
 
+                        <div id="no-items-msg" class="text-center text-muted py-4" style="font-size:13px;">
+                            <i class="bi bi-box-seam d-block mb-1" style="font-size:24px; opacity:0.3;"></i>
+                            No items added. Select a joint above then click "Add Item".
+                        </div>
+
+                        <div id="manual-items" class="mt-3"></div>
+
+                        <!-- Running total -->
+                        <div id="items-total-row" class="d-none d-flex justify-content-end mt-2">
+                            <div class="bg-light border rounded px-4 py-2">
+                                <span class="text-muted me-2">Items Total:</span>
+                                <strong class="text-primary fs-5" id="items-grand-total">$0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
                     <div class="mt-4 d-flex gap-2">
                         <button type="submit" class="btn btn-primary px-4">
                             <i class="bi bi-save me-2"></i>Save Manual Sale
@@ -73,53 +135,177 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-let idx = 0;
-let products = [];
+let itemIdx = 0;
+let loadedProducts = [];  // cache products for the currently selected joint
 
-document.getElementById('id_joint').addEventListener('change', function() {
-    const jointId = this.value;
-    if (!jointId) return;
+// ─── Load products when joint changes ────────────────────────────────────────
+const jointSelect = document.getElementById('id_joint');
+
+function loadProducts(jointId, callback) {
+    if (!jointId) { loadedProducts = []; return; }
     fetch(`{% url 'inventory:get_products_by_joint' %}?joint_id=${jointId}`)
         .then(r => r.json())
-        .then(data => { products = data.products; });
+        .then(data => {
+            loadedProducts = data.products;
+            if (callback) callback();
+        });
+}
+
+jointSelect.addEventListener('change', function () {
+    loadProducts(this.value);
+    // Refresh product dropdowns in existing rows
+    document.querySelectorAll('.product-select-manual').forEach(sel => {
+        const current = sel.value;
+        rebuildProductOptions(sel);
+        sel.value = current;
+    });
 });
 
-document.getElementById('add-manual-item').addEventListener('click', function() {
-    if (products.length === 0) {
-        alert('Please select a joint first.');
+// Load on page-load if joint is already pre-selected (e.g. form re-render on error)
+if (jointSelect.value) {
+    loadProducts(jointSelect.value);
+}
+
+function rebuildProductOptions(sel) {
+    const currentVal = sel.value;
+    sel.innerHTML = '<option value="">— Select product —</option>' +
+        loadedProducts.map(p =>
+            `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock__quantity}" ${p.id == currentVal ? 'selected' : ''}>
+                ${p.code ? '['+p.code+'] ' : ''}${p.name} — $${parseFloat(p.price).toFixed(2)} (${p.stock__quantity} in stock)
+            </option>`
+        ).join('');
+}
+
+// ─── Add item row ─────────────────────────────────────────────────────────────
+document.getElementById('add-manual-item').addEventListener('click', function () {
+    const jointId = jointSelect.value;
+    if (!jointId) {
+        // Visual feedback instead of alert
+        jointSelect.classList.add('is-invalid');
+        jointSelect.focus();
+        setTimeout(() => jointSelect.classList.remove('is-invalid'), 2000);
         return;
     }
+    if (loadedProducts.length === 0) {
+        loadProducts(jointId, addItemRow);
+    } else {
+        addItemRow();
+    }
+});
+
+function addItemRow() {
+    document.getElementById('no-items-msg').style.display = 'none';
+    document.getElementById('items-total-row').classList.remove('d-none');
+
+    const idx = itemIdx++;
     const container = document.getElementById('manual-items');
     const div = document.createElement('div');
-    div.className = 'row g-2 mb-2 align-items-center';
+    div.className = 'item-row';
+    div.id = `item-row-${idx}`;
     div.innerHTML = `
-        <div class="col-md-5">
-            <select name="product_${idx}" class="form-select">
-                <option value="">-- Product --</option>
-                ${products.map(p => `<option value="${p.id}" data-price="${p.price}">${p.code ? '['+p.code+'] ' : ''}${p.name}</option>`).join('')}
-            </select>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" onclick="removeRow(${idx})">
+            <i class="bi bi-x"></i>
+        </button>
+        <div class="d-flex align-items-center mb-2">
+            <span class="item-number">${idx + 1}</span>
+            <span class="text-muted small">Item ${idx + 1}</span>
         </div>
-        <div class="col-md-2">
-            <input type="number" name="quantity_${idx}" class="form-control" placeholder="Qty" min="1" value="1">
-        </div>
-        <div class="col-md-3">
-            <input type="number" name="unit_price_${idx}" class="form-control" placeholder="Price $" step="0.01">
-        </div>
-        <div class="col-md-2">
-            <button type="button" class="btn btn-sm btn-outline-danger w-100" onclick="this.closest('.row').remove()">Remove</button>
+        <div class="row g-2 align-items-start">
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold mb-1">Product</label>
+                <select name="product_${idx}" class="form-select form-select-sm product-select-manual" required>
+                    <option value="">— Select product —</option>
+                    ${loadedProducts.map(p =>
+                        `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock__quantity}">
+                            ${p.code ? '['+p.code+'] ' : ''}${p.name} — $${parseFloat(p.price).toFixed(2)} (${p.stock__quantity} in stock)
+                        </option>`
+                    ).join('')}
+                </select>
+                <div class="stock-info-${idx}"></div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Qty</label>
+                <input type="number" name="quantity_${idx}" class="form-control form-control-sm qty-input-manual"
+                       min="1" value="1" required placeholder="1">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Unit Price ($)</label>
+                <input type="number" name="unit_price_${idx}" class="form-control form-control-sm price-input-manual"
+                       step="0.01" min="0.01" placeholder="0.00" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Line Total</label>
+                <div class="form-control-plaintext fw-bold text-primary line-total-manual" style="font-size:14px;">$0.00</div>
+            </div>
         </div>
     `;
-    // Auto-fill price on product select
-    div.querySelector('select').addEventListener('change', function() {
-        const opt = this.options[this.selectedIndex];
-        if (opt.value) div.querySelector('input[name^="unit_price"]').value = parseFloat(opt.dataset.price).toFixed(2);
-    });
     container.appendChild(div);
-    idx++;
-});
+
+    // Wire up events
+    const sel = div.querySelector('.product-select-manual');
+    const qtyInput = div.querySelector('.qty-input-manual');
+    const priceInput = div.querySelector('.price-input-manual');
+    const stockInfo = div.querySelector(`.stock-info-${idx}`);
+    const lineTotal = div.querySelector('.line-total-manual');
+
+    function updateStockInfo() {
+        const opt = sel.options[sel.selectedIndex];
+        if (!opt.value) { stockInfo.innerHTML = ''; return; }
+        const stock = parseInt(opt.dataset.stock);
+        const price = parseFloat(opt.dataset.price);
+        priceInput.value = price.toFixed(2);
+        qtyInput.max = stock;
+        if (stock === 0) {
+            stockInfo.innerHTML = `<span class="stock-pill stock-zero"><i class="bi bi-x-circle me-1"></i>Out of stock</span>`;
+        } else if (stock <= 3) {
+            stockInfo.innerHTML = `<span class="stock-pill stock-low"><i class="bi bi-exclamation-triangle me-1"></i>Only ${stock} left</span>`;
+        } else {
+            stockInfo.innerHTML = `<span class="stock-pill stock-ok"><i class="bi bi-check-circle me-1"></i>${stock} in stock</span>`;
+        }
+        recalc();
+    }
+
+    function recalc() {
+        const qty = parseFloat(qtyInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        lineTotal.textContent = `$${(qty * price).toFixed(2)}`;
+        updateGrandTotal();
+    }
+
+    sel.addEventListener('change', updateStockInfo);
+    qtyInput.addEventListener('input', function () {
+        const opt = sel.options[sel.selectedIndex];
+        if (opt.value) {
+            const stock = parseInt(opt.dataset.stock);
+            if (parseInt(this.value) > stock) {
+                this.value = stock;
+            }
+        }
+        recalc();
+    });
+    priceInput.addEventListener('input', recalc);
+}
+
+function removeRow(idx) {
+    const row = document.getElementById(`item-row-${idx}`);
+    if (row) row.remove();
+    updateGrandTotal();
+    if (document.querySelectorAll('.item-row').length === 0) {
+        document.getElementById('no-items-msg').style.display = '';
+        document.getElementById('items-total-row').classList.add('d-none');
+    }
+}
+
+function updateGrandTotal() {
+    let total = 0;
+    document.querySelectorAll('.line-total-manual').forEach(el => {
+        total += parseFloat(el.textContent.replace('$', '')) || 0;
+    });
+    document.getElementById('items-grand-total').textContent = `$${total.toFixed(2)}`;
+}
 </script>
-{% endblock %}
 {% endblock %}

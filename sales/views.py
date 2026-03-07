@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django.conf import settings
 
@@ -19,12 +19,13 @@ def dashboard(request):
     """
     today = timezone.now().date()
 
-    today_sales = Sale.objects.filter(sale_date__date=today)
+    # prefetch_related('items') prevents N+1 queries when calling sale.total_amount
+    today_sales = Sale.objects.filter(sale_date__date=today).prefetch_related('items')
     today_total = sum(sale.total_amount for sale in today_sales)
     today_count = today_sales.count()
 
     month_start = today.replace(day=1)
-    month_sales = Sale.objects.filter(sale_date__date__gte=month_start)
+    month_sales = Sale.objects.filter(sale_date__date__gte=month_start).prefetch_related('items')
     month_total = sum(sale.total_amount for sale in month_sales)
 
     low_stock = Product.objects.select_related('stock', 'joint').filter(
@@ -36,11 +37,11 @@ def dashboard(request):
 
     joint_stats = []
     for joint in Joint.objects.all():
-        joint_today_sales = today_sales.filter(joint=joint)
+        joint_today_sales = [s for s in today_sales if s.joint_id == joint.pk]
         joint_today_total = sum(sale.total_amount for sale in joint_today_sales)
         joint_stats.append({
             'joint': joint,
-            'count': joint_today_sales.count(),
+            'count': len(joint_today_sales),
             'total': joint_today_total,
         })
 
@@ -71,16 +72,27 @@ def make_sale(request):
 
         if sale_form.is_valid():
 
-            # ✅ FIX: Parse and validate ALL items first, before touching the DB.
-            # Previously the Sale was saved, then items checked, then deleted on
-            # error — creating unnecessary DB writes and a messy atomic block.
+            # Parse and validate ALL items first, before touching the DB.
+            # Use item_count (sent by the template) to know the exact number of rows,
+            # so empty product selects don't silently break the loop.
             items_data = []
             errors = []
-            i = 0
-            while f'product_{i}' in request.POST:
-                product_id = request.POST.get(f'product_{i}')
-                quantity_str = request.POST.get(f'quantity_{i}')
-                unit_price_str = request.POST.get(f'unit_price_{i}')
+            try:
+                item_count = int(request.POST.get('item_count', 0))
+            except (ValueError, TypeError):
+                item_count = 0
+
+            # Fallback: scan for product_N keys if item_count missing (old template)
+            if item_count == 0:
+                i = 0
+                while f'product_{i}' in request.POST:
+                    i += 1
+                item_count = i
+
+            for i in range(item_count):
+                product_id = request.POST.get(f'product_{i}', '').strip()
+                quantity_str = request.POST.get(f'quantity_{i}', '').strip()
+                unit_price_str = request.POST.get(f'unit_price_{i}', '').strip()
 
                 if product_id and quantity_str and unit_price_str:
                     try:
@@ -105,7 +117,6 @@ def make_sale(request):
                         errors.append(f"Product ID {product_id} not found.")
                     except (ValueError, TypeError):
                         errors.append("Invalid quantity or price value.")
-                i += 1
 
             if errors:
                 for err in errors:
@@ -316,7 +327,9 @@ def reports(request):
     joints = Joint.objects.all()
     joint_reports = []
     for joint in joints:
-        month_joint_sales = Sale.objects.filter(joint=joint, sale_date__date__gte=month_start)
+        month_joint_sales = Sale.objects.filter(
+            joint=joint, sale_date__date__gte=month_start
+        ).prefetch_related('items')
         joint_reports.append({
             'joint': joint,
             'count': month_joint_sales.count(),
@@ -331,17 +344,18 @@ def reports(request):
         ).count()
         payment_breakdown[label] = count
 
-    from django.db.models import Sum as DjSum
     top_products = SaleItem.objects.filter(
         sale__sale_date__date__gte=month_start
     ).values('product__name', 'product__joint__display_name').annotate(
-        total_qty=DjSum('quantity')
+        total_qty=Sum('quantity')
     ).order_by('-total_qty')[:10]
 
     from users.models import User
     staff_performance = []
     for user in User.objects.filter(is_active=True):
-        user_sales = Sale.objects.filter(sold_by=user, sale_date__date__gte=month_start)
+        user_sales = Sale.objects.filter(
+            sold_by=user, sale_date__date__gte=month_start
+        ).prefetch_related('items')
         if user_sales.exists():
             staff_performance.append({
                 'user': user,
