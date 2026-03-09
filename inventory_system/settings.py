@@ -58,7 +58,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'genx_pos_db',
-        'USER': 'chan',
+        'USER': 'postgres',
         'PASSWORD': 'admin123',
         'HOST': 'localhost',
         'PORT': '5432',
