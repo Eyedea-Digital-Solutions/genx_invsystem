@@ -30,6 +30,7 @@ class Sale(models.Model):
         upload_to='manual_receipts/%Y/%m/', null=True, blank=True
     )
     customer_name = models.CharField(max_length=200, blank=True)
+    customer_phone = models.CharField(max_length=30, blank=True)   # ← NEW
     notes = models.TextField(blank=True)
     receipt_number = models.CharField(max_length=50, unique=True, blank=True)
 

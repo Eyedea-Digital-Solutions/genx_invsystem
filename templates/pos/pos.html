@@ -340,17 +340,33 @@
     <div class="panel" style="border-right:none;">
         <div class="panel-head"><label>Payment</label></div>
         <div class="panel-scroll">
-            <input type="text" class="customer-input" id="customer-name" placeholder="Customer name (optional)">
+
+            <!-- Customer details -->
+            <div style="margin-bottom:12px;">
+                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;">Customer</div>
+                <input type="text"
+                       class="customer-input"
+                       id="customer-name"
+                       placeholder="Customer name (optional)">
+                <input type="tel"
+                       class="customer-input"
+                       id="customer-phone"
+                       placeholder="Customer phone (optional)"
+                       style="margin-top:6px;">
+            </div>
 
             <div class="totals-row"><span class="lbl">Subtotal</span><span id="disp-subtotal">$0.00</span></div>
-            <div class="totals-row" id="disc-row" style="display:none;"><span class="lbl disc" id="disc-label">Discount</span><span class="disc" id="disp-discount">-$0.00</span></div>
+            <div class="totals-row" id="disc-row" style="display:none;">
+                <span class="lbl disc" id="disc-label">Discount</span>
+                <span class="disc" id="disp-discount">-$0.00</span>
+            </div>
             <div class="totals-row total"><span>TOTAL</span><span id="disp-total">$0.00</span></div>
 
             <div style="margin-top:16px;">
-                <button class="pay-btn pay-cash" onclick="completeSale('cash')"><i class="bi bi-cash me-2"></i>Cash</button>
+                <button class="pay-btn pay-cash"    onclick="completeSale('cash')"   ><i class="bi bi-cash me-2"></i>Cash</button>
                 <button class="pay-btn pay-ecocash" onclick="completeSale('ecocash')"><i class="bi bi-phone me-2"></i>EcoCash</button>
-                <button class="pay-btn pay-card" onclick="completeSale('card')"><i class="bi bi-credit-card me-2"></i>Card</button>
-                <button class="pay-btn pay-mixed" onclick="completeSale('mixed')"><i class="bi bi-shuffle me-2"></i>Mixed</button>
+                <button class="pay-btn pay-card"    onclick="completeSale('card')"   ><i class="bi bi-credit-card me-2"></i>Card</button>
+                <button class="pay-btn pay-mixed"   onclick="completeSale('mixed')"  ><i class="bi bi-shuffle me-2"></i>Mixed</button>
             </div>
         </div>
     </div>
@@ -708,6 +724,7 @@ async function completeSale(method) {
         joint_id: jid,
         payment_method: method,
         customer_name: $('customer-name').value.trim(),
+        customer_phone: $('customer-phone').value.trim(),
         items: cart,
         cart_discount: cartDiscount,
         cart_discount_label: cartDiscountLabel,
@@ -766,12 +783,14 @@ async function recallSale(pk) {
             promo_label: i.promo_label,
         }));
         if (data.customer_name) $('customer-name').value = data.customer_name;
+        if (data.customer_phone) $('customer-phone').value = data.customer_phone;
         updateCart();
     }
 }
 
 function newSale() {
     $('customer-name').value = '';
+    $('customer-phone').value = '';
     focusBarcode();
 }
 
