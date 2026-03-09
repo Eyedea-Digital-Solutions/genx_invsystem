@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -132,7 +133,7 @@
         .date-box {
             border: 1px solid #000;
             padding: 1px 5px;
-            min-width: 18mm;
+            min-width: 12mm;
             font-size: 10px;
             text-align: center;
         }
@@ -260,9 +261,6 @@
 </head>
 <body>
 
-{# ════════════════════════════════════════════════════════════════════════
-   GENX RECEIPT
-   ════════════════════════════════════════════════════════════════════════ #}
 {% if sale.joint.name == 'genx' %}
 
 <div class="header-grid">
@@ -359,9 +357,6 @@
 <div class="footer tiny" style="margin-top:1mm;">Receipt #{{ sale.receipt_number }} · {{ sale.get_payment_method_display }}</div>
 
 
-{# ════════════════════════════════════════════════════════════════════════
-   ARMOR SOLE RECEIPT
-   ════════════════════════════════════════════════════════════════════════ #}
 {% elif sale.joint.name == 'armor_sole' %}
 
 <div class="header-grid">
@@ -455,9 +450,6 @@
 <div class="footer tiny" style="margin-top:2mm;">Receipt #{{ sale.receipt_number }} · {{ sale.get_payment_method_display }}</div>
 
 
-{# ════════════════════════════════════════════════════════════════════════
-   EYEDENTITY RECEIPT
-   ════════════════════════════════════════════════════════════════════════ #}
 {% else %}
 
 <div class="header-grid">
