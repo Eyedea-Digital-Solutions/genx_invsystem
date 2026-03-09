@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Joint, Product, Stock, StockTake, StockTakeItem, StockTransfer
+from .models import Joint, Product, Stock, StockTake, StockTakeItem, StockTransfer, Category, Brand, Supplier
 
 
 @admin.register(Joint)
@@ -7,20 +7,38 @@ class JointAdmin(admin.ModelAdmin):
     list_display = ['display_name', 'name', 'phone', 'uses_product_codes']
 
 
+@admin.register(Brand)
+class BrandAdmin(admin.ModelAdmin):
+    list_display = ['name']
+    search_fields = ['name']
+
+
+@admin.register(Supplier)
+class SupplierAdmin(admin.ModelAdmin):
+    list_display = ['name', 'contact_person', 'phone', 'email']
+    search_fields = ['name']
+
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'joint', 'sort_order']
+    list_filter = ['joint']
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['name', 'code', 'joint', 'price', 'current_stock', 'is_active']
-    list_filter = ['joint', 'is_active']
-    search_fields = ['name', 'code']
+    list_display = ['name', 'code', 'barcode', 'joint', 'price', 'effective_price', 'current_stock', 'is_clearance', 'is_active']
+    list_filter = ['joint', 'is_active', 'is_clearance', 'category']
+    search_fields = ['name', 'code', 'barcode']
+    list_editable = ['is_clearance', 'is_active']
 
 
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
-    list_display = ['product', 'quantity', 'last_stock_take', 'last_updated']
+    list_display = ['product', 'quantity', 'min_quantity', 'reorder_level', 'expiry_date', 'last_updated']
     list_filter = ['product__joint']
 
 
-# ✅ FIX: Added proper StockTakeItemInline and removed invalid `inlines_pass = True`
 class StockTakeItemInline(admin.TabularInline):
     model = StockTakeItem
     extra = 0
@@ -31,7 +49,7 @@ class StockTakeItemInline(admin.TabularInline):
 @admin.register(StockTake)
 class StockTakeAdmin(admin.ModelAdmin):
     list_display = ['joint', 'conducted_by', 'conducted_at']
-    inlines = [StockTakeItemInline]  # ✅ FIX: was `inlines_pass = True` (invalid attribute)
+    inlines = [StockTakeItemInline]
 
 
 @admin.register(StockTransfer)

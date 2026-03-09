@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+            <div class="card-body p-4">
+                <div class="mb-3"><div class="text-muted" style="font-size:12px;">Name</div><div class="fw-bold">{{ user.get_full_name|default:user.username }}</div></div>
+                <div class="mb-3"><div class="text-muted" style="font-size:12px;">Role</div><div><span class="badge bg-light text-dark border">{{ user.get_role_display }}</span></div></div>
+                {% if user.primary_joint %}<div class="mb-0"><div class="text-muted" style="font-size:12px;">Primary Joint</div><div class="fw-bold">{{ user.primary_joint.display_name }}</div></div>{% endif %}
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm" style="border-radius:14px;">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">Change Password</h6>
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}<div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>{% endif %}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-dark px-4">Update Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,71 +1,67 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block title %}Products{% endblock %}
 {% block page_title %}Products{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="d-flex gap-2">
-        {% for joint in joints %}
-        <a href="?joint={{ joint.pk }}" 
-           class="btn btn-sm {% if selected_joint == joint.pk|stringformat:'s' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-            {{ joint.display_name }}
-        </a>
-        {% endfor %}
-        {% if selected_joint %}<a href="?" class="btn btn-sm btn-outline-danger">Clear</a>{% endif %}
-    </div>
+<div class="d-flex align-items-center gap-2 mb-4">
+    <form method="get" class="d-flex align-items-center gap-2 flex-grow-1">
+        <select name="joint" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
+            <option value="">All Joints</option>
+            {% for j in joints %}<option value="{{ j.pk }}" {% if selected_joint == j.pk|stringformat:"s" %}selected{% endif %}>{{ j.display_name }}</option>{% endfor %}
+        </select>
+        <input type="text" name="q" value="{{ search }}" class="form-control form-control-sm" placeholder="Search products…" style="width:200px;">
+        <select name="filter" class="form-select form-select-sm" style="width:140px;" onchange="this.form.submit()">
+            <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All Products</option>
+            <option value="clearance" {% if filter_type == 'clearance' %}selected{% endif %}>Clearance</option>
+            <option value="sale" {% if filter_type == 'sale' %}selected{% endif %}>On Sale</option>
+            <option value="low_stock" {% if filter_type == 'low_stock' %}selected{% endif %}>Low Stock</option>
+        </select>
+        <button type="submit" class="btn btn-dark btn-sm">Search</button>
+    </form>
     {% if user.is_manager_role %}
-    <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
-        <i class="bi bi-plus me-1"></i>Add Product
-    </a>
+    <a href="{% url 'inventory:product_create' %}" class="btn btn-dark btn-sm ms-auto"><i class="bi bi-plus-lg me-1"></i>Add Product</a>
     {% endif %}
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead class="table-dark">
-                <tr>
-                    <th>Code</th>
-                    <th>Product Name</th>
-                    <th>Joint</th>
-                    <th>Price</th>
-                    <th class="text-center">Stock</th>
-                    <th>Status</th>
-                    {% if user.is_manager_role %}<th>Actions</th>{% endif %}
-                </tr>
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+            <thead class="table-light">
+                <tr><th>Name</th><th>Code</th><th>Joint</th><th>Category</th><th>Price</th><th>Stock</th><th>Flags</th><th></th></tr>
             </thead>
             <tbody>
                 {% for product in products %}
                 <tr>
-                    <td class="text-muted font-monospace">{{ product.code|default:"—" }}</td>
-                    <td><strong>{{ product.name }}</strong></td>
+                    <td class="fw-semibold">{{ product.name }}</td>
+                    <td class="text-muted">{{ product.code|default:"—" }}</td>
                     <td>{{ product.joint.display_name }}</td>
-                    <td>${{ product.price|floatformat:2 }}</td>
-                    <td class="text-center">
-                        <span class="fw-bold {% if product.current_stock == 0 %}text-danger{% elif product.is_low_stock %}text-warning{% else %}text-success{% endif %}">
-                            {{ product.current_stock }}
-                        </span>
+                    <td>{{ product.category.name|default:"—" }}</td>
+                    <td>
+                        ${{ product.effective_price }}
+                        {% if product.price != product.effective_price %}<span class="text-muted text-decoration-line-through ms-1" style="font-size:11px;">${{ product.price }}</span>{% endif %}
                     </td>
                     <td>
                         {% if product.current_stock == 0 %}
-                        <span class="out-of-stock-badge">OUT OF STOCK</span>
+                        <span class="out-of-stock-badge">Out of stock</span>
                         {% elif product.is_low_stock %}
-                        <span class="low-stock-badge">LOW STOCK</span>
+                        <span class="low-stock-badge">{{ product.current_stock }} low</span>
                         {% else %}
-                        <span class="badge bg-success bg-opacity-10 text-success">In Stock</span>
+                        {{ product.current_stock }}
                         {% endif %}
                     </td>
-                    {% if user.is_manager_role %}
                     <td>
-                        <div class="d-flex gap-1">
-                            <a href="{% url 'inventory:product_edit' product.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn btn-sm btn-outline-success">+Stock</a>
-                        </div>
+                        {% if product.is_clearance %}<span class="badge-clearance me-1">CLR</span>{% endif %}
+                        {% if product.promotion_label == 'SALE' %}<span class="badge-sale">SALE</span>{% endif %}
                     </td>
-                    {% endif %}
+                    <td>
+                        {% if user.is_manager_role %}
+                        <a href="{% url 'inventory:product_edit' product.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;">Edit</a>
+                        <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;"><i class="bi bi-plus"></i></a>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-center text-muted py-5">No products found.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-5">No products found</td></tr>
                 {% endfor %}
             </tbody>
         </table>

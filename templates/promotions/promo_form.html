@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm" style="border-radius:14px;">
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    <h6 class="fw-bold mb-3">Promotion Details</h6>
+                    {% for field in base_form %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                        {% if field.errors %}<div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>{% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <div id="spend-fields" style="display:none;">
+                        <hr><h6 class="fw-bold mb-3">Spend Threshold Settings</h6>
+                        {% for field in spend_form %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="gift-fields" style="display:none;">
+                        <hr><h6 class="fw-bold mb-3">Free Gift Settings</h6>
+                        {% for field in gift_form %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="bundle-fields" style="display:none;">
+                        <hr><h6 class="fw-bold mb-3">Bundle Settings</h6>
+                        {% for field in bundle_form %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-dark px-4">Save Promotion</button>
+                        <a href="{% url 'promotions:dashboard' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const typeSelect = document.querySelector('[name="promo_type"]');
+function toggleSections() {
+    const val = typeSelect.value;
+    document.getElementById('spend-fields').style.display = val === 'spend_threshold' ? '' : 'none';
+    document.getElementById('gift-fields').style.display = (val === 'free_gift' || val === 'buy_n_get_n') ? '' : 'none';
+    document.getElementById('bundle-fields').style.display = val === 'bundle' ? '' : 'none';
+}
+typeSelect.addEventListener('change', toggleSections);
+toggleSections();
+</script>
+{% endblock %}

@@ -1,128 +1,65 @@
-{% extends "base.html" %}
-{% block title %}Sale {{ sale.receipt_number }}{% endblock %}
-{% block page_title %}Sale Detail - {{ sale.receipt_number }}{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{{ sale.receipt_number }}{% endblock %}
+{% block page_title %}Sale {{ sale.receipt_number }}{% endblock %}
 
 {% block content %}
-<div class="row g-4">
-    <div class="col-md-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white d-flex justify-content-between">
-                <h6 class="mb-0">Sale Items</h6>
-                <div class="d-flex gap-2">
-                    <a href="{% url 'sales:sale_receipt' sale.pk %}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-printer me-1"></i>Print Receipt
-                    </a>
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+            <div class="card-body p-4">
+                <div class="row mb-3">
+                    <div class="col"><div class="text-muted" style="font-size:12px;">Receipt</div><div class="fw-bold">{{ sale.receipt_number }}</div></div>
+                    <div class="col"><div class="text-muted" style="font-size:12px;">Joint</div><div class="fw-bold">{{ sale.joint.display_name }}</div></div>
+                    <div class="col"><div class="text-muted" style="font-size:12px;">Date</div><div class="fw-bold">{{ sale.sale_date|date:"d M Y, H:i" }}</div></div>
+                    <div class="col"><div class="text-muted" style="font-size:12px;">Payment</div><div class="fw-bold">{{ sale.get_payment_method_display }}</div></div>
                 </div>
-            </div>
-            <table class="table mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Product</th>
-                        <th>Code</th>
-                        <th class="text-center">Qty</th>
-                        <th class="text-end">Unit Price</th>
-                        <th class="text-end">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in sale.items.all %}
-                    <tr>
-                        <td><strong>{{ item.product.name }}</strong></td>
-                        <td class="text-muted">{{ item.product.code|default:"-" }}</td>
-                        <td class="text-center">{{ item.quantity }}</td>
-                        <td class="text-end">${{ item.unit_price|floatformat:2 }}</td>
-                        <td class="text-end fw-bold">${{ item.line_total|floatformat:2 }}</td>
-                    </tr>
-                    {% endfor %}
-                    <tr class="table-light">
-                        <td colspan="4" class="text-end fw-bold">TOTAL</td>
-                        <td class="text-end fw-bold text-primary fs-5">${{ sale.total_amount|floatformat:2 }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                {% if sale.customer_name %}
+                <div class="mb-3"><div class="text-muted" style="font-size:12px;">Customer</div><div>{{ sale.customer_name }}</div></div>
+                {% endif %}
 
-        {% if sale.manual_receipt_image %}
-        <div class="card border-0 shadow-sm mt-4">
-            <div class="card-header bg-white"><h6 class="mb-0">Manual Receipt Photo</h6></div>
-            <div class="card-body text-center">
-                <img src="{{ sale.manual_receipt_image.url }}" class="img-fluid rounded" style="max-height: 400px;">
+                <table class="table table-sm" style="font-size:13px;">
+                    <thead class="table-light"><tr><th>Product</th><th>Qty</th><th>Price</th><th class="text-end">Total</th></tr></thead>
+                    <tbody>
+                        {% for item in sale.items.all %}
+                        <tr {% if item.is_free_gift %}style="color:#16a34a;"{% endif %}>
+                            <td>
+                                {{ item.product.name }}
+                                {% if item.is_free_gift %}<span class="badge bg-success ms-1" style="font-size:9px;">FREE</span>{% endif %}
+                                {% if item.promotion_label %}<div class="text-muted" style="font-size:11px;">{{ item.promotion_label }}</div>{% endif %}
+                            </td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{% if item.is_free_gift %}Free{% else %}${{ item.unit_price }}{% endif %}</td>
+                            <td class="text-end fw-bold">{% if item.is_free_gift %}$0.00{% else %}${{ item.line_total }}{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr><td colspan="3" class="text-end">Subtotal</td><td class="text-end">${{ sale.subtotal }}</td></tr>
+                        {% if sale.discount_amount and sale.discount_amount > 0 %}
+                        <tr style="color:#16a34a;"><td colspan="3" class="text-end">{{ sale.discount_label|default:"Discount" }}</td><td class="text-end">-${{ sale.discount_amount }}</td></tr>
+                        {% endif %}
+                        <tr class="fw-bold"><td colspan="3" class="text-end">TOTAL</td><td class="text-end">${{ sale.total_amount }}</td></tr>
+                    </tfoot>
+                </table>
             </div>
         </div>
-        {% endif %}
     </div>
 
-    <div class="col-md-4">
-        <!-- Sale Info -->
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white"><h6 class="mb-0">Sale Information</h6></div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-5 text-muted">Receipt #</dt>
-                    <dd class="col-7 fw-bold">{{ sale.receipt_number }}</dd>
-
-                    <dt class="col-5 text-muted">Joint</dt>
-                    <dd class="col-7">{{ sale.joint.display_name }}</dd>
-
-                    <dt class="col-5 text-muted">Date</dt>
-                    <dd class="col-7">{{ sale.sale_date|date:"d M Y H:i" }}</dd>
-
-                    <dt class="col-5 text-muted">Sold By</dt>
-                    <dd class="col-7">{{ sale.sold_by.get_full_name|default:sale.sold_by.username }}</dd>
-
-                    <dt class="col-5 text-muted">Customer</dt>
-                    <dd class="col-7">{{ sale.customer_name|default:"—" }}</dd>
-
-                    <dt class="col-5 text-muted">Payment</dt>
-                    <dd class="col-7">
-                        <span class="badge {% if sale.payment_method == 'ecocash' %}bg-success{% else %}bg-secondary{% endif %}">
-                            {{ sale.get_payment_method_display }}
-                        </span>
-                    </dd>
-
-                    <dt class="col-5 text-muted">Type</dt>
-                    <dd class="col-7">{{ sale.get_sale_type_display }}</dd>
-                </dl>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">Actions</h6>
+                <a href="{% url 'sales:sale_receipt_thermal' sale.pk %}" target="_blank" class="btn btn-dark w-100 mb-2" style="font-size:13px;"><i class="bi bi-printer me-2"></i>Print Thermal Receipt</a>
+                <a href="{% url 'sales:sale_list' %}" class="btn btn-outline-secondary w-100" style="font-size:13px;">← Back to Sales</a>
             </div>
         </div>
 
-        <!-- EcoCash -->
-        {% if sale.ecocash_transaction %}
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-phone me-1"></i>EcoCash</h6></div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-5 text-muted">Number</dt>
-                    <dd class="col-7">{{ sale.ecocash_transaction.econet_number }}</dd>
-                    <dt class="col-5 text-muted">Amount</dt>
-                    <dd class="col-7">${{ sale.ecocash_transaction.amount|floatformat:2 }}</dd>
-                    <dt class="col-5 text-muted">Ref</dt>
-                    <dd class="col-7">{{ sale.ecocash_transaction.transaction_reference|default:"Pending" }}</dd>
-                    <dt class="col-5 text-muted">Status</dt>
-                    <dd class="col-7">
-                        <span class="badge {% if sale.ecocash_transaction.status == 'confirmed' %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                            {{ sale.ecocash_transaction.get_status_display }}
-                        </span>
-                    </dd>
-                </dl>
-                {% if sale.ecocash_transaction.status == 'pending' %}
-                <a href="{% url 'ecocash:confirm_payment' sale.ecocash_transaction.pk %}" class="btn btn-sm btn-success w-100 mt-2">
-                    Confirm Payment
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Audit Log -->
         {% if audit_log %}
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-shield-check me-1"></i>Audit Trail</h6></div>
-            <div class="card-body">
-                <div class="text-muted small">
-                    <i class="bi bi-lock me-1"></i>This sale is <strong>locked</strong> and cannot be modified.<br><br>
-                    Recorded by: <strong>{{ audit_log.performed_by.get_full_name|default:audit_log.performed_by.username }}</strong><br>
-                    At: {{ audit_log.timestamp|date:"d M Y H:i:s" }}
+        <div class="card border-0 shadow-sm" style="border-radius:14px;">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-2">Audit</h6>
+                <div style="font-size:12px;color:#666;">
+                    {{ audit_log.action|upper }} by {{ audit_log.performed_by }} at {{ audit_log.timestamp|date:"d M Y H:i" }}
                 </div>
             </div>
         </div>

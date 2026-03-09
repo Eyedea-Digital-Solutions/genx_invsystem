@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}EcoCash Transactions{% endblock %}
+{% block page_title %}EcoCash Transactions{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:13px;">
+            <thead class="table-light">
+                <tr><th>Receipt</th><th>Joint</th><th>Amount</th><th>Reference</th><th>Status</th><th>Confirmed By</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td class="fw-semibold">{{ tx.sale.receipt_number }}</td>
+                    <td>{{ tx.sale.joint.display_name }}</td>
+                    <td class="fw-bold">${{ tx.amount }}</td>
+                    <td>{{ tx.reference|default:"—" }}</td>
+                    <td>
+                        {% if tx.status == 'confirmed' %}<span class="badge bg-success">Confirmed</span>
+                        {% elif tx.status == 'failed' %}<span class="badge bg-danger">Failed</span>
+                        {% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}
+                    </td>
+                    <td>{{ tx.confirmed_by|default:"—" }}</td>
+                    <td class="text-muted">{{ tx.created_at|date:"d/m/Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-5">No EcoCash transactions</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

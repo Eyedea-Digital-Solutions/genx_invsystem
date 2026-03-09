@@ -1,12 +1,15 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import User
 
 
 @admin.register(User)
-class CustomUserAdmin(UserAdmin):
-    list_display = ['username', 'first_name', 'last_name', 'role', 'primary_joint', 'is_active']
+class UserAdmin(BaseUserAdmin):
+    list_display = ['username', 'get_full_name', 'role', 'primary_joint', 'is_active']
     list_filter = ['role', 'primary_joint', 'is_active']
-    fieldsets = UserAdmin.fieldsets + (
-        ('Custom Fields', {'fields': ('role', 'primary_joint', 'phone')}),
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ('GenX POS', {'fields': ('role', 'primary_joint', 'phone')}),
+    )
+    add_fieldsets = BaseUserAdmin.add_fieldsets + (
+        ('GenX POS', {'fields': ('role', 'primary_joint', 'phone')}),
     )

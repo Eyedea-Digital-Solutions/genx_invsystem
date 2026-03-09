@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt {{ sale.receipt_number }}</title>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; }
+            @page { margin: 4mm; }
+        }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            max-width: 302px;
+            margin: 0 auto;
+            padding: 10px;
+            color: #000;
+            background: #fff;
+        }
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        .divider { border-top: 1px dashed #000; margin: 6px 0; }
+        .divider-solid { border-top: 2px solid #000; margin: 6px 0; }
+        .header { text-align: center; margin-bottom: 6px; }
+        .store-name { font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .store-sub { font-size: 10px; color: #333; }
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #000; padding: 3px 0; }
+        td { padding: 3px 2px; vertical-align: top; font-size: 11px; }
+        .col-qty { width: 30px; }
+        .col-desc { }
+        .col-price { width: 50px; text-align: right; }
+        .col-total { width: 54px; text-align: right; }
+        .badge { font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 2px; display: inline-block; }
+        .badge-free { background: #000; color: #fff; }
+        .badge-clr { background: #000; color: #fff; }
+        .totals-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 11px; }
+        .totals-total { font-size: 15px; font-weight: bold; padding: 4px 0; }
+        .footer-note { font-size: 10px; text-align: center; color: #444; margin-top: 4px; }
+        .btn-row { text-align: center; margin-top: 14px; }
+        .btn-print { background: #000; color: #fff; border: none; padding: 8px 24px; font-family: monospace; font-size: 12px; cursor: pointer; margin: 0 4px; }
+        .btn-new { background: #fff; color: #000; border: 1px solid #000; padding: 8px 24px; font-family: monospace; font-size: 12px; cursor: pointer; margin: 0 4px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="store-name">{{ store_info.legal_name|default:sale.joint.display_name }}</div>
+    {% if store_info.tin %}
+    <div class="store-sub">TIN: {{ store_info.tin }}</div>
+    {% endif %}
+    {% if store_info.address %}
+    <div class="store-sub">{{ store_info.address }}</div>
+    {% endif %}
+    {% if store_info.phone %}
+    <div class="store-sub">{{ store_info.phone }}</div>
+    {% endif %}
+</div>
+
+<div class="divider-solid"></div>
+
+<div style="display:flex;justify-content:space-between;font-size:11px;">
+    <span><span class="bold">Receipt:</span> {{ sale.receipt_number }}</span>
+    <span>{{ sale.sale_date|date:"d/m/Y H:i" }}</span>
+</div>
+{% if sale.customer_name %}
+<div style="font-size:11px;"><span class="bold">Customer:</span> {{ sale.customer_name }}</div>
+{% endif %}
+<div style="font-size:11px;"><span class="bold">Cashier:</span> {{ sale.sold_by.get_full_name|default:sale.sold_by.username }}</div>
+<div style="font-size:11px;"><span class="bold">Payment:</span> {{ sale.get_payment_method_display }}</div>
+
+<div class="divider"></div>
+
+<table>
+    <thead>
+        <tr>
+            <th class="col-qty">QTY</th>
+            <th class="col-desc">DESCRIPTION</th>
+            <th class="col-price">PRICE</th>
+            <th class="col-total">TOTAL</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in sale.items.all %}
+        <tr>
+            <td class="col-qty">{{ item.quantity }}</td>
+            <td class="col-desc">
+                {{ item.product.name }}
+                {% if item.is_free_gift %}
+                <br><span class="badge badge-free">FREE</span>
+                {% elif item.product.is_clearance %}
+                <br><span class="badge badge-clr">CLR</span>
+                {% endif %}
+                {% if item.promotion_label %}
+                <br><span style="font-size:9px;">{{ item.promotion_label }}</span>
+                {% endif %}
+            </td>
+            <td class="col-price">{% if item.is_free_gift %}FREE{% else %}${{ item.unit_price }}{% endif %}</td>
+            <td class="col-total">{% if item.is_free_gift %}$0.00{% else %}${{ item.line_total }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="divider"></div>
+
+<div class="totals-row"><span>Subtotal</span><span>${{ sale.subtotal }}</span></div>
+{% if sale.discount_amount and sale.discount_amount > 0 %}
+<div class="totals-row"><span>{{ sale.discount_label|default:"Discount" }}</span><span>-${{ sale.discount_amount }}</span></div>
+{% endif %}
+<div class="divider-solid"></div>
+<div class="totals-row totals-total"><span>TOTAL</span><span>${{ sale.total_amount }}</span></div>
+
+<div class="divider"></div>
+
+<div class="footer-note">{{ store_info.tagline|default:"Thank you for your purchase." }}</div>
+<div class="footer-note" style="margin-top:8px;">Issued By: {{ sale.sold_by.get_full_name|default:sale.sold_by.username }}</div>
+
+<div class="btn-row no-print">
+    <button class="btn-print" onclick="window.print()">Print</button>
+    <a href="{% url 'sales:pos' %}"><button class="btn-new">New Sale</button></a>
+</div>
+
+<script>
+window.onload = function() { window.print(); };
+</script>
+</body>
+</html>

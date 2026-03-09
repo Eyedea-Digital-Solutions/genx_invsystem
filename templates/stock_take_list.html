@@ -1,43 +1,29 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block title %}Stock Takes{% endblock %}
 {% block page_title %}Stock Takes{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between mb-4">
-    <div></div>
-    {% if user.is_manager_role %}
-    <a href="{% url 'inventory:stock_take_create' %}" class="btn btn-primary">
-        <i class="bi bi-clipboard-plus me-1"></i>New Stock Take
-    </a>
-    {% endif %}
+<div class="d-flex justify-content-end mb-4">
+    <a href="{% url 'inventory:stock_take_create' %}" class="btn btn-dark btn-sm"><i class="bi bi-plus-lg me-1"></i>New Stock Take</a>
 </div>
-
-<div class="card border-0 shadow-sm">
-    <table class="table table-hover mb-0">
-        <thead class="table-dark">
-            <tr>
-                <th>Joint</th>
-                <th>Conducted By</th>
-                <th>Date</th>
-                <th>Notes</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for st in stock_takes %}
-            <tr>
-                <td><strong>{{ st.joint.display_name }}</strong></td>
-                <td>{{ st.conducted_by.get_full_name|default:st.conducted_by.username }}</td>
-                <td>{{ st.conducted_at|date:"d M Y H:i" }}</td>
-                <td class="text-muted">{{ st.notes|truncatechars:50|default:"—" }}</td>
-                <td>
-                    <a href="{% url 'inventory:stock_take_detail' st.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="5" class="text-center text-muted py-5">No stock takes recorded yet.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+            <thead class="table-light"><tr><th>Joint</th><th>Conducted By</th><th>Date</th><th>Notes</th><th></th></tr></thead>
+            <tbody>
+                {% for st in stock_takes %}
+                <tr>
+                    <td class="fw-semibold">{{ st.joint.display_name }}</td>
+                    <td>{{ st.conducted_by }}</td>
+                    <td>{{ st.conducted_at|date:"d M Y H:i" }}</td>
+                    <td class="text-muted">{{ st.notes|truncatechars:40 }}</td>
+                    <td><a href="{% url 'inventory:stock_take_detail' st.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;">View</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-5">No stock takes yet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

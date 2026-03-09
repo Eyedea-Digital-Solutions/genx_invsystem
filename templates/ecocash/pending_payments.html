@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Pending EcoCash{% endblock %}
+{% block page_title %}Pending EcoCash Payments{% endblock %}
+
+{% block content %}
+{% if merchant_name %}
+<div class="alert alert-info border-0 mb-4" style="font-size:13px;">
+    <i class="bi bi-phone me-2"></i>EcoCash to: <strong>{{ econet_number }}</strong> — {{ merchant_name }}
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:13px;">
+            <thead class="table-light">
+                <tr><th>Receipt</th><th>Joint</th><th>Staff</th><th>Amount</th><th>Time</th><th>Confirm</th></tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td class="fw-semibold">{{ tx.sale.receipt_number }}</td>
+                    <td>{{ tx.sale.joint.display_name }}</td>
+                    <td>{{ tx.sale.sold_by.get_full_name|default:tx.sale.sold_by.username }}</td>
+                    <td class="fw-bold">${{ tx.amount }}</td>
+                    <td class="text-muted">{{ tx.created_at|timesince }} ago</td>
+                    <td>
+                        <form action="{% url 'ecocash:confirm_payment' tx.pk %}" method="post" class="d-flex gap-1">
+                            {% csrf_token %}
+                            <input type="text" name="reference" class="form-control form-control-sm" placeholder="Ref #" required style="width:90px;">
+                            <button type="submit" class="btn btn-sm btn-success">Confirm</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-5">No pending payments</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

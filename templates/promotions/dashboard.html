@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Promotions{% endblock %}
+{% block page_title %}Promotions{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div></div>
+    {% if user.is_admin_role %}
+    <a href="{% url 'promotions:create' %}" class="btn btn-dark btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>New Promotion
+    </a>
+    {% endif %}
+</div>
+
+{% if active %}
+<h6 class="fw-bold mb-3"><span class="badge bg-success me-2">{{ active|length }}</span>Active</h6>
+<div class="row g-3 mb-4">
+    {% for promo in active %}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;border-left:4px solid #16a34a !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="fw-bold">{{ promo.name }}</div>
+                        <div class="text-muted" style="font-size:12px;">{{ promo.get_promo_type_display }}</div>
+                        {% if promo.joint %}<div style="font-size:11px;">{{ promo.joint.display_name }}</div>{% endif %}
+                    </div>
+                    {% if user.is_manager_role %}
+                    <form action="{% url 'promotions:toggle' promo.pk %}" method="post" class="d-inline">{% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:11px;">Deactivate</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% if promo.end_date %}<div class="text-muted mt-2" style="font-size:11px;"><i class="bi bi-calendar me-1"></i>Ends {{ promo.end_date }}</div>{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if upcoming %}
+<h6 class="fw-bold mb-3"><span class="badge bg-info me-2">{{ upcoming|length }}</span>Upcoming</h6>
+<div class="row g-3 mb-4">
+    {% for promo in upcoming %}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm" style="border-radius:12px;">
+            <div class="card-body">
+                <div class="fw-bold">{{ promo.name }}</div>
+                <div class="text-muted" style="font-size:12px;">{{ promo.get_promo_type_display }}</div>
+                <div class="text-muted" style="font-size:11px;margin-top:4px;"><i class="bi bi-calendar me-1"></i>Starts {{ promo.start_date }}</div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if inactive %}
+<h6 class="fw-bold mb-3 text-muted">Inactive ({{ inactive|length }})</h6>
+<div class="row g-3 mb-4">
+    {% for promo in inactive %}
+    <div class="col-md-4">
+        <div class="card border-0" style="border-radius:12px;opacity:.6;border:1px solid #e5e3de;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="fw-bold">{{ promo.name }}</div>
+                        <div class="text-muted" style="font-size:12px;">{{ promo.get_promo_type_display }}</div>
+                    </div>
+                    {% if user.is_manager_role %}
+                    <form action="{% url 'promotions:toggle' promo.pk %}" method="post" class="d-inline">{% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-success" style="font-size:11px;">Activate</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if clearance_products %}
+<h6 class="fw-bold mb-3"><span class="badge" style="background:#5b21b6;">{{ clearance_products|length }}</span> Clearance Products</h6>
+<div class="card border-0 shadow-sm" style="border-radius:12px;">
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:13px;">
+            <thead class="table-light"><tr><th>Product</th><th>Joint</th><th>Normal Price</th><th>Clearance Price</th><th>Stock</th></tr></thead>
+            <tbody>
+                {% for p in clearance_products %}
+                <tr>
+                    <td class="fw-semibold">{{ p.name }}</td>
+                    <td>{{ p.joint.display_name }}</td>
+                    <td>${{ p.price }}</td>
+                    <td class="fw-bold" style="color:#5b21b6;">${{ p.clearance_price }}</td>
+                    <td>{{ p.current_stock }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if not active and not upcoming and not inactive and not clearance_products %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-tag" style="font-size:48px;display:block;margin-bottom:12px;"></i>
+    <p>No promotions yet. {% if user.is_admin_role %}<a href="{% url 'promotions:create' %}">Create one</a>.{% endif %}</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,821 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Terminal | GenX</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --ink: #0d0d14;
+            --panel: #17171f;
+            --card: #1e1e28;
+            --border: rgba(255,255,255,0.07);
+            --accent: #e94560;
+            --green: #16a34a;
+            --amber: #d97706;
+            --text: rgba(255,255,255,0.85);
+            --muted: rgba(255,255,255,0.35);
+            --bar-h: 52px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--ink);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 13px;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .pos-topbar {
+            height: 44px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .pos-topbar .brand { font-weight: 800; font-size: 15px; color: #fff; }
+        .pos-topbar .brand span { color: var(--accent); }
+        .pos-main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 340px 260px;
+            gap: 0;
+            overflow: hidden;
+        }
+        .panel {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-right: 1px solid var(--border);
+        }
+        .panel-head {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            background: var(--panel);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .panel-head label { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); }
+        .panel-scroll { flex: 1; overflow-y: auto; padding: 10px; }
+        .panel-scroll::-webkit-scrollbar { width: 3px; }
+        .panel-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+
+        /* LEFT: product browser */
+        #barcode-input {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            color: #fff;
+            padding: 7px 12px;
+            font-size: 14px;
+            flex: 1;
+        }
+        #barcode-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(233,69,96,0.2); }
+        .filter-tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; flex-shrink: 0; }
+        .filter-tab {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            background: rgba(255,255,255,0.06);
+            color: var(--muted);
+            border: 1px solid transparent;
+            transition: all 0.1s;
+        }
+        .filter-tab.active, .filter-tab:hover { background: var(--accent); color: #fff; }
+        .cat-bar { display: flex; gap: 6px; padding: 8px 10px; overflow-x: auto; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+        .cat-bar::-webkit-scrollbar { height: 2px; }
+        .cat-btn {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            background: rgba(255,255,255,0.06);
+            color: var(--muted);
+            border: 1px solid transparent;
+            white-space: nowrap;
+            transition: all 0.1s;
+        }
+        .cat-btn.active { background: rgba(255,255,255,0.14); color: #fff; border-color: rgba(255,255,255,0.2); }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+        .prod-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.12s;
+            user-select: none;
+        }
+        .prod-card:hover { border-color: rgba(255,255,255,0.2); background: #252530; transform: translateY(-1px); }
+        .prod-card:active { transform: translateY(0); }
+        .prod-card.out { opacity: 0.4; cursor: not-allowed; }
+        .prod-name { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.3; margin-bottom: 6px; }
+        .prod-price { font-size: 14px; font-weight: 800; color: #fff; }
+        .prod-price .orig { text-decoration: line-through; font-size: 10px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+        .prod-stock { font-size: 10px; color: var(--muted); margin-top: 3px; }
+        .prod-badge { font-size: 9px; font-weight: 800; padding: 2px 5px; border-radius: 3px; display: inline-block; margin-bottom: 4px; }
+        .pb-clr { background: #5b21b6; color: #fff; }
+        .pb-sale { background: #92400e; color: #fde68a; }
+
+        /* CENTER: cart */
+        #joint-select {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 6px;
+            color: #fff;
+            padding: 5px 10px;
+            font-size: 12px;
+            flex: 1;
+        }
+        .cart-table { width: 100%; border-collapse: collapse; }
+        .cart-table th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+        .cart-table td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+        .cart-table tr:last-child td { border-bottom: none; }
+        .qty-ctrl { display: flex; align-items: center; gap: 4px; }
+        .qty-btn {
+            width: 22px; height: 22px;
+            background: rgba(255,255,255,0.08);
+            border: none;
+            border-radius: 4px;
+            color: var(--text);
+            font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .qty-btn:hover { background: rgba(255,255,255,0.16); }
+        .qty-val { min-width: 24px; text-align: center; font-weight: 700; font-size: 13px; }
+        .remove-btn { background: none; border: none; color: rgba(255,100,100,0.5); cursor: pointer; font-size: 15px; padding: 2px 4px; }
+        .remove-btn:hover { color: #ff5555; }
+        .promo-banner {
+            background: linear-gradient(135deg, #16a34a22, #16a34a11);
+            border: 1px solid #16a34a55;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin: 8px;
+            color: #4ade80;
+            font-size: 12px;
+            font-weight: 600;
+            display: none;
+        }
+        .free-row td { color: #4ade80; }
+        .cart-empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+
+        /* RIGHT: payment */
+        .customer-input {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #fff;
+            padding: 8px 12px;
+            font-size: 13px;
+            width: 100%;
+            margin-bottom: 14px;
+        }
+        .customer-input:focus { outline: none; border-color: var(--accent); }
+        .customer-input::placeholder { color: var(--muted); }
+        .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+        .totals-row.total { font-size: 22px; font-weight: 900; color: #fff; padding: 12px 0; border-top: 1px solid var(--border); margin-top: 4px; }
+        .totals-row .lbl { color: var(--muted); }
+        .totals-row .disc { color: #4ade80; }
+        .pay-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 6px;
+            transition: opacity 0.12s;
+        }
+        .pay-btn:hover { opacity: 0.85; }
+        .pay-cash { background: #16a34a; color: #fff; }
+        .pay-ecocash { background: #059669; color: #fff; }
+        .pay-card { background: #2563eb; color: #fff; }
+        .pay-mixed { background: #7c3aed; color: #fff; }
+
+        /* bottom bar */
+        .pos-bottombar {
+            height: var(--bar-h);
+            background: var(--panel);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .shortcut-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .shortcut-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .shortcut-btn .key { background: rgba(255,255,255,0.12); border-radius: 4px; padding: 1px 5px; font-size: 10px; margin-right: 6px; }
+        .shortcut-btn.danger { border-color: rgba(233,69,96,0.3); color: #ff8096; }
+        .shortcut-btn.danger:hover { background: rgba(233,69,96,0.12); }
+        .pay-trigger {
+            padding: 10px 24px;
+            background: var(--accent);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            margin-left: auto;
+            transition: opacity 0.12s;
+        }
+        .pay-trigger:hover { opacity: 0.85; }
+
+        /* held sales */
+        .held-badge { background: #d97706; color: #fff; font-size: 10px; font-weight: 700; border-radius: 20px; padding: 2px 8px; }
+
+        /* modal */
+        .modal-content { background: #1e1e28; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; color: var(--text); }
+        .modal-header { border-bottom: 1px solid var(--border); }
+        .modal-footer { border-top: 1px solid var(--border); }
+        .modal-title { color: #fff; }
+        .btn-close { filter: invert(1); }
+
+        @media print { body { display: none; } }
+    </style>
+</head>
+<body>
+
+<div class="pos-topbar">
+    <div class="brand">GenX <span>POS</span></div>
+    <div style="flex:1;"></div>
+    <select id="joint-select">
+        <option value="">— Select Joint —</option>
+        {% for joint in joints %}
+        <option value="{{ joint.pk }}"
+            {% if default_joint and default_joint.pk == joint.pk %}selected{% endif %}>
+            {{ joint.display_name }}
+        </option>
+        {% endfor %}
+    </select>
+    {% if held_sales %}
+    <button class="shortcut-btn" data-bs-toggle="modal" data-bs-target="#heldModal">
+        <i class="bi bi-pause-circle me-1"></i>Held
+        <span class="held-badge ms-1">{{ held_sales|length }}</span>
+    </button>
+    {% endif %}
+    <a href="{% url 'sales:dashboard' %}" class="shortcut-btn">
+        <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+</div>
+
+<div class="pos-main">
+
+    <!-- LEFT: Product Browser -->
+    <div class="panel">
+        <div class="panel-head">
+            <label>Products</label>
+            <input type="text" id="barcode-input" placeholder="Scan barcode or search…" autocomplete="off">
+        </div>
+        <div class="filter-tabs">
+            <span class="filter-tab active" data-filter="all">All</span>
+            <span class="filter-tab" data-filter="in_stock">In Stock</span>
+            <span class="filter-tab" data-filter="sale">On Sale</span>
+            <span class="filter-tab" data-filter="clearance">Clearance</span>
+            <span class="filter-tab" data-filter="low_stock">Low Stock</span>
+        </div>
+        <div class="cat-bar" id="cat-bar">
+            <span class="cat-btn active" data-cat="">All</span>
+        </div>
+        <div class="panel-scroll">
+            <div class="product-grid" id="product-grid">
+                <div class="cart-empty"><i class="bi bi-shop" style="font-size:32px;display:block;margin-bottom:10px;"></i>Select a joint to load products</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CENTER: Cart -->
+    <div class="panel">
+        <div class="panel-head">
+            <label>Cart</label>
+            <span id="cart-count" style="color:var(--muted);font-size:11px;"></span>
+        </div>
+        <div id="promo-banner" class="promo-banner">
+            <i class="bi bi-tag-fill me-2"></i><span id="promo-banner-text"></span>
+        </div>
+        <div class="panel-scroll" style="padding:0;">
+            <div id="cart-empty" class="cart-empty"><i class="bi bi-cart" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.3;"></i>Cart is empty</div>
+            <table class="cart-table" id="cart-table" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th style="text-align:right;">Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="cart-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- RIGHT: Payment -->
+    <div class="panel" style="border-right:none;">
+        <div class="panel-head"><label>Payment</label></div>
+        <div class="panel-scroll">
+            <input type="text" class="customer-input" id="customer-name" placeholder="Customer name (optional)">
+
+            <div class="totals-row"><span class="lbl">Subtotal</span><span id="disp-subtotal">$0.00</span></div>
+            <div class="totals-row" id="disc-row" style="display:none;"><span class="lbl disc" id="disc-label">Discount</span><span class="disc" id="disp-discount">-$0.00</span></div>
+            <div class="totals-row total"><span>TOTAL</span><span id="disp-total">$0.00</span></div>
+
+            <div style="margin-top:16px;">
+                <button class="pay-btn pay-cash" onclick="completeSale('cash')"><i class="bi bi-cash me-2"></i>Cash</button>
+                <button class="pay-btn pay-ecocash" onclick="completeSale('ecocash')"><i class="bi bi-phone me-2"></i>EcoCash</button>
+                <button class="pay-btn pay-card" onclick="completeSale('card')"><i class="bi bi-credit-card me-2"></i>Card</button>
+                <button class="pay-btn pay-mixed" onclick="completeSale('mixed')"><i class="bi bi-shuffle me-2"></i>Mixed</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="pos-bottombar">
+    <button class="shortcut-btn danger" onclick="clearCart()"><span class="key">F9</span> Cancel</button>
+    <button class="shortcut-btn" onclick="holdTransaction()"><span class="key">F8</span> Hold</button>
+    <button class="shortcut-btn" onclick="focusBarcode()"><span class="key">F2</span> Scan</button>
+    <button class="pay-trigger" id="pay-btn" onclick="completeSale(currentPayMethod)">
+        <span class="key">F4</span> Pay <span id="pay-total-label">$0.00</span>
+    </button>
+</div>
+
+<!-- Held Sales Modal -->
+<div class="modal fade" id="heldModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Held Transactions</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-2">
+                {% for sale in held_sales %}
+                <div class="d-flex align-items-center justify-content-between p-2 rounded mb-1" style="background:rgba(255,255,255,0.05);">
+                    <div>
+                        <div style="font-size:12px;font-weight:700;">{{ sale.receipt_number }}</div>
+                        <div style="font-size:11px;color:var(--muted);">{{ sale.customer_name|default:"No name" }} · {{ sale.items.count }} item(s)</div>
+                    </div>
+                    <button class="btn btn-sm btn-warning" style="font-size:11px;" onclick="recallSale({{ sale.pk }})" data-bs-dismiss="modal">Recall</button>
+                </div>
+                {% empty %}
+                <p class="text-muted small p-2">No held transactions.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Modal -->
+<div class="modal fade" id="receiptModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title"><i class="bi bi-check-circle-fill text-success me-2"></i>Sale Complete</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div id="receipt-number" style="font-size:18px;font-weight:800;color:#fff;margin-bottom:8px;"></div>
+                <div style="color:var(--muted);font-size:12px;margin-bottom:20px;">Transaction completed</div>
+                <a id="receipt-link" href="#" target="_blank" class="btn btn-sm btn-outline-light w-100 mb-2">
+                    <i class="bi bi-printer me-2"></i>Print Receipt
+                </a>
+                <button class="btn btn-sm w-100" style="background:var(--accent);color:#fff;" data-bs-dismiss="modal" onclick="newSale()">
+                    New Sale
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const CSRF = '{{ csrf_token }}';
+const URLS = {
+    scan: '{% url "sales:pos_scan" %}',
+    search: '{% url "sales:pos_search" %}',
+    categories: '{% url "sales:pos_categories" %}',
+    updateCart: '{% url "sales:pos_update_cart" %}',
+    complete: '{% url "sales:pos_complete" %}',
+    hold: '{% url "sales:pos_hold" %}',
+    recall: id => `/sales/pos/recall/${id}/`,
+};
+
+let cart = [];
+let currentFilter = 'all';
+let currentCategory = '';
+let currentPayMethod = 'cash';
+let searchTimeout = null;
+let cartDiscount = 0;
+let cartDiscountLabel = '';
+
+const $ = id => document.getElementById(id);
+const jointEl = $('joint-select');
+
+function getJointId() { return jointEl.value; }
+
+// Barcode / search
+const barcodeEl = $('barcode-input');
+
+barcodeEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        const val = barcodeEl.value.trim();
+        if (val) scanBarcode(val);
+    }
+});
+
+barcodeEl.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    const val = barcodeEl.value.trim();
+    if (!val) { loadProducts(); return; }
+    searchTimeout = setTimeout(() => searchProducts(val), 220);
+});
+
+jointEl.addEventListener('change', () => {
+    loadCategories();
+    loadProducts();
+    cart = [];
+    renderCart();
+});
+
+function focusBarcode() { barcodeEl.focus(); barcodeEl.select(); }
+
+async function scanBarcode(barcode) {
+    const jid = getJointId();
+    if (!jid) { alert('Select a joint first.'); return; }
+    const res = await fetch(`${URLS.scan}?barcode=${encodeURIComponent(barcode)}&joint_id=${jid}`);
+    const data = await res.json();
+    if (data.found) {
+        beep();
+        addToCart(data.product);
+        barcodeEl.value = '';
+        barcodeEl.focus();
+    } else {
+        barcodeEl.style.borderColor = '#e94560';
+        setTimeout(() => barcodeEl.style.borderColor = '', 600);
+    }
+}
+
+async function searchProducts(q) {
+    const jid = getJointId();
+    if (!jid) return;
+    const url = `${URLS.search}?q=${encodeURIComponent(q)}&joint_id=${jid}&filter=${currentFilter}&category_id=${currentCategory}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    renderProductGrid(data.products);
+}
+
+async function loadProducts() {
+    const jid = getJointId();
+    if (!jid) return;
+    const url = `${URLS.search}?joint_id=${jid}&filter=${currentFilter}&category_id=${currentCategory}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    renderProductGrid(data.products);
+}
+
+async function loadCategories() {
+    const jid = getJointId();
+    if (!jid) return;
+    const res = await fetch(`${URLS.categories}?joint_id=${jid}`);
+    const data = await res.json();
+    const bar = $('cat-bar');
+    bar.innerHTML = '<span class="cat-btn active" data-cat="">All</span>';
+    data.categories.forEach(c => {
+        const btn = document.createElement('span');
+        btn.className = 'cat-btn';
+        btn.dataset.cat = c.id;
+        btn.textContent = c.name;
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentCategory = c.id;
+            loadProducts();
+        });
+        bar.appendChild(btn);
+    });
+    bar.querySelector('[data-cat=""]').addEventListener('click', e => {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        currentCategory = '';
+        loadProducts();
+    });
+}
+
+function renderProductGrid(products) {
+    const grid = $('product-grid');
+    if (!products.length) {
+        grid.innerHTML = '<div class="cart-empty" style="grid-column:1/-1;"><i class="bi bi-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>No products found</div>';
+        return;
+    }
+    grid.innerHTML = products.map(p => {
+        const outOfStock = p.stock <= 0;
+        const badge = p.is_clearance ? '<span class="prod-badge pb-clr">CLR</span>' :
+                      p.promotion_label ? '<span class="prod-badge pb-sale">SALE</span>' : '';
+        const origPrice = p.original_price !== p.price ? `<span class="orig">$${p.original_price}</span>` : '';
+        return `<div class="prod-card${outOfStock ? ' out' : ''}" onclick="${outOfStock ? '' : `addToCartById(${p.id})`}">
+            ${badge}
+            <div class="prod-name">${p.name}</div>
+            <div class="prod-price">$${p.price}${origPrice}</div>
+            <div class="prod-stock">${p.stock > 0 ? `${p.stock} in stock` : '⚠ Out of stock'}</div>
+        </div>`;
+    }).join('');
+    window._productCache = {};
+    products.forEach(p => window._productCache[p.id] = p);
+}
+
+function addToCartById(id) {
+    const p = window._productCache?.[id];
+    if (p) addToCart(p);
+}
+
+function addToCart(product) {
+    const existing = cart.find(i => i.product_id === product.id && !i.is_free_gift);
+    if (existing) {
+        existing.qty++;
+    } else {
+        cart.push({
+            product_id: product.id,
+            name: product.name,
+            qty: 1,
+            unit_price: product.price,
+            is_free_gift: false,
+            promo_label: '',
+        });
+    }
+    updateCart();
+}
+
+async function updateCart() {
+    if (!cart.filter(i => !i.is_free_gift).length) {
+        cart = [];
+        cartDiscount = 0;
+        cartDiscountLabel = '';
+        renderCart();
+        return;
+    }
+    const jid = getJointId();
+    const res = await fetch(URLS.updateCart, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify({
+            joint_id: jid,
+            items: cart.filter(i => !i.is_free_gift).map(i => ({
+                product_id: i.product_id,
+                qty: i.qty,
+                unit_price: i.unit_price,
+            }))
+        })
+    });
+    const data = await res.json();
+    cart = data.items;
+    cartDiscount = parseFloat(data.cart_discount);
+    cartDiscountLabel = data.cart_discount_label;
+    renderCart(data);
+}
+
+function renderCart(data) {
+    const body = $('cart-body');
+    const empty = $('cart-empty');
+    const table = $('cart-table');
+    const banner = $('promo-banner');
+    const realItems = cart.filter(i => !i.is_free_gift);
+
+    $('cart-count').textContent = realItems.length ? `${realItems.length} item(s)` : '';
+
+    if (!cart.length) {
+        empty.style.display = 'block';
+        table.style.display = 'none';
+        banner.style.display = 'none';
+        updateTotals(0, 0, 0);
+        return;
+    }
+    empty.style.display = 'none';
+    table.style.display = 'table';
+
+    if (data && cartDiscount > 0) {
+        banner.style.display = 'block';
+        $('promo-banner-text').textContent = `🎉 ${cartDiscountLabel} — $${cartDiscount.toFixed(2)} off applied!`;
+    } else {
+        banner.style.display = 'none';
+    }
+
+    body.innerHTML = cart.map((item, idx) => {
+        if (item.is_free_gift) {
+            return `<tr class="free-row">
+                <td><div style="font-size:12px;">${item.name}</div><span style="font-size:10px;background:#16a34a;color:#fff;padding:1px 5px;border-radius:3px;">FREE</span></td>
+                <td>${item.qty}</td>
+                <td style="text-align:right;">$0.00</td>
+                <td></td>
+            </tr>`;
+        }
+        const lineTotal = (item.qty * parseFloat(item.unit_price)).toFixed(2);
+        return `<tr>
+            <td>
+                <div style="font-size:12px;font-weight:600;">${item.name}</div>
+                ${item.promo_label ? `<span style="font-size:10px;color:#fbbf24;">${item.promo_label}</span>` : ''}
+            </td>
+            <td>
+                <div class="qty-ctrl">
+                    <button class="qty-btn" onclick="changeQty(${idx}, -1)">−</button>
+                    <span class="qty-val">${item.qty}</span>
+                    <button class="qty-btn" onclick="changeQty(${idx}, 1)">+</button>
+                </div>
+            </td>
+            <td style="text-align:right;font-weight:700;">$${lineTotal}</td>
+            <td><button class="remove-btn" onclick="removeItem(${idx})"><i class="bi bi-x"></i></button></td>
+        </tr>`;
+    }).join('');
+
+    if (data) {
+        updateTotals(parseFloat(data.subtotal), cartDiscount, parseFloat(data.total));
+    }
+}
+
+function updateTotals(subtotal, discount, total) {
+    $('disp-subtotal').textContent = `$${subtotal.toFixed(2)}`;
+    $('disp-total').textContent = `$${total.toFixed(2)}`;
+    $('pay-total-label').textContent = `$${total.toFixed(2)}`;
+    const discRow = $('disc-row');
+    if (discount > 0) {
+        discRow.style.display = 'flex';
+        $('disc-label').textContent = cartDiscountLabel || 'Discount';
+        $('disp-discount').textContent = `-$${discount.toFixed(2)}`;
+    } else {
+        discRow.style.display = 'none';
+    }
+}
+
+function changeQty(idx, delta) {
+    const realItems = cart.filter(i => !i.is_free_gift);
+    const item = realItems[idx];
+    if (!item) return;
+    item.qty = Math.max(1, item.qty + delta);
+    updateCart();
+}
+
+function removeItem(idx) {
+    const realItems = cart.filter(i => !i.is_free_gift);
+    const item = realItems[idx];
+    if (!item) return;
+    cart = cart.filter(i => i !== item);
+    updateCart();
+}
+
+function clearCart() {
+    if (!cart.length || confirm('Clear cart?')) {
+        cart = [];
+        cartDiscount = 0;
+        cartDiscountLabel = '';
+        renderCart();
+        focusBarcode();
+    }
+}
+
+async function completeSale(method) {
+    currentPayMethod = method;
+    const jid = getJointId();
+    if (!jid) { alert('Select a joint first.'); return; }
+    const realItems = cart.filter(i => !i.is_free_gift);
+    if (!realItems.length) { alert('Cart is empty.'); return; }
+
+    const payload = {
+        joint_id: jid,
+        payment_method: method,
+        customer_name: $('customer-name').value.trim(),
+        items: cart,
+        cart_discount: cartDiscount,
+        cart_discount_label: cartDiscountLabel,
+    };
+
+    const res = await fetch(URLS.complete, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.success) {
+        $('receipt-number').textContent = data.receipt_number;
+        $('receipt-link').href = data.receipt_url;
+        new bootstrap.Modal($('receiptModal')).show();
+        cart = [];
+        cartDiscount = 0;
+        cartDiscountLabel = '';
+        renderCart();
+        setTimeout(() => window.open(data.receipt_url, '_blank'), 300);
+    } else {
+        alert('Error: ' + data.error);
+    }
+}
+
+async function holdTransaction() {
+    const jid = getJointId();
+    if (!jid || !cart.filter(i => !i.is_free_gift).length) return;
+    const res = await fetch(URLS.hold, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify({
+            joint_id: jid,
+            items: cart.filter(i => !i.is_free_gift),
+            customer_name: $('customer-name').value.trim(),
+        }),
+    });
+    const data = await res.json();
+    if (data.success) {
+        alert('Transaction held.');
+        clearCart();
+        location.reload();
+    }
+}
+
+async function recallSale(pk) {
+    const res = await fetch(URLS.recall(pk));
+    const data = await res.json();
+    if (data.success) {
+        cart = data.items.map(i => ({
+            product_id: i.product_id,
+            name: i.name,
+            qty: i.qty,
+            unit_price: i.unit_price,
+            is_free_gift: i.is_free_gift,
+            promo_label: i.promo_label,
+        }));
+        if (data.customer_name) $('customer-name').value = data.customer_name;
+        updateCart();
+    }
+}
+
+function newSale() {
+    $('customer-name').value = '';
+    focusBarcode();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+    if (e.key === 'F2') { e.preventDefault(); focusBarcode(); }
+    if (e.key === 'F4') { e.preventDefault(); completeSale(currentPayMethod); }
+    if (e.key === 'F8') { e.preventDefault(); holdTransaction(); }
+    if (e.key === 'F9') { e.preventDefault(); clearCart(); }
+    if (e.key === 'Escape') { bootstrap.Modal.getInstance($('receiptModal'))?.hide(); }
+});
+
+// Filter tabs
+document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.filter;
+        loadProducts();
+    });
+});
+
+// Audio beep
+function beep() {
+    try {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.08);
+    } catch {}
+}
+
+// Init
+if (getJointId()) {
+    loadCategories();
+    loadProducts();
+}
+focusBarcode();
+</script>
+</body>
+</html>

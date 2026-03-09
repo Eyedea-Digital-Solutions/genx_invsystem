@@ -4,30 +4,17 @@ from django.utils import timezone
 
 
 class Joint(models.Model):
-    """
-    A 'Joint' is one of the three shops: Eyedentity, GenX, or Armor Sole.
-    Everything in the system belongs to a joint.
-    """
-
     JOINT_CHOICES = [
         ('eyedentity', 'Eyedentity'),
         ('genx', 'GenX'),
         ('armor_sole', 'Armor Sole'),
     ]
 
-    name = models.CharField(
-        max_length=50,
-        choices=JOINT_CHOICES,
-        unique=True,
-        help_text="The name/identifier of this shop."
-    )
-    display_name = models.CharField(max_length=100, help_text="Full display name, e.g. 'Eyedentity - Zee Eyewear'")
+    name = models.CharField(max_length=50, choices=JOINT_CHOICES, unique=True)
+    display_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
-    uses_product_codes = models.BooleanField(
-        default=False,
-        help_text="Eyedentity and Armor Sole use product codes; GenX does not."
-    )
+    uses_product_codes = models.BooleanField(default=False)
 
     def __str__(self):
         return self.display_name
@@ -36,28 +23,65 @@ class Joint(models.Model):
         ordering = ['name']
 
 
-class Product(models.Model):
-    """
-    A product sold at one of the joints.
-    Eyedentity and Armor Sole use product codes; GenX uses just names.
-    """
+class Supplier(models.Model):
+    name = models.CharField(max_length=200)
+    contact_person = models.CharField(max_length=200, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    address = models.TextField(blank=True)
 
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+
+
+class Brand(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['name']
+
+
+class Category(models.Model):
+    joint = models.ForeignKey(Joint, on_delete=models.CASCADE, related_name='categories')
+    name = models.CharField(max_length=100)
+    icon = models.CharField(max_length=50, blank=True)
+    color = models.CharField(max_length=20, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.joint.display_name} › {self.name}"
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+        verbose_name_plural = 'Categories'
+
+
+class Product(models.Model):
     joint = models.ForeignKey(Joint, on_delete=models.CASCADE, related_name='products')
-    code = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text="Product code (required for Eyedentity and Armor Sole)."
-    )
-    name = models.CharField(max_length=200, help_text="Product name or description.")
-    price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        help_text="Selling price in USD."
-    )
-    is_active = models.BooleanField(default=True, help_text="Uncheck to hide from sales without deleting.")
+    code = models.CharField(max_length=50, blank=True, null=True)
+    name = models.CharField(max_length=200)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    barcode = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='products')
+    brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True)
+    image = models.ImageField(upload_to='products/', null=True, blank=True)
+
+    sale_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    sale_start = models.DateField(null=True, blank=True)
+    sale_end = models.DateField(null=True, blank=True)
+
+    is_clearance = models.BooleanField(default=False)
+    clearance_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         if self.code:
@@ -65,8 +89,37 @@ class Product(models.Model):
         return self.name
 
     @property
+    def effective_price(self):
+        today = timezone.now().date()
+        if self.is_clearance and self.clearance_price:
+            return self.clearance_price
+        if self.sale_price:
+            in_date = True
+            if self.sale_start and today < self.sale_start:
+                in_date = False
+            if self.sale_end and today > self.sale_end:
+                in_date = False
+            if in_date:
+                return self.sale_price
+        return self.price
+
+    @property
+    def promotion_label(self):
+        today = timezone.now().date()
+        if self.is_clearance:
+            return 'CLEARANCE'
+        if self.sale_price:
+            in_date = True
+            if self.sale_start and today < self.sale_start:
+                in_date = False
+            if self.sale_end and today > self.sale_end:
+                in_date = False
+            if in_date:
+                return 'SALE'
+        return None
+
+    @property
     def current_stock(self):
-        """Returns the current stock quantity for this product."""
         try:
             return self.stock.quantity
         except Stock.DoesNotExist:
@@ -74,45 +127,51 @@ class Product(models.Model):
 
     @property
     def is_low_stock(self):
-        """Returns True if stock is at or below the low stock threshold."""
-        return self.current_stock <= settings.LOW_STOCK_THRESHOLD
+        try:
+            threshold = self.stock.min_quantity
+        except Stock.DoesNotExist:
+            threshold = getattr(settings, 'LOW_STOCK_THRESHOLD', 3)
+        return self.current_stock <= threshold
 
     class Meta:
         ordering = ['joint', 'name']
-        unique_together = [['joint', 'code']]  # Codes must be unique per joint
+        unique_together = [['joint', 'code']]
+        indexes = [
+            models.Index(fields=['barcode']),
+            models.Index(fields=['joint', 'is_active']),
+            models.Index(fields=['is_clearance']),
+            models.Index(fields=['joint', 'is_active', 'is_clearance']),
+        ]
 
 
 class Stock(models.Model):
-    """
-    Tracks stock levels for each product.
-    One Stock record per Product (OneToOne relationship).
-    Stock is automatically deducted when a sale is made.
-    """
-
     product = models.OneToOneField(Product, on_delete=models.CASCADE, related_name='stock')
-    quantity = models.IntegerField(default=0, help_text="Current quantity in stock.")
-    last_stock_take = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Date and time of the last monthly stock take."
-    )
+    quantity = models.IntegerField(default=0)
+    min_quantity = models.IntegerField(default=3)
+    reorder_level = models.IntegerField(default=10)
+    supplier = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, blank=True)
+    batch_number = models.CharField(max_length=100, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    last_stock_take = models.DateTimeField(null=True, blank=True)
     last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.product.name} - Qty: {self.quantity}"
 
+    @property
+    def is_expiring_soon(self):
+        from datetime import date, timedelta
+        if not self.expiry_date:
+            return False
+        return self.expiry_date <= date.today() + timedelta(days=30)
+
     def deduct(self, qty):
-        """
-        Deducts stock when a sale is made.
-        This is called automatically — do NOT call manually from outside.
-        """
         if self.quantity < qty:
             raise ValueError(f"Insufficient stock. Available: {self.quantity}, Requested: {qty}")
         self.quantity -= qty
         self.save()
 
     def add(self, qty):
-        """Adds stock (used during stock take or when receiving new stock)."""
         self.quantity += qty
         self.save()
 
@@ -121,18 +180,9 @@ class Stock(models.Model):
 
 
 class StockTake(models.Model):
-    """
-    Records monthly stock takes.
-    When a stock take is done, we log who did it, when, and what the count was.
-    Stock takes CANNOT be undone once saved.
-    """
-
     joint = models.ForeignKey(Joint, on_delete=models.CASCADE, related_name='stock_takes')
     conducted_by = models.ForeignKey(
-        'users.User',
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='stock_takes_conducted'
+        'users.User', on_delete=models.SET_NULL, null=True, related_name='stock_takes_conducted'
     )
     conducted_at = models.DateTimeField(default=timezone.now)
     notes = models.TextField(blank=True)
@@ -145,19 +195,13 @@ class StockTake(models.Model):
 
 
 class StockTakeItem(models.Model):
-    """
-    Individual product counts within a stock take.
-    Records what the actual count was vs what the system said.
-    """
-
     stock_take = models.ForeignKey(StockTake, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    system_count = models.IntegerField(help_text="What the system showed before the stock take.")
-    actual_count = models.IntegerField(help_text="The physical count during the stock take.")
+    system_count = models.IntegerField()
+    actual_count = models.IntegerField()
 
     @property
     def variance(self):
-        """Difference between system count and actual count."""
         return self.actual_count - self.system_count
 
     def __str__(self):
@@ -165,11 +209,6 @@ class StockTakeItem(models.Model):
 
 
 class StockTransfer(models.Model):
-    """
-    Records stock transfers between joints (shops).
-    For example, moving 5 pairs of shoes from Armor Sole to GenX.
-    """
-
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('completed', 'Completed'),
@@ -179,7 +218,9 @@ class StockTransfer(models.Model):
     to_joint = models.ForeignKey(Joint, on_delete=models.CASCADE, related_name='transfers_in')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.IntegerField()
-    transferred_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, related_name='stock_transfers')
+    transferred_by = models.ForeignKey(
+        'users.User', on_delete=models.SET_NULL, null=True, related_name='stock_transfers'
+    )
     transferred_at = models.DateTimeField(default=timezone.now)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     notes = models.TextField(blank=True)

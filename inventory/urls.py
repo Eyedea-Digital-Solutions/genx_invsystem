@@ -13,6 +13,9 @@ urlpatterns = [
     path('stock-takes/new/', views.stock_take_create, name='stock_take_create'),
     path('stock-takes/<int:pk>/', views.stock_take_detail, name='stock_take_detail'),
     path('transfers/new/', views.transfer_create, name='transfer_create'),
-    # AJAX endpoint
+    path('categories/', views.category_list, name='category_list'),
+    path('categories/add/', views.category_create, name='category_create'),
+    path('suppliers/', views.supplier_list, name='supplier_list'),
+    path('suppliers/add/', views.supplier_create, name='supplier_create'),
     path('api/products/', views.get_products_by_joint, name='get_products_by_joint'),
 ]
