@@ -297,7 +297,6 @@
     </div>
     <div class="with-thanks">With Thanks</div>
 </div>
-<div class="footer small">All payments are non-refundable.</div>
 <div class="footer tiny" style="margin-top:0.5mm;">{{ sale.receipt_number }} · {{ sale.get_payment_method_display }}</div>
 
 
@@ -371,7 +370,6 @@
 
 <div class="thin"></div>
 <div class="totals-section">
-    <div class="total-row small"><span>All payments are non-refundable</span></div>
     {% if sale.discount_amount and sale.discount_amount > 0 %}
     <div class="total-row" style="margin-top:1px;"><span>Subtotal</span><span>${{ sale.subtotal }}</span></div>
     <div class="total-row"><span>{{ sale.discount_label|default:"Discount" }}</span><span>-${{ sale.discount_amount }}</span></div>
@@ -479,7 +477,6 @@
     </div>
     <div class="with-thanks">With Thanks</div>
 </div>
-<div class="footer small">All payments are non-refundable.</div>
 <div class="footer tiny" style="margin-top:0.5mm;">{{ sale.receipt_number }} · {{ sale.get_payment_method_display }}</div>
 
 {% endif %}
@@ -491,10 +488,15 @@
 </div>
 
 <script>
-// Auto-print when page loads — works once Gprinter is set as default
-// in Android Settings → Connected devices → Printing
+// Auto-print when page loads, then close the tab
 window.addEventListener('load', function () {
-    setTimeout(function () { window.print(); }, 500);
+    setTimeout(function () {
+        window.print();
+    }, 500);
+});
+// Close the receipt tab after printing is done
+window.addEventListener('afterprint', function () {
+    window.close();
 });
 </script>
 </body>
