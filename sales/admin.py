@@ -1,7 +1,9 @@
 """
-sales/admin.py
-──────────────
-Full admin registration for Sale, SaleItem, SaleAuditLog.
+sales/admin.py  — fixed version
+Changes vs original:
+  - AuditLogInline: performed_by shown safely (can now be null/SET_NULL)
+  - SaleAuditLogAdmin: performed_by null-safe display
+  - has_delete_permission restored to default (True) so deletion works
 """
 import json
 
@@ -39,10 +41,16 @@ class SaleItemInline(admin.TabularInline):
 class AuditLogInline(admin.StackedInline):
     model           = SaleAuditLog
     extra           = 0
-    readonly_fields = ['action', 'performed_by', 'timestamp', 'details_pretty']
-    fields          = ['action', 'performed_by', 'timestamp', 'details_pretty']
+    readonly_fields = ['action', 'performed_by_display', 'timestamp', 'details_pretty']
+    fields          = ['action', 'performed_by_display', 'timestamp', 'details_pretty']
     can_delete      = False
     verbose_name    = 'Audit Log Entry'
+
+    @admin.display(description='Performed By')
+    def performed_by_display(self, obj):
+        if obj.performed_by:
+            return obj.performed_by.get_full_name() or obj.performed_by.username
+        return '—'
 
     @admin.display(description='Details')
     def details_pretty(self, obj):
@@ -202,15 +210,25 @@ genx_admin_site.register(SaleItem, SaleItemAdmin)
 
 # ─── AUDIT LOG ────────────────────────────────────────────────────────────────
 class SaleAuditLogAdmin(admin.ModelAdmin):
-    list_display    = ['sale_link', 'action_badge', 'performed_by', 'timestamp_fmt']
-    list_filter     = ['action', 'performed_by']
+    list_display    = ['sale_link', 'action_badge', 'performed_by_display', 'timestamp_fmt']
+    list_filter     = ['action']
     search_fields   = ['sale__receipt_number', 'performed_by__username']
     readonly_fields = ['sale', 'action', 'performed_by', 'timestamp', 'details_pretty']
+
+    # Audit logs should not be manually deleted via admin
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
 
     @admin.display(description='Sale')
     def sale_link(self, obj):
         url = reverse('genx_admin:sales_sale_change', args=[obj.sale_id])
         return format_html('<a href="{}">{}</a>', url, obj.sale.receipt_number)
+
+    @admin.display(description='Performed By')
+    def performed_by_display(self, obj):
+        if obj.performed_by:
+            return obj.performed_by.get_full_name() or obj.performed_by.username
+        return '—'
 
     @admin.display(description='Action')
     def action_badge(self, obj):

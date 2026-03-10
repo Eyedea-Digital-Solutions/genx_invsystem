@@ -46,14 +46,11 @@ class GenXAdminSite(AdminSite):
             today_qs = Sale.objects.filter(sale_date__date=today, is_held=False)
             stats["today_count"] = today_qs.count()
 
-            # Prefer aggregating from SaleItem rows (avoids loading Sale objects
-            # and calling Python-side properties which caused the original 500s)
             today_total = (
                 SaleItem.objects
                 .filter(sale__sale_date__date=today, sale__is_held=False)
                 .aggregate(t=Sum("line_total"))["t"]
             )
-            # Fallback: if total_amount is a real DB column on Sale
             if today_total is None:
                 today_total = today_qs.aggregate(t=Sum("total_amount"))["t"]
 
@@ -101,8 +98,6 @@ class GenXAdminSite(AdminSite):
             from inventory.models import Stock
 
             threshold = getattr(django_settings, "LOW_STOCK_THRESHOLD", 3)
-            # Query Stock directly instead of going through Product — avoids
-            # the extra JOIN that was causing issues on some DB configs
             stats["low_stock_count"] = (
                 Stock.objects
                 .filter(
@@ -121,13 +116,25 @@ class GenXAdminSite(AdminSite):
         except Exception:
             pass
 
-        # ── active promotions ──────────────────────────────────────────
+        # ── active promotions — pure DB query, no Python-side filtering ──
+        # Avoids the 500 that came from loading all promos and calling
+        # the is_currently_active property in Python.
         try:
             from promotions.models import Promotion
-            stats["active_promos"] = sum(
-                1 for p in Promotion.objects.filter(is_active=True)
-                if p.is_currently_active
-            )
+            from django.db.models import Q
+
+            now = timezone.now()
+            today_date = now.date()
+
+            stats["active_promos"] = Promotion.objects.filter(
+                is_active=True,
+            ).filter(
+                # start_date is null OR start_date <= today
+                Q(start_date__isnull=True) | Q(start_date__lte=today_date)
+            ).filter(
+                # end_date is null OR end_date >= today
+                Q(end_date__isnull=True) | Q(end_date__gte=today_date)
+            ).count()
         except Exception:
             pass
 

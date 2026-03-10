@@ -20,7 +20,10 @@ class Sale(models.Model):
 
     joint = models.ForeignKey(Joint, on_delete=models.PROTECT, related_name='sales')
     sold_by = models.ForeignKey(
-        'users.User', on_delete=models.PROTECT, related_name='sales_made'
+        'users.User',
+        on_delete=models.SET_NULL,   # FIX: was PROTECT — staff accounts can now be removed
+        null=True, blank=True,
+        related_name='sales_made',
     )
     sale_date = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -30,7 +33,7 @@ class Sale(models.Model):
         upload_to='manual_receipts/%Y/%m/', null=True, blank=True
     )
     customer_name = models.CharField(max_length=200, blank=True)
-    customer_phone = models.CharField(max_length=30, blank=True)   # ← NEW
+    customer_phone = models.CharField(max_length=30, blank=True)
     notes = models.TextField(blank=True)
     receipt_number = models.CharField(max_length=50, unique=True, blank=True)
 
@@ -38,12 +41,12 @@ class Sale(models.Model):
     discount_type = models.CharField(
         max_length=20,
         choices=[('fixed', 'Fixed $'), ('percent', 'Percentage %')],
-        blank=True
+        blank=True,
     )
     discount_label = models.CharField(max_length=200, blank=True)
     promotion_applied = models.ForeignKey(
         'promotions.Promotion', on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='sales'
+        null=True, blank=True, related_name='sales',
     )
 
     is_held = models.BooleanField(default=False)
@@ -70,7 +73,7 @@ class Sale(models.Model):
         prefix = prefix_map.get(self.joint.name, 'SAL')
         last_sale = Sale.objects.filter(
             joint=self.joint,
-            receipt_number__startswith=prefix
+            receipt_number__startswith=prefix,
         ).order_by('-pk').first()
 
         if last_sale and last_sale.receipt_number:
@@ -90,7 +93,11 @@ class Sale(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Receipt {self.receipt_number} - {self.joint.display_name} - {self.sale_date.strftime('%d/%m/%Y')}"
+        return (
+            f"Receipt {self.receipt_number} - "
+            f"{self.joint.display_name} - "
+            f"{self.sale_date.strftime('%d/%m/%Y')}"
+        )
 
     class Meta:
         ordering = ['-sale_date']
@@ -103,7 +110,12 @@ class Sale(models.Model):
 
 class SaleItem(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.PROTECT, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='sale_items')
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,   # FIX: was PROTECT — products can now be deleted
+        null=True, blank=True,
+        related_name='sale_items',
+    )
     quantity = models.PositiveIntegerField()
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     is_free_gift = models.BooleanField(default=False)
@@ -116,18 +128,29 @@ class SaleItem(models.Model):
         return self.quantity * self.unit_price
 
     def __str__(self):
-        return f"{self.quantity}x {self.product.name} @ ${self.unit_price}"
+        name = self.product.name if self.product else '(deleted product)'
+        return f"{self.quantity}x {name} @ ${self.unit_price}"
 
 
 class SaleAuditLog(models.Model):
-    sale = models.OneToOneField(Sale, on_delete=models.PROTECT, related_name='audit_log')
+    # FIX: was OneToOneField — a sale can have multiple log entries (e.g. edits after creation)
+    sale = models.ForeignKey(
+        Sale,
+        on_delete=models.CASCADE,   # logs are deleted automatically with their sale
+        related_name='audit_logs',
+    )
     action = models.CharField(max_length=50, default='created')
-    performed_by = models.ForeignKey('users.User', on_delete=models.PROTECT)
+    performed_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,  # FIX: was PROTECT — staff accounts can now be removed
+        null=True, blank=True,
+    )
     timestamp = models.DateTimeField(auto_now_add=True)
     details = models.JSONField(default=dict)
 
     def __str__(self):
-        return f"Audit: {self.sale.receipt_number} by {self.performed_by.username}"
+        user = self.performed_by.username if self.performed_by else '(deleted user)'
+        return f"Audit: {self.sale.receipt_number} by {user}"
 
     class Meta:
         ordering = ['-timestamp']
