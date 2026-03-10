@@ -641,9 +641,7 @@ function buildQuickCashBtns() {
     if (!container || currentTotal <= 0) { if(container) container.innerHTML = ''; return; }
 
     const suggestions = new Set();
-    // Exact amount (round 2dp)
     suggestions.add(parseFloat(currentTotal.toFixed(2)));
-    // Round up to nearest common notes: 1,2,5,10,20,50
     [1, 2, 5, 10, 20, 50].forEach(step => {
         const r = Math.ceil(currentTotal / step) * step;
         if (r <= currentTotal * 3) suggestions.add(r);
@@ -823,7 +821,7 @@ async function updateCart() {
     currentTotal     = parseFloat(data.total);
     renderCart(data);
     buildQuickCashBtns();
-    calcChange(); // recalculate in case tendered was already entered
+    calcChange();
 }
 
 function renderCart(data) {
@@ -833,7 +831,6 @@ function renderCart(data) {
     const banner = $('promo-banner');
     const real  = cart.filter(i => !i.is_free_gift);
 
-    // Badge on mobile tab
     const badge = $('cart-tab-badge');
     if (badge) {
         if (real.length > 0) { badge.style.display = 'inline'; badge.textContent = real.length; }
@@ -944,12 +941,12 @@ async function completeSale(method) {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
         body: JSON.stringify({
-            joint_id:           jid,
-            payment_method:     method,
-            customer_name:      $('customer-name').value.trim(),
-            customer_phone:     $('customer-phone').value.trim(),
-            items:              cart,
-            cart_discount:      cartDiscount,
+            joint_id:            jid,
+            payment_method:      method,
+            customer_name:       $('customer-name').value.trim(),
+            customer_phone:      $('customer-phone').value.trim(),
+            items:               cart,
+            cart_discount:       cartDiscount,
             cart_discount_label: cartDiscountLabel,
         }),
     });
@@ -977,7 +974,18 @@ async function completeSale(method) {
         new bootstrap.Modal($('receiptModal')).show();
         cart = []; cartDiscount = 0; cartDiscountLabel = ''; currentTotal = 0;
         renderCart(); resetChangeCalc();
-        setTimeout(() => window.open(data.receipt_url, '_blank'), 300);
+
+        // ── AUTO PRINT ──────────────────────────────────────────────────────
+        // Opens receipt in new tab → receipt_thermal.html auto-calls
+        // window.print() on load → after printing the tab closes itself
+        setTimeout(() => {
+            const printWin = window.open(data.receipt_url, '_blank');
+            if (printWin) {
+                printWin.addEventListener('afterprint', () => printWin.close());
+            }
+        }, 300);
+        // ────────────────────────────────────────────────────────────────────
+
     } else {
         alert('Error: ' + data.error);
     }
