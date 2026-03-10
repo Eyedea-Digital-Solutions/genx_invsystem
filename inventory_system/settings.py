@@ -57,11 +57,11 @@ WSGI_APPLICATION = 'inventory_system.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'genx_pos_db',
-        'USER': 'postgres',
-        'PASSWORD': 'admin123',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'genx_pos_db'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'admin123'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -140,3 +140,4 @@ STORE_INFO = {
         'tagline': 'Please note that all payments are non-refundable.',
     },
 }
+CSRF_TRUSTED_ORIGINS = ['http://192.168.1.100', 'http://192.168.1.100:8080']
