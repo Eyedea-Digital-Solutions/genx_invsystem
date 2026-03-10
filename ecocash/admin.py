@@ -1,9 +1,3 @@
-"""
-ecocash/admin.py
-────────────────
-EcoCash transaction admin with status badges, confirm/fail bulk actions,
-and rich sale info display.
-"""
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
@@ -14,22 +8,17 @@ from .models import EcoCashTransaction
 
 class EcoCashTransactionAdmin(admin.ModelAdmin):
     list_display    = ['id', 'phone_number', 'sale_info', 'amount_disp',
-                       'status_badge', 'initiated_by', 'created_at_fmt', 'confirmed_at_fmt']
+                       'status_badge', 'created_at_fmt', 'confirmed_at_fmt']
     list_filter     = ['status', 'sale__joint']
-    search_fields   = ['phone_number', 'sale__receipt_number',
-                       'initiated_by__username', 'poll_url']
-    readonly_fields = ['created_at', 'confirmed_at', 'poll_url', 'sale_info']
+    search_fields   = ['phone_number', 'sale__receipt_number']
+    readonly_fields = ['created_at', 'confirmed_at', 'sale_info']
     ordering        = ['-created_at']
     list_per_page   = 50
     date_hierarchy  = 'created_at'
 
     fieldsets = (
         ('Transaction', {
-            'fields': ('sale', 'phone_number', 'amount', 'status', 'initiated_by')
-        }),
-        ('EcoCash API', {
-            'fields': ('poll_url',),
-            'classes': ('collapse',),
+            'fields': ('sale', 'phone_number', 'amount', 'status')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'confirmed_at'),

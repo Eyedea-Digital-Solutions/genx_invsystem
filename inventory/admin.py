@@ -1,9 +1,3 @@
-"""
-inventory/admin.py
-──────────────────
-Registers all inventory models with the custom GenX admin site.
-Every model has rich display, filtering, search, bulk actions, and inline editing.
-"""
 import datetime
 
 from django.contrib import admin
@@ -129,7 +123,8 @@ class StockInline(admin.StackedInline):
 # ─── PRODUCT ─────────────────────────────────────────────────────────────────
 class ProductAdmin(admin.ModelAdmin):
     list_display   = ['name', 'code', 'barcode_display', 'joint', 'category', 'brand',
-                       'price_display', 'effective_price_display', 'stock_display', 'promo_flags', 'is_active']
+                       'price_display', 'effective_price_display', 'stock_display',
+                       'promo_flags', 'is_clearance', 'is_active']
     list_filter    = ['joint', 'is_active', 'is_clearance', 'category', 'brand']
     search_fields  = ['name', 'code', 'barcode']
     list_editable  = ['is_clearance', 'is_active']

@@ -1,8 +1,3 @@
-"""
-promotions/admin.py
-────────────────────
-Promotion model admin with type/status badges, sub-rule inlines, and bulk actions.
-"""
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
@@ -99,23 +94,23 @@ genx_admin_site.register(Promotion, PromotionAdmin)
 
 # ─── SUB-RULE STANDALONE ADMINS ──────────────────────────────────────────────
 class SpendThresholdAdmin(admin.ModelAdmin):
-    list_display = ['promotion', 'minimum_spend', 'discount_type', 'discount_value']
-    list_filter  = ['discount_type', 'promotion__joint']
+    list_display = ['promotion', '__str__']
+    list_filter  = ['promotion__joint']
     search_fields = ['promotion__name']
 
 genx_admin_site.register(SpendThresholdPromo, SpendThresholdAdmin)
 
 
 class FreeGiftAdmin(admin.ModelAdmin):
-    list_display  = ['promotion', 'gift_product', 'quantity']
+    list_display  = ['promotion', '__str__']
     list_filter   = ['promotion__joint']
-    search_fields = ['promotion__name', 'gift_product__name']
+    search_fields = ['promotion__name']
 
 genx_admin_site.register(FreeGiftPromo, FreeGiftAdmin)
 
 
 class BundleAdmin(admin.ModelAdmin):
-    list_display  = ['promotion', 'bundle_price', 'discount_percent']
+    list_display  = ['promotion', '__str__']
     list_filter   = ['promotion__joint']
     search_fields = ['promotion__name']
 
