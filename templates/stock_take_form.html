@@ -4,45 +4,135 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-9">
+
+        <div class="alert alert-info border-0 mb-3" style="font-size:13px;">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Add-Only Mode:</strong> Enter how many units you want to <strong>add</strong> to each product's current stock.
+            Leave blank or enter <strong>0</strong> to make no change. Stock will only increase — never decrease.
+        </div>
+
         <form method="post">
             {% csrf_token %}
+
+            <!-- Joint + Notes selection card -->
             <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
                 <div class="card-body p-4">
                     <h6 class="fw-bold mb-3">Stock Take Details</h6>
-                    {% for field in form %}
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
-                        {{ field }}
+                    <div class="row g-3">
+                        {% for field in form %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                 </div>
             </div>
 
             {% if products %}
+            <!-- Products table -->
             <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
-                <div class="card-body p-0">
-                    <table class="table table-sm mb-0" style="font-size:13px;">
-                        <thead class="table-light"><tr><th>Product</th><th>System Count</th><th>Actual Count</th></tr></thead>
-                        <tbody>
-                            {% for product in products %}
-                            <tr>
-                                <td class="fw-semibold">{{ product.name }}</td>
-                                <td>{{ product.current_stock }}</td>
-                                <td><input type="number" name="actual_{{ product.pk }}" value="{{ product.current_stock }}" class="form-control form-control-sm" style="width:80px;" min="0"></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="card-header bg-white border-0 py-3 d-flex align-items-center justify-content-between" style="border-radius:14px 14px 0 0;">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-clipboard-plus me-2 text-success"></i>Add Stock
+                    </h6>
+                    <div style="font-size:12px;color:#666;">{{ products|length }} product{{ products|length|pluralize }}</div>
                 </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0" style="font-size:13px;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center" style="width:110px;">Current Stock</th>
+                                    <th style="width:150px;">Units to Add</th>
+                                    <th class="text-center" style="width:110px;">New Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr id="row-{{ product.pk }}">
+                                    <td>
+                                        <div class="fw-semibold">{{ product.name }}</div>
+                                        {% if product.code %}
+                                            <div class="text-muted" style="font-size:11px;">{{ product.code }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if product.current_stock == 0 %}
+                                            <span class="badge bg-danger" style="font-size:11px;">0 — Out</span>
+                                        {% elif product.is_low_stock %}
+                                            <span class="badge bg-warning text-dark" style="font-size:11px;">{{ product.current_stock }} — Low</span>
+                                        {% else %}
+                                            <span class="fw-bold">{{ product.current_stock }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="number"
+                                            name="add_{{ product.pk }}"
+                                            id="add_{{ product.pk }}"
+                                            value="0"
+                                            min="0"
+                                            class="form-control form-control-sm add-input"
+                                            style="width:100px;"
+                                            data-current="{{ product.current_stock }}"
+                                            data-pk="{{ product.pk }}"
+                                            oninput="updateNewTotal({{ product.pk }}, {{ product.current_stock }})"
+                                        >
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-bold new-total-{{ product.pk }}">{{ product.current_stock }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-warning border-0" style="font-size:13px;">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Select a joint above to load its products.
             </div>
             {% endif %}
 
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-dark px-4">Save Stock Take</button>
+                <button type="submit" class="btn btn-dark px-4">
+                    <i class="bi bi-plus-circle me-1"></i>Save Stock Take
+                </button>
                 <a href="{% url 'inventory:stock_take_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+// Live "new total" preview
+function updateNewTotal(pk, currentStock) {
+    const addVal = parseInt(document.getElementById('add_' + pk).value) || 0;
+    const newTotal = currentStock + Math.max(0, addVal);
+    const spans = document.querySelectorAll('.new-total-' + pk);
+    spans.forEach(span => {
+        span.textContent = newTotal;
+        span.style.color = addVal > 0 ? '#16a34a' : '';
+        span.style.fontWeight = addVal > 0 ? '800' : '600';
+    });
+}
+
+// Joint select auto-submits via GET to load products for that joint
+const jointSelect = document.querySelector('[name="joint"]');
+if (jointSelect) {
+    jointSelect.addEventListener('change', function() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('joint', this.value);
+        window.location.href = url.toString();
+    });
+}
+</script>
 {% endblock %}
