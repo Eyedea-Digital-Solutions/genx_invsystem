@@ -146,56 +146,59 @@ def stock_take_create(request):
         form = StockTakeForm(request.POST)
         if form.is_valid():
             joint    = form.cleaned_data['joint']
-            products = Product.objects.select_related('stock').filter(joint=joint, is_active=True)
+            products = Product.objects.select_related('stock').filter(
+                joint=joint, is_active=True
+            )
 
             with transaction.atomic():
-                stock_take               = form.save(commit=False)
-                stock_take.conducted_by  = request.user
+                stock_take              = form.save(commit=False)
+                stock_take.conducted_by = request.user
                 stock_take.save()
 
+                items_added = 0
                 for product in products:
-                    add_key     = f'add_{product.pk}'
-                    add_qty     = int(request.POST.get(add_key, 0) or 0)
-                    add_qty     = max(0, add_qty)          # never negative
+                    add_qty      = max(0, int(request.POST.get(f'add_{product.pk}', 0) or 0))
                     system_count = product.current_stock
-                    new_count    = system_count + add_qty  # ADD-ONLY
+                    new_count    = system_count + add_qty   # ADD ONLY — never subtract
 
                     StockTakeItem.objects.create(
                         stock_take   = stock_take,
                         product      = product,
-                        system_count = system_count,       # before
-                        actual_count = new_count,          # after
+                        system_count = system_count,
+                        actual_count = new_count,
                     )
 
                     if add_qty > 0:
                         product.stock.quantity = new_count
                         product.stock.save()
+                        items_added += 1
 
             messages.success(
                 request,
-                f"Stock take for {joint.display_name} completed. "
-                f"Added quantities have been applied."
+                f"Stock take for {joint.display_name} completed — "
+                f"{items_added} product{'s' if items_added != 1 else ''} restocked."
             )
             return redirect('inventory:stock_take_list')
 
     else:
-        # Support ?joint= GET param so joint select auto-loads products
-        joint_id = request.GET.get('joint')
-        initial  = {'joint': joint_id} if joint_id else {}
-        form     = StockTakeForm(initial=initial)
+        form = StockTakeForm()
 
-    # Load products for the pre-selected joint (GET param or form initial)
-    joint_id = request.GET.get('joint') or request.POST.get('joint', '')
+    # Products only shown server-side if joint was pre-selected via GET
+    # (AJAX handles dynamic loading from the template JS)
+    joint_id = request.GET.get('joint', '')
     products = []
     if joint_id:
         products = Product.objects.select_related('stock').filter(
             joint_id=joint_id, is_active=True
         ).order_by('name')
+        form.initial['joint'] = joint_id
 
     return render(request, 'stock_take_form.html', {
         'form':     form,
         'products': products,
     })
+
+
 
 @login_required
 def stock_take_detail(request, pk):

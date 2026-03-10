@@ -226,18 +226,19 @@ def pos_update_cart(request):
 @login_required
 @require_POST
 def pos_complete(request):
-    body = json.loads(request.body)
-    joint_id = body.get('joint_id')
-    items_data = body.get('items', [])
-    payment_method = body.get('payment_method', 'cash')
-    customer_name = body.get('customer_name', '')
-    cart_discount = Decimal(str(body.get('cart_discount', '0')))
+    body                = json.loads(request.body)
+    joint_id            = body.get('joint_id')
+    items_data          = body.get('items', [])
+    payment_method      = body.get('payment_method', 'cash')
+    customer_name       = body.get('customer_name', '')
+    customer_phone      = body.get('customer_phone', '')          # ← was missing
+    cart_discount       = Decimal(str(body.get('cart_discount', '0')))
     cart_discount_label = body.get('cart_discount_label', '')
 
     if not joint_id or not items_data:
         return JsonResponse({'success': False, 'error': 'Joint and items are required.'})
 
-    pids = [i['product_id'] for i in items_data if not i.get('is_free_gift')]
+    pids     = [i['product_id'] for i in items_data if not i.get('is_free_gift')]
     products = {
         p.pk: p
         for p in Product.objects.select_related('stock').filter(pk__in=pids)
@@ -257,19 +258,20 @@ def pos_complete(request):
 
     with transaction.atomic():
         sale = Sale.objects.create(
-            joint_id=joint_id,
-            sold_by=request.user,
-            sale_type='pos',
-            payment_method=payment_method,
-            customer_name=customer_name,
-            discount_amount=cart_discount,
-            discount_type='fixed' if cart_discount else '',
-            discount_label=cart_discount_label,
+            joint_id        = joint_id,
+            sold_by         = request.user,
+            sale_type       = 'pos',
+            payment_method  = payment_method,
+            customer_name   = customer_name,
+            customer_phone  = customer_phone,             # ← saved now
+            discount_amount = cart_discount,
+            discount_type   = 'fixed' if cart_discount else '',
+            discount_label  = cart_discount_label,
         )
 
         snapshot = []
         for item in items_data:
-            pid = item['product_id']
+            pid     = item['product_id']
             is_free = item.get('is_free_gift', False)
 
             if is_free:
@@ -280,16 +282,16 @@ def pos_complete(request):
             else:
                 p = products[pid]
 
-            qty = int(item['qty'])
-            unit_price = Decimal(str(item['unit_price'])) if not is_free else Decimal('0')
+            qty        = int(item['qty'])
+            unit_price = Decimal('0') if is_free else Decimal(str(item['unit_price']))
 
             SaleItem.objects.create(
-                sale=sale,
-                product=p,
-                quantity=qty,
-                unit_price=unit_price,
-                is_free_gift=is_free,
-                promotion_label=item.get('promo_label', ''),
+                sale            = sale,
+                product         = p,
+                quantity        = qty,
+                unit_price      = unit_price,
+                is_free_gift    = is_free,
+                promotion_label = item.get('promo_label', ''),
             )
 
             if not is_free:
@@ -298,22 +300,22 @@ def pos_complete(request):
                 p.stock.deduct(qty)
 
             snapshot.append({
-                'product_id': pid,
+                'product_id':   pid,
                 'product_name': p.name,
-                'quantity': qty,
-                'unit_price': str(unit_price),
+                'quantity':     qty,
+                'unit_price':   str(unit_price),
                 'is_free_gift': is_free,
             })
 
         SaleAuditLog.objects.create(
-            sale=sale,
-            action='created',
-            performed_by=request.user,
+            sale         = sale,
+            action       = 'created',
+            performed_by = request.user,
             details={
-                'source': 'pos',
-                'total': str(sale.total_amount),
+                'source':         'pos',
+                'total':          str(sale.total_amount),
                 'payment_method': payment_method,
-                'items': snapshot,
+                'items':          snapshot,
             }
         )
 
@@ -322,12 +324,11 @@ def pos_complete(request):
             create_ecocash_payment(sale)
 
     return JsonResponse({
-        'success': True,
-        'receipt_url': f'/sales/{sale.pk}/receipt/thermal/',
+        'success':        True,
+        'receipt_url':    f'/sales/{sale.pk}/receipt/thermal/',
         'receipt_number': sale.receipt_number,
-        'sale_id': sale.pk,
+        'sale_id':        sale.pk,
     })
-
 
 @login_required
 @require_POST

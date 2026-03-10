@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <div class="text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Today's Revenue</div>
+                    <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Today's Revenue</div>
                     <div class="stat-value mt-1">${{ today_total|floatformat:2 }}</div>
                     <div class="text-muted" style="font-size:12px;">{{ today_count }} sale{{ today_count|pluralize }}</div>
                 </div>
@@ -16,11 +16,11 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <div class="text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Month Revenue</div>
+                    <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Month Revenue</div>
                     <div class="stat-value mt-1">${{ month_total|floatformat:2 }}</div>
                     <div class="text-muted" style="font-size:12px;">{{ month_count }} sale{{ month_count|pluralize }}</div>
                 </div>
@@ -28,23 +28,23 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <div class="text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Low Stock</div>
+                    <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Low Stock</div>
                     <div class="stat-value mt-1">{{ low_stock_count }}</div>
-                    <div class="text-muted" style="font-size:12px;">product{{ low_stock_count|pluralize }} need restocking</div>
+                    <div class="text-muted" style="font-size:12px;">need restocking</div>
                 </div>
                 <div class="stat-icon" style="background:#fef9c3;color:#a16207;"><i class="bi bi-exclamation-triangle"></i></div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="stat-card">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
-                    <div class="text-muted" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Expiring Soon</div>
+                    <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Expiring Soon</div>
                     <div class="stat-value mt-1">{{ expiring_soon|length }}</div>
                     <div class="text-muted" style="font-size:12px;">within 30 days</div>
                 </div>
@@ -56,10 +56,10 @@
 
 <div class="row g-3 mb-4">
     {% for stat in joint_stats %}
-    <div class="col-md-4">
+    <div class="col-12 col-sm-4">
         <div class="stat-card joint-{{ stat.joint.name }}">
-            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">{{ stat.joint.display_name }}</div>
-            <div style="font-size:22px;font-weight:800;">${{ stat.total|floatformat:2 }}</div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">{{ stat.joint.display_name }}</div>
+            <div style="font-size:20px;font-weight:800;">${{ stat.total|floatformat:2 }}</div>
             <div class="text-muted" style="font-size:12px;">{{ stat.count }} sale{{ stat.count|pluralize }} today</div>
         </div>
     </div>
@@ -73,7 +73,7 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-sm mb-0" style="font-size:13px;">
+            <table class="table table-sm mb-0" style="font-size:13px;min-width:400px;">
                 <thead class="table-light"><tr><th>Product</th><th>Joint</th><th>In Stock</th><th></th></tr></thead>
                 <tbody>
                     {% for product in low_stock %}
@@ -87,7 +87,11 @@
                             <span class="low-stock-badge">{{ product.current_stock }} left</span>
                             {% endif %}
                         </td>
-                        <td><a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;">Restock</a></td>
+                        <td>
+                            {% if user.is_manager_role %}
+                            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;">Restock</a>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -104,15 +108,24 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-sm mb-0" style="font-size:13px;">
-                <thead class="table-light"><tr><th>Receipt</th><th>Joint</th><th>Staff</th><th>Payment</th><th class="text-end">Total</th><th></th></tr></thead>
+            <table class="table table-sm mb-0" style="font-size:13px;min-width:500px;">
+                <thead class="table-light">
+                    <tr>
+                        <th>Receipt</th>
+                        <th class="d-none d-sm-table-cell">Joint</th>
+                        <th class="d-none d-md-table-cell">Staff</th>
+                        <th class="d-none d-sm-table-cell">Payment</th>
+                        <th class="text-end">Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
                 <tbody>
                     {% for sale in recent_sales %}
                     <tr>
                         <td class="fw-semibold">{{ sale.receipt_number }}</td>
-                        <td>{{ sale.joint.display_name }}</td>
-                        <td>{{ sale.sold_by.get_full_name|default:sale.sold_by.username }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ sale.get_payment_method_display }}</span></td>
+                        <td class="d-none d-sm-table-cell">{{ sale.joint.display_name }}</td>
+                        <td class="d-none d-md-table-cell">{{ sale.sold_by.get_full_name|default:sale.sold_by.username }}</td>
+                        <td class="d-none d-sm-table-cell"><span class="badge bg-light text-dark border">{{ sale.get_payment_method_display }}</span></td>
                         <td class="text-end fw-bold">${{ sale.total_amount|floatformat:2 }}</td>
                         <td><a href="{% url 'sales:sale_receipt_thermal' sale.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:10px;"><i class="bi bi-printer"></i></a></td>
                     </tr>

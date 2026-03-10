@@ -4,18 +4,17 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-9">
+    <div class="col-lg-9 col-xl-8">
 
         <div class="alert alert-info border-0 mb-3" style="font-size:13px;">
             <i class="bi bi-info-circle me-2"></i>
-            <strong>Add-Only Mode:</strong> Enter how many units you want to <strong>add</strong> to each product's current stock.
-            Leave blank or enter <strong>0</strong> to make no change. Stock will only increase — never decrease.
+            <strong>Add-Only Mode:</strong> Enter how many units to <strong>add</strong> to each product.
+            Leave as <strong>0</strong> to keep unchanged. Stock is never reduced here.
         </div>
 
-        <form method="post">
+        <form method="post" id="stock-take-form">
             {% csrf_token %}
 
-            <!-- Joint + Notes selection card -->
             <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
                 <div class="card-body p-4">
                     <h6 class="fw-bold mb-3">Stock Take Details</h6>
@@ -25,7 +24,7 @@
                             <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
                             {{ field }}
                             {% if field.errors %}
-                                <div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>
+                            <div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>
                             {% endif %}
                         </div>
                         {% endfor %}
@@ -33,77 +32,74 @@
                 </div>
             </div>
 
-            {% if products %}
-            <!-- Products table -->
-            <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
-                <div class="card-header bg-white border-0 py-3 d-flex align-items-center justify-content-between" style="border-radius:14px 14px 0 0;">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-clipboard-plus me-2 text-success"></i>Add Stock
-                    </h6>
-                    <div style="font-size:12px;color:#666;">{{ products|length }} product{{ products|length|pluralize }}</div>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0" style="font-size:13px;">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Product</th>
-                                    <th class="text-center" style="width:110px;">Current Stock</th>
-                                    <th style="width:150px;">Units to Add</th>
-                                    <th class="text-center" style="width:110px;">New Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for product in products %}
-                                <tr id="row-{{ product.pk }}">
-                                    <td>
-                                        <div class="fw-semibold">{{ product.name }}</div>
-                                        {% if product.code %}
-                                            <div class="text-muted" style="font-size:11px;">{{ product.code }}</div>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        {% if product.current_stock == 0 %}
-                                            <span class="badge bg-danger" style="font-size:11px;">0 — Out</span>
-                                        {% elif product.is_low_stock %}
-                                            <span class="badge bg-warning text-dark" style="font-size:11px;">{{ product.current_stock }} — Low</span>
-                                        {% else %}
-                                            <span class="fw-bold">{{ product.current_stock }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            name="add_{{ product.pk }}"
-                                            id="add_{{ product.pk }}"
-                                            value="0"
-                                            min="0"
-                                            class="form-control form-control-sm add-input"
-                                            style="width:100px;"
-                                            data-current="{{ product.current_stock }}"
-                                            data-pk="{{ product.pk }}"
-                                            oninput="updateNewTotal({{ product.pk }}, {{ product.current_stock }})"
-                                        >
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="fw-bold new-total-{{ product.pk }}">{{ product.current_stock }}</span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            <div id="products-section">
+                {% if products %}
+                <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+                    <div class="card-header bg-white border-0 py-3 d-flex align-items-center justify-content-between" style="border-radius:14px 14px 0 0;">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-clipboard-plus me-2 text-success"></i>Add Stock</h6>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="text-muted" style="font-size:12px;">{{ products|length }} product{{ products|length|pluralize }}</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" style="font-size:11px;" onclick="resetAllInputs()">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Product</th>
+                                        <th class="text-center" style="width:110px;">Current Stock</th>
+                                        <th style="width:160px;">Units to Add</th>
+                                        <th class="text-center" style="width:110px;">New Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in products %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">{{ product.name }}</div>
+                                            {% if product.code %}<div class="text-muted" style="font-size:11px;">{{ product.code }}</div>{% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if product.current_stock == 0 %}
+                                                <span class="badge bg-danger" style="font-size:11px;">0 — Out</span>
+                                            {% elif product.is_low_stock %}
+                                                <span class="badge bg-warning text-dark" style="font-size:11px;">{{ product.current_stock }} — Low</span>
+                                            {% else %}
+                                                <span class="fw-bold">{{ product.current_stock }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <input type="number" name="add_{{ product.pk }}" id="add_{{ product.pk }}"
+                                                   value="0" min="0"
+                                                   class="form-control form-control-sm add-input"
+                                                   style="width:100px;"
+                                                   data-current="{{ product.current_stock }}"
+                                                   data-pk="{{ product.pk }}"
+                                                   oninput="updateNewTotal({{ product.pk }}, {{ product.current_stock }})">
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="fw-bold" id="new-total-{{ product.pk }}">{{ product.current_stock }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
+                {% else %}
+                <div class="alert border-0 mb-3" id="no-joint-msg"
+                     style="background:#f8f7f5;color:#666;font-size:13px;border-radius:12px;">
+                    <i class="bi bi-arrow-up-left me-2"></i>Select a joint above to load its products.
+                </div>
+                {% endif %}
             </div>
-            {% else %}
-            <div class="alert alert-warning border-0" style="font-size:13px;">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                Select a joint above to load its products.
-            </div>
-            {% endif %}
 
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-dark px-4">
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="submit" class="btn btn-dark px-4" id="submit-btn" {% if not products %}disabled{% endif %}>
                     <i class="bi bi-plus-circle me-1"></i>Save Stock Take
                 </button>
                 <a href="{% url 'inventory:stock_take_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
@@ -113,25 +109,120 @@
 </div>
 
 <script>
-// Live "new total" preview
 function updateNewTotal(pk, currentStock) {
-    const addVal = parseInt(document.getElementById('add_' + pk).value) || 0;
-    const newTotal = currentStock + Math.max(0, addVal);
-    const spans = document.querySelectorAll('.new-total-' + pk);
-    spans.forEach(span => {
-        span.textContent = newTotal;
-        span.style.color = addVal > 0 ? '#16a34a' : '';
-        span.style.fontWeight = addVal > 0 ? '800' : '600';
+    const addVal   = Math.max(0, parseInt(document.getElementById('add_' + pk).value) || 0);
+    const newTotal = currentStock + addVal;
+    const span     = document.getElementById('new-total-' + pk);
+    if (!span) return;
+    span.textContent      = newTotal;
+    span.style.color      = addVal > 0 ? '#16a34a' : '';
+    span.style.fontWeight = addVal > 0 ? '800' : '600';
+}
+
+function resetAllInputs() {
+    document.querySelectorAll('.add-input').forEach(input => {
+        input.value = 0;
+        updateNewTotal(input.dataset.pk, parseInt(input.dataset.current) || 0);
     });
 }
 
-// Joint select auto-submits via GET to load products for that joint
+function buildProductsHTML(products) {
+    if (!products.length) {
+        return `<div class="alert alert-warning border-0 mb-3" style="font-size:13px;border-radius:12px;">
+                    No active products found for this joint.
+                </div>`;
+    }
+    const rows = products.map(p => {
+        const qty    = p['stock__quantity'] ?? 0;
+        const isOut  = qty === 0;
+        const isLow  = qty > 0 && qty <= 3;
+        const badge  = isOut
+            ? `<span class="badge bg-danger" style="font-size:11px;">0 — Out</span>`
+            : isLow
+            ? `<span class="badge bg-warning text-dark" style="font-size:11px;">${qty} — Low</span>`
+            : `<span class="fw-bold">${qty}</span>`;
+
+        return `<tr>
+            <td>
+                <div class="fw-semibold">${p.name}</div>
+                ${p.code ? `<div class="text-muted" style="font-size:11px;">${p.code}</div>` : ''}
+            </td>
+            <td class="text-center">${badge}</td>
+            <td>
+                <input type="number" name="add_${p.id}" id="add_${p.id}"
+                       value="0" min="0"
+                       class="form-control form-control-sm add-input"
+                       style="width:100px;"
+                       data-current="${qty}" data-pk="${p.id}"
+                       oninput="updateNewTotal(${p.id}, ${qty})">
+            </td>
+            <td class="text-center">
+                <span class="fw-bold" id="new-total-${p.id}">${qty}</span>
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `<div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+        <div class="card-header bg-white border-0 py-3 d-flex align-items-center justify-content-between" style="border-radius:14px 14px 0 0;">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-clipboard-plus me-2 text-success"></i>Add Stock</h6>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted" style="font-size:12px;">${products.length} product${products.length !== 1 ? 's' : ''}</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm" style="font-size:11px;" onclick="resetAllInputs()">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reset All
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-center" style="width:110px;">Current Stock</th>
+                            <th style="width:160px;">Units to Add</th>
+                            <th class="text-center" style="width:110px;">New Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+}
+
+// AJAX: load products when joint changes
 const jointSelect = document.querySelector('[name="joint"]');
 if (jointSelect) {
-    jointSelect.addEventListener('change', function() {
-        const url = new URL(window.location.href);
-        url.searchParams.set('joint', this.value);
-        window.location.href = url.toString();
+    jointSelect.addEventListener('change', function () {
+        const jid = this.value;
+        const section   = document.getElementById('products-section');
+        const submitBtn = document.getElementById('submit-btn');
+
+        if (!jid) {
+            section.innerHTML = `<div class="alert border-0 mb-3"
+                style="background:#f8f7f5;color:#666;font-size:13px;border-radius:12px;">
+                <i class="bi bi-arrow-up-left me-2"></i>Select a joint above to load its products.
+            </div>`;
+            submitBtn.disabled = true;
+            return;
+        }
+
+        section.innerHTML = `<div class="text-center py-4 text-muted" style="font-size:13px;">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading products…
+        </div>`;
+
+        fetch(`/inventory/api/products/?joint_id=${jid}`)
+            .then(r => r.json())
+            .then(data => {
+                section.innerHTML  = buildProductsHTML(data.products);
+                submitBtn.disabled = data.products.length === 0;
+            })
+            .catch(() => {
+                section.innerHTML = `<div class="alert alert-danger border-0 mb-3" style="font-size:13px;border-radius:12px;">
+                    Failed to load products. Please refresh and try again.
+                </div>`;
+                submitBtn.disabled = true;
+            });
     });
 }
 </script>
