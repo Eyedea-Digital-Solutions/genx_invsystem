@@ -1,6 +1,6 @@
 from pathlib import Path
 import os
-load
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
@@ -140,4 +140,5 @@ STORE_INFO = {
         'tagline': 'Please note that all payments are non-refundable.',
     },
 }
+
 CSRF_TRUSTED_ORIGINS = ['http://192.168.1.100', 'http://192.168.1.100:8080']

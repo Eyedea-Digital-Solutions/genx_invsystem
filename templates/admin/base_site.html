@@ -1,0 +1,642 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{# ══ PAGE TITLE ══════════════════════════════════════════════════════════ #}
+{% block title %}{{ title }} | GenX POS Admin{% endblock %}
+
+{# ══ BRANDING ════════════════════════════════════════════════════════════ #}
+{% block branding %}
+<div id="site-name" style="display:flex;align-items:center;gap:10px;">
+    <span style="font-weight:900;font-size:16px;color:#fff;letter-spacing:-0.5px;">
+        GenX<span style="color:#e94560;">POS</span>
+    </span>
+    <span style="font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1px;text-transform:uppercase;">Admin</span>
+</div>
+{% endblock %}
+
+{# ══ EXTRA CSS ═══════════════════════════════════════════════════════════ #}
+{% block extrastyle %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+/* ─── TOKENS ─────────────────────────────────────────────────────── */
+:root {
+    --ink:     #0d0d14;
+    --panel:   #17171f;
+    --card:    #1e1e28;
+    --border:  rgba(255,255,255,.08);
+    --accent:  #e94560;
+    --green:   #16a34a;
+    --blue:    #2563eb;
+    --amber:   #d97706;
+    --purple:  #7c3aed;
+    --text:    rgba(255,255,255,.85);
+    --muted:   rgba(255,255,255,.38);
+    --radius:  10px;
+}
+
+/* ─── GLOBAL RESET ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+    font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif !important;
+    background: #f0eeea !important;
+    color: #111827 !important;
+    font-size: 13px !important;
+}
+
+/* ─── HEADER / NAV ──────────────────────────────────────────────── */
+#header {
+    background: var(--ink) !important;
+    color: #fff !important;
+    padding: 0 20px !important;
+    height: 52px !important;
+    display: flex !important;
+    align-items: center !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,.4) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 200 !important;
+}
+#header a:link, #header a:visited { color: rgba(255,255,255,.7) !important; text-decoration: none; }
+#header a:hover { color: #fff !important; }
+#branding { flex: 1; }
+#user-tools {
+    font-size: 12px !important;
+    color: rgba(255,255,255,.5) !important;
+}
+#user-tools a { color: rgba(255,255,255,.7) !important; margin-left: 14px; }
+#user-tools a:hover { color: var(--accent) !important; }
+
+/* ─── STATS RIBBON (injected via block) ─────────────────────────── */
+#gx-stats-ribbon {
+    background: var(--ink);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    padding: 6px 22px;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+#gx-stats-ribbon::-webkit-scrollbar { height: 2px; }
+.gx-stat-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,.1);
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,.7);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s;
+    text-decoration: none;
+}
+.gx-stat-chip:hover { background: rgba(255,255,255,.07); color: #fff; }
+.gx-stat-chip .chip-val {
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+}
+
+/* ─── NAV SIDEBAR (Django 3.2+ collapsible nav) ─────────────────── */
+#nav-sidebar {
+    background: var(--panel) !important;
+    border-right: 1px solid var(--border) !important;
+    min-width: 220px !important;
+}
+#nav-sidebar .sticky { padding: 12px 0 !important; }
+.nav-sidebar .current-app .section:last-child::before {
+    border-color: var(--accent) !important;
+}
+#nav-sidebar a:link, #nav-sidebar a:visited { color: rgba(255,255,255,.6) !important; font-size: 12px; }
+#nav-sidebar a:hover, #nav-sidebar a.selected { color: #fff !important; }
+#nav-sidebar .current-app { background: rgba(255,255,255,.05) !important; }
+.toggle-nav-sidebar {
+    background: var(--ink) !important;
+    border-color: var(--border) !important;
+    color: rgba(255,255,255,.5) !important;
+}
+.toggle-nav-sidebar::before { border-color: rgba(255,255,255,.5) !important; }
+
+/* ─── BREADCRUMBS ───────────────────────────────────────────────── */
+div.breadcrumbs {
+    background: var(--panel) !important;
+    padding: 8px 22px !important;
+    font-size: 11px !important;
+    border-bottom: 1px solid var(--border) !important;
+    color: var(--muted) !important;
+}
+div.breadcrumbs a { color: rgba(255,255,255,.5) !important; }
+div.breadcrumbs a:hover { color: #fff !important; }
+
+/* ─── CONTENT AREA ──────────────────────────────────────────────── */
+#content-main, #content {
+    padding: 20px 22px !important;
+}
+#content-main { flex: 1 !important; min-width: 0 !important; }
+
+/* ─── PAGE HEADER ───────────────────────────────────────────────── */
+#content h1 {
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+    margin-bottom: 16px !important;
+}
+#content-main h1 {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+}
+
+/* ─── APP MODULES (index cards) ────────────────────────────────── */
+#content-main .module {
+    background: #fff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: var(--radius) !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06) !important;
+    margin-bottom: 16px !important;
+    overflow: hidden !important;
+}
+#content-main .module caption,
+#content-main .module > h2 {
+    background: var(--ink) !important;
+    color: #fff !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    letter-spacing: .5px !important;
+    text-transform: uppercase !important;
+    padding: 9px 14px !important;
+}
+#content-main .module table { width: 100% !important; }
+#content-main .module td { padding: 7px 14px !important; font-size: 12px; border-bottom: 1px solid #f3f4f6; }
+#content-main .module tr:last-child td { border-bottom: none; }
+#content-main .module .addlink,
+#content-main .module .changelink {
+    font-size: 11px !important;
+    color: var(--blue) !important;
+    font-weight: 600 !important;
+}
+#content-main .module .addlink::before { content: '＋ '; }
+#content-main .module .changelink::before { content: '✎ '; }
+
+/* ─── CHANGELIST TABLE ──────────────────────────────────────────── */
+#changelist {
+    background: #fff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: var(--radius) !important;
+    overflow: hidden !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06) !important;
+}
+#changelist-filter {
+    background: #fff !important;
+    border-left: 1px solid #e5e7eb !important;
+    border-radius: 0 var(--radius) var(--radius) 0 !important;
+    min-width: 200px !important;
+}
+#changelist-filter h2 {
+    background: var(--ink) !important;
+    color: #fff !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    letter-spacing: .5px !important;
+    text-transform: uppercase !important;
+    padding: 9px 14px !important;
+}
+#changelist-filter h3 {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #6b7280 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .4px !important;
+    padding: 8px 14px 2px !important;
+    margin: 0 !important;
+}
+#changelist-filter li { padding: 0 !important; }
+#changelist-filter li a {
+    display: block !important;
+    padding: 4px 14px !important;
+    font-size: 12px !important;
+    color: #374151 !important;
+}
+#changelist-filter li a:hover,
+#changelist-filter li.selected a { color: var(--accent) !important; font-weight: 700; }
+
+#result_list {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 12px !important;
+}
+#result_list thead th {
+    background: #f9fafb !important;
+    color: #374151 !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .4px !important;
+    padding: 9px 12px !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    white-space: nowrap !important;
+}
+#result_list thead th.sorted { color: var(--ink) !important; }
+#result_list thead th a:link,
+#result_list thead th a:visited { color: #374151 !important; }
+#result_list thead th.sorted a { color: var(--ink) !important; }
+#result_list thead th.sorted .text::after { color: var(--accent) !important; }
+
+#result_list tbody tr { border-bottom: 1px solid #f3f4f6 !important; transition: background .1s; }
+#result_list tbody tr:hover { background: #fafafa !important; }
+#result_list tbody td, #result_list tbody th {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    vertical-align: middle !important;
+}
+#result_list tbody td.action-checkbox { width: 24px; }
+#result_list .row1 { background: #fff !important; }
+#result_list .row2 { background: #fafafa !important; }
+
+/* Date hierarchy */
+.xfull { width: 100% !important; }
+ul.toplinks {
+    background: #f9fafb !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+}
+ul.toplinks li a { color: var(--blue) !important; }
+
+/* ─── SEARCH BAR ────────────────────────────────────────────────── */
+#changelist-search { padding: 10px 12px !important; border-bottom: 1px solid #e5e7eb !important; }
+#changelist-search label { font-size: 11px !important; color: #6b7280 !important; }
+#searchbar {
+    border: 1px solid #d1d5db !important;
+    border-radius: 7px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    width: 260px !important;
+    outline: none !important;
+}
+#searchbar:focus { border-color: var(--accent) !important; box-shadow: 0 0 0 2px rgba(233,69,96,.15) !important; }
+#changelist-search input[type="submit"] {
+    background: var(--ink) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 7px !important;
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    margin-left: 6px !important;
+}
+
+/* ─── ACTION BAR ────────────────────────────────────────────────── */
+.actions {
+    padding: 8px 12px !important;
+    background: #f9fafb !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    font-size: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+.actions select {
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    padding: 5px 8px !important;
+    font-size: 12px !important;
+}
+.actions button, .actions input[type="submit"] {
+    background: var(--ink) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 5px 14px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+}
+
+/* ─── PAGINATION ────────────────────────────────────────────────── */
+.paginator {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    border-top: 1px solid #e5e7eb !important;
+    color: #6b7280 !important;
+}
+.paginator a {
+    color: var(--blue) !important;
+    padding: 3px 8px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 5px !important;
+    margin: 0 2px !important;
+    font-weight: 600 !important;
+}
+.paginator .this-page {
+    background: var(--ink) !important;
+    color: #fff !important;
+    padding: 3px 8px !important;
+    border-radius: 5px !important;
+    font-weight: 700 !important;
+}
+
+/* ─── CHANGE FORM ───────────────────────────────────────────────── */
+.change-form .module {
+    background: #fff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: var(--radius) !important;
+    margin-bottom: 16px !important;
+    overflow: hidden !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05) !important;
+}
+.change-form h2 {
+    background: var(--ink) !important;
+    color: #fff !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .5px !important;
+    padding: 9px 16px !important;
+    margin: 0 !important;
+}
+.change-form .form-row {
+    padding: 10px 16px !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+}
+.change-form .form-row:last-child { border-bottom: none !important; }
+.change-form label {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #374151 !important;
+    min-width: 160px !important;
+}
+.change-form input[type="text"],
+.change-form input[type="number"],
+.change-form input[type="email"],
+.change-form input[type="url"],
+.change-form input[type="password"],
+.change-form input[type="tel"],
+.change-form input[type="date"],
+.change-form textarea,
+.change-form select {
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    font-family: inherit !important;
+    width: auto !important;
+    max-width: 400px !important;
+}
+.change-form input:focus,
+.change-form textarea:focus,
+.change-form select:focus {
+    border-color: var(--accent) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(233,69,96,.12) !important;
+}
+.change-form .readonly { font-size: 12px !important; color: #374151 !important; }
+
+/* ─── INLINE FORMS ──────────────────────────────────────────────── */
+.inline-group {
+    background: #fff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: var(--radius) !important;
+    overflow: hidden !important;
+    margin-bottom: 16px !important;
+}
+.inline-group h2 {
+    background: var(--panel) !important;
+    color: #fff !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .5px !important;
+    padding: 8px 14px !important;
+    margin: 0 !important;
+}
+.inline-related .module { margin: 0 !important; border: none !important; box-shadow: none !important; }
+.tabular.inline-related thead tr th {
+    background: #f9fafb !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .4px !important;
+    color: #374151 !important;
+    padding: 7px 10px !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+.tabular.inline-related tbody tr td {
+    padding: 6px 10px !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+    font-size: 12px !important;
+}
+
+/* ─── SUBMIT ROW ────────────────────────────────────────────────── */
+.submit-row {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: var(--radius) !important;
+    padding: 12px 16px !important;
+    display: flex !important;
+    gap: 8px !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    margin-bottom: 16px !important;
+}
+.submit-row input[type="submit"],
+.submit-row button {
+    padding: 8px 20px !important;
+    border-radius: 7px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    font-family: inherit !important;
+    cursor: pointer !important;
+    border: none !important;
+}
+.submit-row .default {
+    background: var(--ink) !important;
+    color: #fff !important;
+}
+.submit-row input[name="_addanother"] {
+    background: var(--blue) !important;
+    color: #fff !important;
+}
+.submit-row input[name="_continue"] {
+    background: var(--purple) !important;
+    color: #fff !important;
+}
+.submit-row p.deletelink-box { margin-left: auto !important; }
+.submit-row a.deletelink {
+    background: #dc2626 !important;
+    color: #fff !important;
+    padding: 8px 16px !important;
+    border-radius: 7px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+}
+
+/* ─── MESSAGES / ALERTS ─────────────────────────────────────────── */
+ul.messagelist {
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+}
+ul.messagelist li {
+    padding: 10px 20px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    border-left: 4px solid transparent !important;
+}
+ul.messagelist li.success {
+    background: #f0fdf4 !important;
+    border-left-color: #16a34a !important;
+    color: #166534 !important;
+}
+ul.messagelist li.warning {
+    background: #fffbeb !important;
+    border-left-color: #d97706 !important;
+    color: #92400e !important;
+}
+ul.messagelist li.error {
+    background: #fef2f2 !important;
+    border-left-color: #dc2626 !important;
+    color: #7f1d1d !important;
+}
+
+/* ─── OBJECT TOOLS ──────────────────────────────────────────────── */
+ul.object-tools {
+    float: right !important;
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 0 10px !important;
+    display: flex !important;
+    gap: 6px !important;
+}
+ul.object-tools li a {
+    background: var(--ink) !important;
+    color: #fff !important;
+    padding: 6px 14px !important;
+    border-radius: 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    display: block !important;
+}
+ul.object-tools li a:hover { background: var(--accent) !important; }
+ul.object-tools li a.addlink::before { content: '＋ '; }
+
+/* ─── RESPONSIVE WRAPPER ────────────────────────────────────────── */
+#container { max-width: 100% !important; }
+#content-related { background: #fff !important; border-left: 1px solid #e5e7eb !important; }
+
+/* ─── CALENDAR / DATE WIDGET ────────────────────────────────────── */
+.calendarbox { border-radius: 8px !important; border: 1px solid #e5e7eb !important; box-shadow: 0 8px 24px rgba(0,0,0,.12) !important; }
+.calendar caption { background: var(--ink) !important; color: #fff !important; border-radius: 7px 7px 0 0 !important; font-weight: 700 !important; }
+.calendarnav-previous, .calendarnav-next { color: #fff !important; }
+td.selected a { background: var(--accent) !important; border-radius: 4px !important; }
+td.today a { background: #dbeafe !important; color: var(--blue) !important; border-radius: 4px !important; font-weight: 700 !important; }
+
+/* ─── RELATED POPUP LINKS ───────────────────────────────────────── */
+a.related-widget-wrapper-link { color: var(--blue) !important; }
+
+/* ─── SELECT2 / AUTOCOMPLETE ────────────────────────────────────── */
+.select2-container--admin-autocomplete .select2-selection {
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    min-height: 32px !important;
+}
+.select2-container--admin-autocomplete .select2-selection--single .select2-selection__rendered {
+    line-height: 30px !important;
+    font-size: 12px !important;
+}
+
+/* ─── SCROLL IMPROVEMENTS ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 4px; }
+
+/* ─── COLLAPSIBLE SECTIONS ──────────────────────────────────────── */
+fieldset.collapse { display: none !important; }
+fieldset.collapse.open { display: block !important; }
+.collapse-toggle {
+    font-size: 11px !important;
+    color: var(--blue) !important;
+    cursor: pointer !important;
+    padding: 4px 16px !important;
+    display: block !important;
+}
+</style>
+{% endblock %}
+
+{# ══ STATS RIBBON (appears on every admin page) ══════════════════════════ #}
+{% block nav-global %}
+<div id="gx-stats-ribbon">
+    <a href="{% url 'genx_admin:sales_sale_changelist' %}" class="gx-stat-chip">
+        <i class="bi bi-cash-coin" style="color:#4ade80;"></i>
+        Today <span class="chip-val">${{ today_total|floatformat:2 }}</span>
+        <span style="color:var(--muted);">{{ today_count }} sale{{ today_count|pluralize }}</span>
+    </a>
+    <a href="{% url 'genx_admin:sales_sale_changelist' %}" class="gx-stat-chip">
+        <i class="bi bi-bar-chart" style="color:#60a5fa;"></i>
+        Month <span class="chip-val">${{ month_total|floatformat:2 }}</span>
+        <span style="color:var(--muted);">{{ month_count }}</span>
+    </a>
+    <a href="{% url 'genx_admin:ecocash_ecocashtransaction_changelist' %}?status__exact=pending" class="gx-stat-chip">
+        <i class="bi bi-phone" style="color:#fbbf24;"></i>
+        EcoCash <span class="chip-val" style="{% if pending_ecocash %}color:#fbbf24;{% endif %}">{{ pending_ecocash }}</span>
+        <span style="color:var(--muted);">pending</span>
+    </a>
+    <a href="{% url 'genx_admin:inventory_stock_changelist' %}" class="gx-stat-chip">
+        <i class="bi bi-exclamation-triangle" style="color:#f87171;"></i>
+        Low Stock <span class="chip-val" style="{% if low_stock_count %}color:#f87171;{% endif %}">{{ low_stock_count }}</span>
+    </a>
+    {% if held_count %}
+    <a href="{% url 'genx_admin:sales_sale_changelist' %}?is_held__exact=1" class="gx-stat-chip">
+        <i class="bi bi-pause-circle" style="color:#a78bfa;"></i>
+        Held <span class="chip-val" style="color:#a78bfa;">{{ held_count }}</span>
+    </a>
+    {% endif %}
+    {% if active_promos %}
+    <a href="{% url 'genx_admin:promotions_promotion_changelist' %}" class="gx-stat-chip">
+        <i class="bi bi-tag" style="color:#34d399;"></i>
+        Promos <span class="chip-val" style="color:#34d399;">{{ active_promos }}</span> active
+    </a>
+    {% endif %}
+
+    <span style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+        <a href="/sales/pos/" class="gx-stat-chip" style="border-color:rgba(233,69,96,.4);color:#e94560;">
+            <i class="bi bi-display"></i> POS Terminal
+        </a>
+        <a href="/sales/dashboard/" class="gx-stat-chip">
+            <i class="bi bi-grid"></i> Dashboard
+        </a>
+    </span>
+</div>
+{% endblock %}
+
+{% block footer %}
+<div id="footer" style="background:var(--ink);color:var(--muted);padding:10px 22px;font-size:11px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+    <span>GenX POS — Admin Panel</span>
+    <span>Eyedentity · GenX Zimbabwe · Armor Sole</span>
+</div>
+{% endblock %}
+
+{% block extrascripts %}
+{{ block.super }}
+<script>
+/* Keyboard shortcut: press / to focus search */
+document.addEventListener('keydown', function(e) {
+    if (e.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        var s = document.getElementById('searchbar');
+        if (s) { s.focus(); s.select(); }
+    }
+});
+</script>
+{% endblock %}
