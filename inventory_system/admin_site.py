@@ -1,9 +1,3 @@
-"""
-inventory_system/admin_site.py
-──────────────────────────────
-Custom AdminSite that injects live dashboard stats into every admin page
-context so templates can display them in the sidebar and on the index page.
-"""
 from decimal import Decimal
 
 from django.contrib.admin import AdminSite
@@ -25,56 +19,118 @@ class GenXAdminSite(AdminSite):
 
     @staticmethod
     def _get_stats():
-        """Return a dict of live stats, safely — never crash the admin."""
+        """
+        Return a dict of live stats using DB-level aggregation.
+        Each stat is fetched independently so a single failure never
+        crashes the whole admin panel.
+        """
         stats = {
-            "today_total":      Decimal("0"),
-            "today_count":      0,
-            "month_total":      Decimal("0"),
-            "month_count":      0,
-            "pending_ecocash":  0,
-            "low_stock_count":  0,
-            "held_count":       0,
-            "active_promos":    0,
+            "today_total":     Decimal("0"),
+            "today_count":     0,
+            "month_total":     Decimal("0"),
+            "month_count":     0,
+            "pending_ecocash": 0,
+            "low_stock_count": 0,
+            "held_count":      0,
+            "active_promos":   0,
         }
+
+        today       = timezone.now().date()
+        month_start = today.replace(day=1)
+
+        # ── today's sales ──────────────────────────────────────────────
         try:
-            from django.conf import settings as django_settings
-            from sales.models import Sale
-            from ecocash.models import EcoCashTransaction
-            from inventory.models import Product
-            from promotions.models import Promotion
+            from django.db.models import Sum
+            from sales.models import Sale, SaleItem
 
-            today       = timezone.now().date()
-            month_start = today.replace(day=1)
-            threshold   = getattr(django_settings, "LOW_STOCK_THRESHOLD", 3)
+            today_qs = Sale.objects.filter(sale_date__date=today, is_held=False)
+            stats["today_count"] = today_qs.count()
 
-            today_sales = Sale.objects.filter(
-                sale_date__date=today, is_held=False
-            ).prefetch_related("items")
-            stats["today_count"] = today_sales.count()
-            stats["today_total"] = sum(s.total_amount for s in today_sales)
+            # Prefer aggregating from SaleItem rows (avoids loading Sale objects
+            # and calling Python-side properties which caused the original 500s)
+            today_total = (
+                SaleItem.objects
+                .filter(sale__sale_date__date=today, sale__is_held=False)
+                .aggregate(t=Sum("line_total"))["t"]
+            )
+            # Fallback: if total_amount is a real DB column on Sale
+            if today_total is None:
+                today_total = today_qs.aggregate(t=Sum("total_amount"))["t"]
 
-            month_sales = Sale.objects.filter(
+            stats["today_total"] = today_total or Decimal("0")
+        except Exception:
+            pass
+
+        # ── month's sales ──────────────────────────────────────────────
+        try:
+            from django.db.models import Sum
+            from sales.models import Sale, SaleItem
+
+            month_qs = Sale.objects.filter(
                 sale_date__date__gte=month_start, is_held=False
-            ).prefetch_related("items")
-            stats["month_count"] = month_sales.count()
-            stats["month_total"] = sum(s.total_amount for s in month_sales)
+            )
+            stats["month_count"] = month_qs.count()
 
+            month_total = (
+                SaleItem.objects
+                .filter(
+                    sale__sale_date__date__gte=month_start,
+                    sale__is_held=False,
+                )
+                .aggregate(t=Sum("line_total"))["t"]
+            )
+            if month_total is None:
+                month_total = month_qs.aggregate(t=Sum("total_amount"))["t"]
+
+            stats["month_total"] = month_total or Decimal("0")
+        except Exception:
+            pass
+
+        # ── pending ecocash ────────────────────────────────────────────
+        try:
+            from ecocash.models import EcoCashTransaction
             stats["pending_ecocash"] = EcoCashTransaction.objects.filter(
                 status=EcoCashTransaction.STATUS_PENDING
             ).count()
+        except Exception:
+            pass
 
-            stats["low_stock_count"] = Product.objects.filter(
-                is_active=True, stock__quantity__lte=threshold
-            ).count()
+        # ── low stock ──────────────────────────────────────────────────
+        try:
+            from django.conf import settings as django_settings
+            from inventory.models import Stock
 
+            threshold = getattr(django_settings, "LOW_STOCK_THRESHOLD", 3)
+            # Query Stock directly instead of going through Product — avoids
+            # the extra JOIN that was causing issues on some DB configs
+            stats["low_stock_count"] = (
+                Stock.objects
+                .filter(
+                    product__is_active=True,
+                    quantity__lte=threshold,
+                )
+                .count()
+            )
+        except Exception:
+            pass
+
+        # ── held sales ─────────────────────────────────────────────────
+        try:
+            from sales.models import Sale
             stats["held_count"] = Sale.objects.filter(is_held=True).count()
+        except Exception:
+            pass
 
+        # ── active promotions ──────────────────────────────────────────
+        try:
+            from promotions.models import Promotion
             stats["active_promos"] = sum(
                 1 for p in Promotion.objects.filter(is_active=True)
                 if p.is_currently_active
             )
         except Exception:
             pass
+
         return stats
 
 
