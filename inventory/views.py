@@ -80,13 +80,16 @@ def product_create(request):
         messages.error(request, "Only managers and admins can add products.")
         return redirect('inventory:product_list')
 
-    form = ProductForm(request.POST or None, request.FILES or None)
-    if request.method == 'POST' and form.is_valid():
-        with transaction.atomic():
-            product = form.save()
-            Stock.objects.create(product=product, quantity=0)
-        messages.success(request, f"Product '{product.name}' added successfully!")
-        return redirect('inventory:product_list')
+    if request.method == 'POST':
+        form = ProductForm(request.POST, request.FILES)
+        if form.is_valid():
+            with transaction.atomic():
+                product = form.save()
+                Stock.objects.create(product=product, quantity=0)
+            messages.success(request, f"Product '{product.name}' added successfully!")
+            return redirect('inventory:product_list')
+    else:
+        form = ProductForm()
 
     return render(request, 'product_form.html', {'form': form, 'title': 'Add Product'})
 
@@ -98,11 +101,15 @@ def product_edit(request, pk):
         return redirect('inventory:product_list')
 
     product = get_object_or_404(Product, pk=pk)
-    form = ProductForm(request.POST or None, request.FILES or None, instance=product)
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        messages.success(request, f"Product '{product.name}' updated!")
-        return redirect('inventory:product_list')
+
+    if request.method == 'POST':
+        form = ProductForm(request.POST, request.FILES, instance=product)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Product '{product.name}' updated!")
+            return redirect('inventory:product_list')
+    else:
+        form = ProductForm(instance=product)
 
     return render(request, 'product_form.html', {'form': form, 'title': 'Edit Product', 'product': product})
 
@@ -159,7 +166,7 @@ def stock_take_create(request):
                 for product in products:
                     add_qty      = max(0, int(request.POST.get(f'add_{product.pk}', 0) or 0))
                     system_count = product.current_stock
-                    new_count    = system_count + add_qty   # ADD ONLY — never subtract
+                    new_count    = system_count + add_qty
 
                     StockTakeItem.objects.create(
                         stock_take   = stock_take,
@@ -183,8 +190,6 @@ def stock_take_create(request):
     else:
         form = StockTakeForm()
 
-    # Products only shown server-side if joint was pre-selected via GET
-    # (AJAX handles dynamic loading from the template JS)
     joint_id = request.GET.get('joint', '')
     products = []
     if joint_id:
@@ -197,7 +202,6 @@ def stock_take_create(request):
         'form':     form,
         'products': products,
     })
-
 
 
 @login_required
@@ -276,6 +280,7 @@ def get_products_by_joint(request):
 
         return JsonResponse({'products': result})
     return JsonResponse({'products': []})
+
 
 @login_required
 def category_list(request):
