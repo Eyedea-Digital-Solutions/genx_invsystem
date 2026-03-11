@@ -97,9 +97,14 @@
         .main-wrapper {
             margin-left: var(--sidebar-w);
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
             transition: margin-left 0.25s ease;
         }
 
+        .page-content {
+            flex: 1;
+        }
         /* ─── TOPBAR ─── */
         .topbar {
             height: var(--topbar-h);
@@ -256,6 +261,11 @@
     </a>
     {% endif %}
 
+    <div class="nav-section">Expenses</div>
+        <a href="{% url 'expense:expense_list' %}" class="nav-link {% if request.resolver_match.app_name == 'expense' %}active{% endif %}">
+            <i class="bi bi-receipt-cutoff"></i> Expenses
+        </a>
+        
     {% if user.is_manager_role %}
     <div class="nav-section">Promotions</div>
     <a href="{% url 'promotions:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'promotions' %}active{% endif %}">
