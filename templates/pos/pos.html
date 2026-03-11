@@ -593,9 +593,6 @@ let searchTimeout = null;
 const $  = id => document.getElementById(id);
 const jointEl = $('joint-select');
 
-/* ══════════════════════════════
-   MOBILE PANEL SWITCHING
-══════════════════════════════ */
 const PANEL_IDS = ['panel-products', 'panel-cart', 'panel-payment'];
 let activePanel = 0;
 
@@ -613,9 +610,6 @@ function switchPanel(idx) {
 
 function isMobile() { return window.innerWidth <= 768; }
 
-/* ══════════════════════════════
-   CHANGE CALCULATOR
-══════════════════════════════ */
 function calcChange() {
     const tendered = parseFloat($('cash-tendered').value) || 0;
     const change = tendered - currentTotal;
@@ -666,9 +660,6 @@ function resetChangeCalc() {
     if (r) r.style.display = 'none';
 }
 
-/* ══════════════════════════════
-   BARCODE / SEARCH
-══════════════════════════════ */
 const barcodeEl = $('barcode-input');
 
 barcodeEl.addEventListener('keydown', e => {
@@ -795,9 +786,6 @@ function addToCart(product) {
     updateCart();
 }
 
-/* ══════════════════════════════
-   CART UPDATE
-══════════════════════════════ */
 async function updateCart() {
     if (!cart.filter(i => !i.is_free_gift).length) {
         cart = []; cartDiscount = 0; cartDiscountLabel = ''; currentTotal = 0;
@@ -820,6 +808,7 @@ async function updateCart() {
     cartDiscountLabel = data.cart_discount_label;
     currentTotal     = parseFloat(data.total);
     renderCart(data);
+    showAccessoryWarnings(data.free_accessory_warnings);
     buildQuickCashBtns();
     calcChange();
 }
@@ -888,6 +877,42 @@ function renderCart(data) {
     if (data) updateTotals(parseFloat(data.subtotal), cartDiscount, parseFloat(data.total));
 }
 
+function showAccessoryWarnings(warnings) {
+    if (!warnings || warnings.length === 0) return;
+
+    document.querySelectorAll('.accessory-warning-banner').forEach(el => el.remove());
+
+    const container = document.getElementById('cart-warnings')
+        || document.getElementById('cart-container')
+        || document.body;
+
+    warnings.forEach(msg => {
+        const banner = document.createElement('div');
+        banner.className = 'accessory-warning-banner alert alert-warning alert-dismissible fade show';
+        banner.style.cssText = `
+            margin: 6px 0;
+            padding: 8px 12px;
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #92400e;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        `;
+        banner.innerHTML = `
+            <span style="font-size:16px;line-height:1;">⚠</span>
+            <span style="flex:1;">${msg}</span>
+            <button type="button"
+                    style="background:none;border:none;cursor:pointer;color:#92400e;font-size:16px;line-height:1;padding:0;"
+                    onclick="this.closest('.accessory-warning-banner').remove()">&times;</button>
+        `;
+        container.prepend(banner);
+        setTimeout(() => banner.remove(), 8000);
+    });
+}
+
 function updateTotals(subtotal, discount, total) {
     $('disp-subtotal').textContent = `$${subtotal.toFixed(2)}`;
     $('disp-total').textContent    = `$${total.toFixed(2)}`;
@@ -926,9 +951,6 @@ function clearCart() {
     }
 }
 
-/* ══════════════════════════════
-   COMPLETE / HOLD / RECALL
-══════════════════════════════ */
 async function completeSale(method) {
     const jid = getJointId();
     if (!jid)  { alert('Select a joint first.'); return; }
@@ -952,43 +974,41 @@ async function completeSale(method) {
     });
     const data = await res.json();
 
-    if (data.success) {
-        $('receipt-number').textContent = data.receipt_number;
-        $('receipt-link').href          = data.receipt_url;
-
-        // Show change info in modal for cash / mixed payments
-        const changeDisplay = $('modal-change-display');
-        if ((method === 'cash' || method === 'mixed') && tendered > 0) {
-            changeDisplay.style.display  = 'block';
-            $('modal-tendered').textContent = `$${tendered.toFixed(2)}`;
-            $('modal-change').textContent   = change >= 0
-                ? `$${change.toFixed(2)}`
-                : `Short $${Math.abs(change).toFixed(2)}`;
-            $('modal-change').style.color   = change >= 0 ? '#4ade80' : '#f87171';
-            $('modal-subtitle').textContent = '';
-        } else {
-            changeDisplay.style.display  = 'none';
-            $('modal-subtitle').textContent = 'Transaction completed';
-        }
-
-        new bootstrap.Modal($('receiptModal')).show();
-        cart = []; cartDiscount = 0; cartDiscountLabel = ''; currentTotal = 0;
-        renderCart(); resetChangeCalc();
-
-        // ── AUTO PRINT ──────────────────────────────────────────────────────
-        // Opens receipt in new tab → receipt_thermal.html auto-calls
-        // window.print() on load → after printing the tab closes itself
-        setTimeout(() => {
-            const printWin = window.open(data.receipt_url, '_blank');
-            if (printWin) {
-                printWin.addEventListener('afterprint', () => printWin.close());
-            }
-        }, 300);
-        // ────────────────────────────────────────────────────────────────────
-
-    } else {
+    if (!data.success) {
         alert('Error: ' + data.error);
+        return;
     }
+
+    showAccessoryWarnings(data.free_accessory_warnings);
+
+    $('receipt-number').textContent = data.receipt_number;
+    $('receipt-link').href          = data.receipt_url;
+
+    const changeDisplay = $('modal-change-display');
+    if ((method === 'cash' || method === 'mixed') && tendered > 0) {
+        changeDisplay.style.display  = 'block';
+        $('modal-tendered').textContent = `$${tendered.toFixed(2)}`;
+        $('modal-change').textContent   = change >= 0
+            ? `$${change.toFixed(2)}`
+            : `Short $${Math.abs(change).toFixed(2)}`;
+        $('modal-change').style.color   = change >= 0 ? '#4ade80' : '#f87171';
+        $('modal-subtitle').textContent = '';
+    } else {
+        changeDisplay.style.display  = 'none';
+        $('modal-subtitle').textContent = 'Transaction completed';
+    }
+
+    new bootstrap.Modal($('receiptModal')).show();
+    cart = []; cartDiscount = 0; cartDiscountLabel = ''; currentTotal = 0;
+    renderCart(); resetChangeCalc();
+
+    const delay = data.free_accessory_warnings && data.free_accessory_warnings.length > 0 ? 2500 : 300;
+    setTimeout(() => {
+        const printWin = window.open(data.receipt_url, '_blank');
+        if (printWin) {
+            printWin.addEventListener('afterprint', () => printWin.close());
+        }
+    }, delay);
 }
 
 async function holdTransaction() {
@@ -1028,9 +1048,6 @@ function newSale() {
     if (isMobile()) switchPanel(0); else focusBarcode();
 }
 
-/* ══════════════════════════════
-   KEYBOARD SHORTCUTS (desktop)
-══════════════════════════════ */
 document.addEventListener('keydown', e => {
     if (isMobile()) return;
     if (e.key === 'F2') { e.preventDefault(); focusBarcode(); }
@@ -1040,7 +1057,6 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') bootstrap.Modal.getInstance($('receiptModal'))?.hide();
 });
 
-/* Filter tabs */
 document.querySelectorAll('.filter-tab').forEach(tab => {
     tab.addEventListener('click', () => {
         document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
@@ -1050,7 +1066,6 @@ document.querySelectorAll('.filter-tab').forEach(tab => {
     });
 });
 
-/* Beep */
 function beep() {
     try {
         const ctx = new AudioContext();
@@ -1063,7 +1078,6 @@ function beep() {
     } catch {}
 }
 
-/* Init */
 if (getJointId()) { loadCategories(); loadProducts(); }
 if (!isMobile()) focusBarcode();
 </script>

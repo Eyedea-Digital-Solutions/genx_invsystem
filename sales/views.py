@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from .models import Sale, SaleItem, SaleAuditLog
 from .forms import SaleForm, ManualSaleForm, SaleFilterForm
-from inventory.models import Joint, Product
+from inventory.models import Joint, Product, ProductFreeAccessory
 
 
 @login_required
@@ -160,11 +160,10 @@ def pos_categories(request):
     cats = Category.objects.filter(joint_id=joint_id).values('id', 'name', 'icon', 'color')
     return JsonResponse({'categories': list(cats)})
 
-
 @login_required
 @require_POST
 def pos_update_cart(request):
-    body = json.loads(request.body)
+    body     = json.loads(request.body)
     joint_id = body.get('joint_id')
     raw_items = body.get('items', [])
 
@@ -175,21 +174,22 @@ def pos_update_cart(request):
             'cart_discount': '0.00',
             'cart_discount_label': '',
             'total': '0.00',
+            'free_accessory_warnings': [],
         })
 
-    pids = [i['product_id'] for i in raw_items]
+    pids     = [i['product_id'] for i in raw_items]
     products = {p.pk: p for p in Product.objects.filter(pk__in=pids)}
 
     cart_items = []
     for item in raw_items:
         pid = item['product_id']
-        p = products.get(pid)
+        p   = products.get(pid)
         if p:
             cart_items.append({
-                'product_id': pid,
+                'product_id':  pid,
                 'product_obj': p,
-                'qty': int(item['qty']),
-                'unit_price': Decimal(str(item['unit_price'])),
+                'qty':         int(item['qty']),
+                'unit_price':  Decimal(str(item['unit_price'])),
                 'is_free_gift': False,
                 'promo_label': '',
             })
@@ -197,6 +197,67 @@ def pos_update_cart(request):
     from promotions.engine import apply_promotions
     result = apply_promotions(cart_items, joint_id=joint_id)
 
+    trigger_pids = [
+        i['product_id']
+        for i in result['items']
+        if not i.get('is_free_gift')
+    ]
+
+    # Load all active accessory rules for these triggers in one query.
+    accessory_rules = (
+        ProductFreeAccessory.objects
+        .select_related('accessory_product__stock')
+        .filter(trigger_product_id__in=trigger_pids, is_active=True)
+    )
+
+    trigger_qty_map = {i['product_id']: i['qty'] for i in result['items'] if not i.get('is_free_gift')}
+    accessory_map   = {}   # accessory_product_id → dict
+    for rule in accessory_rules:
+        aid = rule.accessory_product_id
+        trigger_qty = trigger_qty_map.get(rule.trigger_product_id, 1)
+        needed_qty  = rule.quantity * trigger_qty
+        if aid in accessory_map:
+            accessory_map[aid]['qty'] += needed_qty
+        else:
+            accessory_map[aid] = {
+                'product':    rule.accessory_product,
+                'qty':        needed_qty,
+                'label':      rule.get_label(),
+                'rule_id':    rule.pk,
+            }
+
+    # Build warning list for out-of-stock accessories.
+    free_accessory_warnings = []
+    for aid, acc in accessory_map.items():
+        available = acc['product'].current_stock
+        if available == 0:
+            free_accessory_warnings.append(
+                f"⚠ Free accessory '{acc['product'].name}' is out of stock — "
+                f"it will NOT be included in this sale."
+            )
+        elif available < acc['qty']:
+            free_accessory_warnings.append(
+                f"⚠ Only {available} unit(s) of free accessory "
+                f"'{acc['product'].name}' in stock (needed {acc['qty']}) — "
+                f"sale will proceed with {available} unit(s)."
+            )
+
+    # Add free accessories to the items list (skip fully OOS ones).
+    for aid, acc in accessory_map.items():
+        available = acc['product'].current_stock
+        actual_qty = min(acc['qty'], available)
+        if actual_qty <= 0:
+            continue
+        result['items'].append({
+            'product_id':   aid,
+            'product_obj':  acc['product'],
+            'qty':          actual_qty,
+            'unit_price':   Decimal('0'),
+            'is_free_gift': True,
+            'promo_label':  acc['label'],
+        })
+
+    # ── Totals ───────────────────────────────────────────────────────────────
     subtotal = sum(
         i['unit_price'] * i['qty']
         for i in result['items']
@@ -206,20 +267,21 @@ def pos_update_cart(request):
 
     return JsonResponse({
         'items': [{
-            'product_id': i['product_id'],
-            'name': i['product_obj'].name,
-            'qty': i['qty'],
-            'unit_price': str(i['unit_price']),
-            'line_total': '0.00' if i.get('is_free_gift') else str(
+            'product_id':   i['product_id'],
+            'name':         i['product_obj'].name,
+            'qty':          i['qty'],
+            'unit_price':   str(i['unit_price']),
+            'line_total':   '0.00' if i.get('is_free_gift') else str(
                 (i['unit_price'] * i['qty']).quantize(Decimal('0.01'))
             ),
             'is_free_gift': i.get('is_free_gift', False),
-            'promo_label': i.get('promo_label', ''),
+            'promo_label':  i.get('promo_label', ''),
         } for i in result['items']],
-        'subtotal': str(subtotal.quantize(Decimal('0.01'))),
-        'cart_discount': str(result['cart_discount'].quantize(Decimal('0.01'))),
-        'cart_discount_label': result['cart_discount_label'],
-        'total': str(total.quantize(Decimal('0.01'))),
+        'subtotal':               str(subtotal.quantize(Decimal('0.01'))),
+        'cart_discount':          str(result['cart_discount'].quantize(Decimal('0.01'))),
+        'cart_discount_label':    result['cart_discount_label'],
+        'total':                  str(total.quantize(Decimal('0.01'))),
+        'free_accessory_warnings': free_accessory_warnings,   # ← NEW field
     })
 
 
@@ -231,13 +293,14 @@ def pos_complete(request):
     items_data          = body.get('items', [])
     payment_method      = body.get('payment_method', 'cash')
     customer_name       = body.get('customer_name', '')
-    customer_phone      = body.get('customer_phone', '')          # ← was missing
+    customer_phone      = body.get('customer_phone', '')
     cart_discount       = Decimal(str(body.get('cart_discount', '0')))
     cart_discount_label = body.get('cart_discount_label', '')
 
     if not joint_id or not items_data:
         return JsonResponse({'success': False, 'error': 'Joint and items are required.'})
 
+    # ── Stock validation for PAID items only ─────────────────────────────────
     pids     = [i['product_id'] for i in items_data if not i.get('is_free_gift')]
     products = {
         p.pk: p
@@ -256,6 +319,35 @@ def pos_complete(request):
                 'error': f"Insufficient stock for '{p.name}'. Available: {p.current_stock}."
             })
 
+    # ── Free accessory stock check (warn-only, clamp quantity) ───────────────
+    free_items   = [i for i in items_data if i.get('is_free_gift')]
+    free_pids    = [i['product_id'] for i in free_items]
+    free_products = {
+        p.pk: p
+        for p in Product.objects.select_related('stock').filter(pk__in=free_pids)
+    }
+
+    # Clamp free quantities to available stock; collect warnings.
+    sale_warnings = []
+    clamped_free  = []
+    for item in free_items:
+        p         = free_products.get(item['product_id'])
+        if not p:
+            continue
+        available = p.current_stock
+        needed    = int(item['qty'])
+        actual    = min(needed, available)
+        if available == 0:
+            sale_warnings.append(
+                f"Free accessory '{p.name}' was out of stock and not included."
+            )
+            continue   # skip entirely
+        if actual < needed:
+            sale_warnings.append(
+                f"Only {actual} of {needed} free '{p.name}' included (limited stock)."
+            )
+        clamped_free.append({**item, 'qty': actual, '_product': p})
+
     with transaction.atomic():
         sale = Sale.objects.create(
             joint_id        = joint_id,
@@ -263,48 +355,59 @@ def pos_complete(request):
             sale_type       = 'pos',
             payment_method  = payment_method,
             customer_name   = customer_name,
-            customer_phone  = customer_phone,             # ← saved now
+            customer_phone  = customer_phone,
             discount_amount = cart_discount,
             discount_type   = 'fixed' if cart_discount else '',
             discount_label  = cart_discount_label,
         )
 
         snapshot = []
+
+        # Paid items
         for item in items_data:
-            pid     = item['product_id']
-            is_free = item.get('is_free_gift', False)
-
-            if is_free:
-                try:
-                    p = Product.objects.select_related('stock').get(pk=pid)
-                except Product.DoesNotExist:
-                    continue
-            else:
-                p = products[pid]
-
+            if item.get('is_free_gift'):
+                continue
+            p          = products[item['product_id']]
             qty        = int(item['qty'])
-            unit_price = Decimal('0') if is_free else Decimal(str(item['unit_price']))
+            unit_price = Decimal(str(item['unit_price']))
 
             SaleItem.objects.create(
                 sale            = sale,
                 product         = p,
                 quantity        = qty,
                 unit_price      = unit_price,
-                is_free_gift    = is_free,
+                is_free_gift    = False,
                 promotion_label = item.get('promo_label', ''),
             )
-
-            if not is_free:
-                p.stock.deduct(qty)
-            elif p.current_stock >= qty:
-                p.stock.deduct(qty)
-
+            p.stock.deduct(qty)
             snapshot.append({
-                'product_id':   pid,
+                'product_id':   p.pk,
                 'product_name': p.name,
                 'quantity':     qty,
                 'unit_price':   str(unit_price),
-                'is_free_gift': is_free,
+                'is_free_gift': False,
+            })
+
+        # Free accessory items (clamped to available stock)
+        for item in clamped_free:
+            p   = item['_product']
+            qty = item['qty']
+
+            SaleItem.objects.create(
+                sale            = sale,
+                product         = p,
+                quantity        = qty,
+                unit_price      = Decimal('0'),
+                is_free_gift    = True,
+                promotion_label = item.get('promo_label', ''),
+            )
+            p.stock.deduct(qty)
+            snapshot.append({
+                'product_id':   p.pk,
+                'product_name': p.name,
+                'quantity':     qty,
+                'unit_price':   '0.00',
+                'is_free_gift': True,
             })
 
         SaleAuditLog.objects.create(
@@ -312,10 +415,11 @@ def pos_complete(request):
             action       = 'created',
             performed_by = request.user,
             details={
-                'source':         'pos',
-                'total':          str(sale.total_amount),
-                'payment_method': payment_method,
-                'items':          snapshot,
+                'source':            'pos',
+                'total':             str(sale.total_amount),
+                'payment_method':    payment_method,
+                'items':             snapshot,
+                'accessory_warnings': sale_warnings,
             }
         )
 
@@ -324,11 +428,13 @@ def pos_complete(request):
             create_ecocash_payment(sale)
 
     return JsonResponse({
-        'success':        True,
-        'receipt_url':    f'/sales/{sale.pk}/receipt/thermal/',
-        'receipt_number': sale.receipt_number,
-        'sale_id':        sale.pk,
+        'success':                 True,
+        'receipt_url':             f'/sales/{sale.pk}/receipt/thermal/',
+        'receipt_number':          sale.receipt_number,
+        'sale_id':                 sale.pk,
+        'free_accessory_warnings': sale_warnings,   # surfaced to POS UI
     })
+
 
 @login_required
 @require_POST

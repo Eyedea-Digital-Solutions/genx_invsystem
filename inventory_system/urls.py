@@ -13,5 +13,6 @@ urlpatterns = [
     path("sales/",      include("sales.urls",      namespace="sales")),
     path("ecocash/",    include("ecocash.urls",    namespace="ecocash")),
     path("promotions/", include("promotions.urls", namespace="promotions")),
+    path('expenses/', include('expenses.urls')),
 ] + static(settings.MEDIA_URL,  document_root=settings.MEDIA_ROOT) \
   + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

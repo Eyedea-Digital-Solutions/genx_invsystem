@@ -230,3 +230,47 @@ class StockTransfer(models.Model):
 
     class Meta:
         ordering = ['-transferred_at']
+
+class ProductFreeAccessory(models.Model):
+   
+    trigger_product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='free_accessories',
+        help_text='When this product is added to cart, the accessory is auto-added for free',
+    )
+    accessory_product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='given_as_free_with',
+        help_text='The product given for free (must belong to same joint)',
+    )
+    quantity = models.PositiveIntegerField(
+        default=1,
+        help_text='How many free units come with each unit of the trigger product',
+    )
+    label = models.CharField(
+        max_length=200, blank=True,
+        help_text='Receipt label, e.g. "Free case with purchase". Defaults to accessory name.',
+    )
+    is_active = models.BooleanField(default=True)
+
+    def get_label(self):
+        return self.label or f"Free {self.accessory_product.name}"
+
+    def __str__(self):
+        return (
+            f"{self.trigger_product.name} → FREE {self.accessory_product.name} "
+            f"×{self.quantity} [{self.trigger_product.joint.display_name}]"
+        )
+
+    class Meta:
+        verbose_name = 'Free Accessory Bundle'
+        verbose_name_plural = 'Free Accessory Bundles'
+        ordering = ['trigger_product__name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['trigger_product', 'accessory_product'],
+                name='unique_trigger_accessory_pair',
+            )
+        ]

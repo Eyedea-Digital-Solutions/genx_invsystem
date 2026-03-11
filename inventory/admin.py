@@ -6,7 +6,7 @@ from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from django.urls import reverse
 
 from inventory_system.admin_site import genx_admin_site
-from .models import Joint, Product, Stock, StockTake, StockTakeItem, StockTransfer, Category, Brand, Supplier
+from .models import Joint, Product, Stock, StockTake, StockTakeItem, StockTransfer, Category, Brand, Supplier, ProductFreeAccessory
 
 
 # ─── JOINT ──────────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_editable  = ['is_clearance', 'is_active']
     list_per_page  = 50
     ordering       = ['joint', 'name']
-    inlines        = [StockInline]
+    inlines        = [StockInline, ProductFreeAccessoryInline]
     readonly_fields = ['effective_price', 'promotion_label', 'current_stock',
                        'created_at', 'updated_at', 'image_preview']
 
@@ -356,5 +356,71 @@ class StockTransferAdmin(admin.ModelAdmin):
         n = queryset.filter(status='pending').update(status='completed')
         self.message_user(request, f'{n} transfer(s) marked as completed.')
 
+class ProductFreeAccessoryInline(admin.TabularInline):
+    """
+    Shown inside ProductAdmin so managers can attach free accessories
+    directly on the product edit page.
+    """
+    model          = ProductFreeAccessory
+    extra          = 1
+    fk_name        = 'trigger_product'
+    fields         = ['accessory_product', 'quantity', 'label', 'is_active']
+    verbose_name   = 'Free Accessory'
+    verbose_name_plural = 'Free Accessories (auto-added to cart)'
 
-genx_admin_site.register(StockTransfer, StockTransferAdmin)
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Limit accessory choices to the same joint as the trigger product."""
+        if db_field.name == 'accessory_product' and hasattr(request, '_product_joint'):
+            kwargs['queryset'] = Product.objects.filter(
+                joint=request._product_joint, is_active=True
+            ).order_by('name')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+class ProductFreeAccessoryAdmin(admin.ModelAdmin):
+    """
+    Standalone admin for browsing/editing all free accessory bundles.
+    Accessible via the Inventory section of the admin.
+    """
+    list_display  = ['trigger_product', 'joint_display', 'arrow', 'accessory_product',
+                     'quantity', 'label', 'accessory_stock', 'is_active']
+    list_filter   = ['is_active', 'trigger_product__joint']
+    search_fields = ['trigger_product__name', 'accessory_product__name', 'label']
+    list_editable = ['quantity', 'is_active']
+    ordering      = ['trigger_product__joint__name', 'trigger_product__name']
+
+    fieldsets = (
+        (None, {
+            'fields': ('trigger_product', 'accessory_product', 'quantity', 'label', 'is_active'),
+            'description': (
+                'When the <strong>Trigger Product</strong> is added to the POS cart, '
+                '<strong>Quantity</strong> units of the <strong>Accessory Product</strong> '
+                'are automatically added for free and deducted from stock on sale.'
+            ),
+        }),
+    )
+
+    @admin.display(description='Joint', ordering='trigger_product__joint__display_name')
+    def joint_display(self, obj):
+        return obj.trigger_product.joint.display_name
+
+    @admin.display(description='')
+    def arrow(self, obj):
+        return format_html('<span style="color:#9ca3af;font-weight:700;">→ FREE</span>')
+
+    @admin.display(description='Accessory Stock')
+    def accessory_stock(self, obj):
+        qty = obj.accessory_product.current_stock
+        if qty == 0:
+            return format_html(
+                '<span style="background:#fee2e2;color:#dc2626;padding:2px 7px;'
+                'border-radius:4px;font-size:10px;font-weight:700;">OUT OF STOCK</span>'
+            )
+        if qty <= obj.accessory_product.stock.min_quantity:
+            return format_html(
+                '<span style="background:#fef3c7;color:#d97706;padding:2px 7px;'
+                'border-radius:4px;font-size:10px;font-weight:700;">{} ⚠ LOW</span>', qty
+            )
+        return format_html('<span style="color:#16a34a;font-weight:600;">{}</span>', qty)
+
+genx_admin_site.register(StockTransfer, StockTransferAdmin, ProductFreeAccessory, ProductFreeAccessoryAdmin)
