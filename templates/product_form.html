@@ -12,9 +12,34 @@
                     <div class="row g-3">
                         {% for field in form %}
                         <div class="col-md-{% if field.name in 'name,notes' %}12{% else %}6{% endif %}">
-                            <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}{% if field.field.required %}<span class="text-danger ms-1">*</span>{% endif %}</label>
-                            {{ field }}
-                            {% if field.errors %}<div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>{% endif %}
+                            <label class="form-label fw-semibold" style="font-size:13px;">
+                                {{ field.label }}{% if field.field.required %}<span class="text-danger ms-1">*</span>{% endif %}
+                            </label>
+
+                            {% if field.name == 'image' %}
+                                {# Show current image preview when editing #}
+                                {% if product.image %}
+                                <div class="mb-2 d-flex align-items-center gap-3"
+                                     style="background:#f8f7f5;border:1px solid #e5e3de;border-radius:10px;padding:10px;">
+                                    <img src="{{ product.image.url }}"
+                                         alt="Current image"
+                                         style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e3de;">
+                                    <div>
+                                        <div style="font-size:12px;font-weight:600;color:#333;">Current image</div>
+                                        <div style="font-size:11px;color:#888;margin-top:2px;">
+                                            Upload a new file below to replace it
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {{ field }}
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+
+                            {% if field.errors %}
+                            <div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
