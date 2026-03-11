@@ -263,10 +263,19 @@ def get_products_by_joint(request):
     if joint_id:
         products = Product.objects.select_related('stock').filter(
             joint_id=joint_id, is_active=True
-        ).values('id', 'name', 'code', 'price', 'stock__quantity', 'barcode', 'is_clearance')
-        return JsonResponse({'products': list(products)})
-    return JsonResponse({'products': []})
+        ).values('id', 'name', 'code', 'price', 'stock__quantity', 'barcode', 'is_clearance', 'image')
 
+        result = []
+        for p in products:
+            image_url = None
+            if p['image']:
+                image_url = request.build_absolute_uri(settings.MEDIA_URL + p['image'])
+            p['image_url'] = image_url
+            del p['image']
+            result.append(p)
+
+        return JsonResponse({'products': result})
+    return JsonResponse({'products': []})
 
 @login_required
 def category_list(request):

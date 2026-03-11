@@ -2,9 +2,35 @@
 {% block title %}Products{% endblock %}
 {% block page_title %}Products{% endblock %}
 
+{% block extra_css %}
+<style>
+    .prod-thumb {
+        width: 44px; height: 44px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #f5f4f0;
+        display: block;
+        flex-shrink: 0;
+    }
+    .prod-thumb-placeholder {
+        width: 44px; height: 44px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #f0efeb;
+        display: flex; align-items: center; justify-content: center;
+        color: #ccc; font-size: 18px;
+        flex-shrink: 0;
+    }
+    .prod-name-cell {
+        display: flex; align-items: center; gap: 10px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex align-items-center gap-2 mb-4">
-    <form method="get" class="d-flex align-items-center gap-2 flex-grow-1">
+    <form method="get" class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
         <select name="joint" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
             <option value="">All Joints</option>
             {% for j in joints %}<option value="{{ j.pk }}" {% if selected_joint == j.pk|stringformat:"s" %}selected{% endif %}>{{ j.display_name }}</option>{% endfor %}
@@ -25,21 +51,54 @@
 
 <div class="card border-0 shadow-sm" style="border-radius:14px;">
     <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+        <table class="table table-sm table-hover mb-0 align-middle" style="font-size:13px;">
             <thead class="table-light">
-                <tr><th>Name</th><th>Code</th><th>Joint</th><th>Category</th><th>Price</th><th>Stock</th><th>Flags</th><th></th></tr>
+                <tr>
+                    <th style="width:56px;"></th>
+                    <th>Name</th>
+                    <th class="d-none d-md-table-cell">Code</th>
+                    <th>Joint</th>
+                    <th class="d-none d-lg-table-cell">Category</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th class="d-none d-sm-table-cell">Flags</th>
+                    <th></th>
+                </tr>
             </thead>
             <tbody>
                 {% for product in products %}
                 <tr>
+                    <!-- Thumbnail -->
+                    <td style="padding:8px 10px;">
+                        {% if product.image %}
+                        <img src="{{ product.image.url }}"
+                             alt="{{ product.name }}"
+                             class="prod-thumb"
+                             loading="lazy"
+                             onerror="this.outerHTML='<div class=\'prod-thumb-placeholder\'><i class=\'bi bi-image\'></i></div>'">
+                        {% else %}
+                        <div class="prod-thumb-placeholder">
+                            <i class="bi bi-image"></i>
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Name -->
                     <td class="fw-semibold">{{ product.name }}</td>
-                    <td class="text-muted">{{ product.code|default:"—" }}</td>
+
+                    <td class="text-muted d-none d-md-table-cell">{{ product.code|default:"—" }}</td>
                     <td>{{ product.joint.display_name }}</td>
-                    <td>{{ product.category.name|default:"—" }}</td>
+                    <td class="d-none d-lg-table-cell">{{ product.category.name|default:"—" }}</td>
+
+                    <!-- Price -->
                     <td>
                         ${{ product.effective_price }}
-                        {% if product.price != product.effective_price %}<span class="text-muted text-decoration-line-through ms-1" style="font-size:11px;">${{ product.price }}</span>{% endif %}
+                        {% if product.price != product.effective_price %}
+                        <span class="text-muted text-decoration-line-through ms-1" style="font-size:11px;">${{ product.price }}</span>
+                        {% endif %}
                     </td>
+
+                    <!-- Stock -->
                     <td>
                         {% if product.current_stock == 0 %}
                         <span class="out-of-stock-badge">Out of stock</span>
@@ -49,10 +108,14 @@
                         {{ product.current_stock }}
                         {% endif %}
                     </td>
-                    <td>
+
+                    <!-- Flags -->
+                    <td class="d-none d-sm-table-cell">
                         {% if product.is_clearance %}<span class="badge-clearance me-1">CLR</span>{% endif %}
                         {% if product.promotion_label == 'SALE' %}<span class="badge-sale">SALE</span>{% endif %}
                     </td>
+
+                    <!-- Actions -->
                     <td>
                         {% if user.is_manager_role %}
                         <a href="{% url 'inventory:product_edit' product.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;">Edit</a>
@@ -61,7 +124,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="8" class="text-center text-muted py-5">No products found</td></tr>
+                <tr><td colspan="9" class="text-center text-muted py-5">No products found</td></tr>
                 {% endfor %}
             </tbody>
         </table>

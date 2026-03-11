@@ -192,6 +192,30 @@
         .prod-card:hover { border-color: rgba(255,255,255,0.2); background: #252530; }
         .prod-card:active { transform: scale(0.97); }
         .prod-card.out { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+        /* ─── PRODUCT IMAGE ─── */
+        .prod-img-wrap {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 6px;
+            background: rgba(255,255,255,0.04);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .prod-img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.15s;
+        }
+        .prod-card:hover .prod-img { transform: scale(1.04); }
+        .prod-img-placeholder {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,0.1); font-size: 24px;
+        }
+
         .prod-name { font-size: 11px; font-weight: 600; color: var(--text); line-height: 1.3; margin-bottom: 5px; word-break: break-word; }
         .prod-price { font-size: 13px; font-weight: 800; color: #fff; }
         .prod-price .orig { text-decoration: line-through; font-size: 10px; color: var(--muted); font-weight: 400; margin-left: 3px; }
@@ -207,6 +231,21 @@
         .cart-table td { padding: 6px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
         .cart-table tr:last-child td { border-bottom: none; }
         .cart-item-name { font-size: 11px; font-weight: 600; word-break: break-word; max-width: 85px; }
+
+        /* ─── CART ITEM THUMBNAIL ─── */
+        .cart-thumb {
+            width: 32px; height: 32px; border-radius: 4px;
+            object-fit: cover; flex-shrink: 0;
+            background: rgba(255,255,255,0.06);
+        }
+        .cart-thumb-placeholder {
+            width: 32px; height: 32px; border-radius: 4px;
+            background: rgba(255,255,255,0.06);
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(255,255,255,0.15); font-size: 14px; flex-shrink: 0;
+        }
+        .cart-item-cell { display: flex; align-items: center; gap: 7px; }
+
         .qty-ctrl { display: flex; align-items: center; gap: 3px; }
         .qty-btn {
             width: 22px; height: 22px;
@@ -759,8 +798,15 @@ function renderProductGrid(products) {
         const badge = p.is_clearance    ? '<span class="prod-badge pb-clr">CLR</span>' :
                       p.promotion_label ? '<span class="prod-badge pb-sale">SALE</span>' : '';
         const orig  = p.original_price !== p.price ? `<span class="orig">$${p.original_price}</span>` : '';
+
+        // Image or placeholder
+        const imgHtml = p.image_url
+            ? `<div class="prod-img-wrap"><img class="prod-img" src="${p.image_url}" alt="${p.name}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'prod-img-placeholder\\'><i class=\\'bi bi-image\\'></i></div>'"></div>`
+            : `<div class="prod-img-wrap"><div class="prod-img-placeholder"><i class="bi bi-image"></i></div></div>`;
+
         return `<div class="prod-card${out ? ' out' : ''}" onclick="${out ? '' : `addToCartById(${p.id})`}">
             ${badge}
+            ${imgHtml}
             <div class="prod-name">${p.name}</div>
             <div class="prod-price">$${p.price}${orig}</div>
             <div class="prod-stock">${p.stock > 0 ? p.stock + ' left' : '⚠ Out'}</div>
@@ -780,8 +826,15 @@ function addToCart(product) {
     if (existing) {
         existing.qty++;
     } else {
-        cart.push({ product_id: product.id, name: product.name, qty: 1,
-                    unit_price: product.price, is_free_gift: false, promo_label: '' });
+        cart.push({
+            product_id: product.id,
+            name: product.name,
+            qty: 1,
+            unit_price: product.price,
+            is_free_gift: false,
+            promo_label: '',
+            image_url: product.image_url || null,
+        });
     }
     updateCart();
 }
@@ -803,7 +856,15 @@ async function updateCart() {
         })
     });
     const data = await res.json();
-    cart             = data.items;
+
+    // Preserve image_url from our local cart since the server may not return it
+    const imageMap = {};
+    cart.forEach(i => { if (i.image_url) imageMap[i.product_id] = i.image_url; });
+
+    cart             = data.items.map(i => ({
+        ...i,
+        image_url: imageMap[i.product_id] || null,
+    }));
     cartDiscount     = parseFloat(data.cart_discount);
     cartDiscountLabel = data.cart_discount_label;
     currentTotal     = parseFloat(data.total);
@@ -847,10 +908,22 @@ function renderCart(data) {
     }
 
     body.innerHTML = cart.map((item, idx) => {
+        // Thumbnail for cart row
+        const thumbHtml = item.image_url
+            ? `<img class="cart-thumb" src="${item.image_url}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'cart-thumb-placeholder\\'><i class=\\'bi bi-image\\'></i></div>'">`
+            : `<div class="cart-thumb-placeholder"><i class="bi bi-image"></i></div>`;
+
         if (item.is_free_gift) {
             return `<tr class="free-row">
-                <td><div class="cart-item-name">${item.name}</div>
-                    <span style="font-size:9px;background:#16a34a;color:#fff;padding:1px 4px;border-radius:3px;">FREE</span></td>
+                <td>
+                    <div class="cart-item-cell">
+                        ${thumbHtml}
+                        <div>
+                            <div class="cart-item-name">${item.name}</div>
+                            <span style="font-size:9px;background:#16a34a;color:#fff;padding:1px 4px;border-radius:3px;">FREE</span>
+                        </div>
+                    </div>
+                </td>
                 <td>${item.qty}</td>
                 <td style="text-align:right;">$0</td>
                 <td></td>
@@ -859,8 +932,13 @@ function renderCart(data) {
         const lineTotal = (item.qty * parseFloat(item.unit_price)).toFixed(2);
         return `<tr>
             <td>
-                <div class="cart-item-name">${item.name}</div>
-                ${item.promo_label ? `<div style="font-size:9px;color:#fbbf24;">${item.promo_label}</div>` : ''}
+                <div class="cart-item-cell">
+                    ${thumbHtml}
+                    <div>
+                        <div class="cart-item-name">${item.name}</div>
+                        ${item.promo_label ? `<div style="font-size:9px;color:#fbbf24;">${item.promo_label}</div>` : ''}
+                    </div>
+                </div>
             </td>
             <td>
                 <div class="qty-ctrl">
@@ -879,35 +957,15 @@ function renderCart(data) {
 
 function showAccessoryWarnings(warnings) {
     if (!warnings || warnings.length === 0) return;
-
     document.querySelectorAll('.accessory-warning-banner').forEach(el => el.remove());
-
     const container = document.getElementById('cart-warnings')
         || document.getElementById('cart-container')
         || document.body;
-
     warnings.forEach(msg => {
         const banner = document.createElement('div');
         banner.className = 'accessory-warning-banner alert alert-warning alert-dismissible fade show';
-        banner.style.cssText = `
-            margin: 6px 0;
-            padding: 8px 12px;
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #92400e;
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-        `;
-        banner.innerHTML = `
-            <span style="font-size:16px;line-height:1;">⚠</span>
-            <span style="flex:1;">${msg}</span>
-            <button type="button"
-                    style="background:none;border:none;cursor:pointer;color:#92400e;font-size:16px;line-height:1;padding:0;"
-                    onclick="this.closest('.accessory-warning-banner').remove()">&times;</button>
-        `;
+        banner.style.cssText = `margin:6px 0;padding:8px 12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:8px;`;
+        banner.innerHTML = `<span style="font-size:16px;line-height:1;">⚠</span><span style="flex:1;">${msg}</span><button type="button" style="background:none;border:none;cursor:pointer;color:#92400e;font-size:16px;line-height:1;padding:0;" onclick="this.closest('.accessory-warning-banner').remove()">&times;</button>`;
         container.prepend(banner);
         setTimeout(() => banner.remove(), 8000);
     });
@@ -974,10 +1032,7 @@ async function completeSale(method) {
     });
     const data = await res.json();
 
-    if (!data.success) {
-        alert('Error: ' + data.error);
-        return;
-    }
+    if (!data.success) { alert('Error: ' + data.error); return; }
 
     showAccessoryWarnings(data.free_accessory_warnings);
 
@@ -1005,9 +1060,7 @@ async function completeSale(method) {
     const delay = data.free_accessory_warnings && data.free_accessory_warnings.length > 0 ? 2500 : 300;
     setTimeout(() => {
         const printWin = window.open(data.receipt_url, '_blank');
-        if (printWin) {
-            printWin.addEventListener('afterprint', () => printWin.close());
-        }
+        if (printWin) { printWin.addEventListener('afterprint', () => printWin.close()); }
     }, delay);
 }
 
@@ -1031,8 +1084,13 @@ async function recallSale(pk) {
     const data = await (await fetch(URLS.recall(pk))).json();
     if (data.success) {
         cart = data.items.map(i => ({
-            product_id: i.product_id, name: i.name, qty: i.qty,
-            unit_price: i.unit_price, is_free_gift: i.is_free_gift, promo_label: i.promo_label,
+            product_id:  i.product_id,
+            name:        i.name,
+            qty:         i.qty,
+            unit_price:  i.unit_price,
+            is_free_gift: i.is_free_gift,
+            promo_label: i.promo_label,
+            image_url:   i.image_url || null,
         }));
         if (data.customer_name)  $('customer-name').value  = data.customer_name;
         if (data.customer_phone) $('customer-phone').value = data.customer_phone;
