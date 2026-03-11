@@ -21,7 +21,13 @@
             --card: #ffffff;
             --border: #e5e3de;
         }
+
         *, *::before, *::after { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+        }
 
         body {
             background: var(--paper);
@@ -33,18 +39,25 @@
 
         /* ─── SIDEBAR ─── */
         .sidebar {
-            position: fixed; top: 0; left: 0; bottom: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: var(--sidebar-w);
+            height: 100vh;
             background: var(--ink);
             z-index: 300;
             overflow-y: auto;
+            overflow-x: hidden;
             display: flex;
             flex-direction: column;
             transition: transform 0.25s ease;
+            will-change: transform;
+            -webkit-overflow-scrolling: touch;
         }
         .sidebar-brand {
             padding: 16px 18px 12px;
             border-bottom: 1px solid rgba(255,255,255,0.08);
+            flex-shrink: 0;
         }
         .sidebar-brand .b-name {
             color: #fff; font-weight: 800; font-size: 15px; letter-spacing: -0.3px;
@@ -57,6 +70,7 @@
             font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
             text-transform: uppercase; color: rgba(255,255,255,0.25);
             padding: 14px 18px 4px;
+            flex-shrink: 0;
         }
         .sidebar .nav-link {
             color: rgba(255,255,255,0.6);
@@ -65,6 +79,7 @@
             display: flex; align-items: center; gap: 10px;
             border-left: 3px solid transparent;
             transition: all 0.15s; text-decoration: none;
+            flex-shrink: 0;
         }
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
@@ -77,6 +92,7 @@
             margin-top: auto;
             border-top: 1px solid rgba(255,255,255,0.08);
             padding: 12px 18px;
+            flex-shrink: 0;
         }
         .sidebar-footer .user-name {
             color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 6px;
@@ -102,9 +118,6 @@
             transition: margin-left 0.25s ease;
         }
 
-        .page-content {
-            flex: 1;
-        }
         /* ─── TOPBAR ─── */
         .topbar {
             height: var(--topbar-h);
@@ -114,8 +127,13 @@
             padding: 0 20px;
             position: sticky; top: 0; z-index: 100;
             gap: 10px;
+            flex-shrink: 0;
         }
-        .topbar h6 { margin: 0; font-weight: 600; font-size: 15px; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .topbar h6 {
+            margin: 0; font-weight: 600; font-size: 15px;
+            flex-grow: 1; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis;
+        }
 
         /* Hamburger — hidden on large screens */
         .sidebar-toggle {
@@ -127,7 +145,7 @@
         }
 
         /* ─── PAGE CONTENT ─── */
-        .page-content { padding: 20px 22px; }
+        .page-content { padding: 20px 22px; flex: 1; }
 
         /* ─── STAT CARDS ─── */
         .stat-card {
@@ -159,14 +177,11 @@
         .table-responsive-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
         /* ─── BREAKPOINTS ─── */
-
-        /* Medium screens: narrow sidebar */
         @media (max-width: 1024px) {
             :root { --sidebar-w: 200px; }
             .page-content { padding: 16px 16px; }
         }
 
-        /* Small screens: hidden sidebar, hamburger shown */
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
@@ -176,7 +191,6 @@
             .topbar h6 { font-size: 14px; }
             .page-content { padding: 14px 12px; }
             .stat-value { font-size: 20px; }
-            /* Stack stat cards 2-up on small */
             .row.g-3 > [class*="col-md-3"],
             .row.g-3 > [class*="col-md-4"] {
                 flex: 0 0 50%;
@@ -186,7 +200,6 @@
 
         @media (max-width: 480px) {
             .page-content { padding: 10px 10px; }
-            /* Single column on phones */
             .row.g-3 > [class*="col-md-3"],
             .row.g-3 > [class*="col-md-4"],
             .row.g-3 > [class*="col-md-6"],
@@ -262,10 +275,10 @@
     {% endif %}
 
     <div class="nav-section">Expenses</div>
-        <a href="{% url 'expense:expense_list' %}" class="nav-link {% if request.resolver_match.app_name == 'expense' %}active{% endif %}">
-            <i class="bi bi-receipt-cutoff"></i> Expenses
-        </a>
-        
+    <a href="{% url 'expense:expense_list' %}" class="nav-link {% if request.resolver_match.app_name == 'expense' %}active{% endif %}">
+        <i class="bi bi-receipt-cutoff"></i> Expenses
+    </a>
+
     {% if user.is_manager_role %}
     <div class="nav-section">Promotions</div>
     <a href="{% url 'promotions:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'promotions' %}active{% endif %}">
@@ -305,7 +318,6 @@
 <!-- ─── MAIN ─── -->
 <div class="main-wrapper">
     <div class="topbar">
-        <!-- Hamburger (visible on mobile only) -->
         <button class="sidebar-toggle" onclick="openSidebar()" aria-label="Open menu">
             <i class="bi bi-list"></i>
         </button>
@@ -318,7 +330,6 @@
                 <i class="bi bi-shop me-1"></i>{{ user.primary_joint.display_name }}
             </span>
             {% endif %}
-            <!-- Quick POS link on mobile topbar -->
             <a href="{% url 'sales:pos' %}" class="btn btn-sm d-md-none"
                style="background:var(--accent);color:#fff;font-size:11px;padding:4px 10px;border-radius:6px;">
                 <i class="bi bi-display me-1"></i>POS
