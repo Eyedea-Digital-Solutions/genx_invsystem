@@ -1,52 +1,56 @@
 {% extends "admin/base_site.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Delete confirmation" %} | GenX POS Admin{% endblock %}
+{% block title %}Delete Confirmation | GenX POS{% endblock %}
 
 {% block content %}
-<div style="max-width:640px;">
+<div style="max-width:580px;">
 
-<h1 style="font-size:18px;font-weight:800;color:#111827;margin-bottom:6px;">
-    <i class="bi bi-trash3" style="color:#dc2626;margin-right:8px;"></i>
-    {% blocktrans with escaped_object=object_name %}Delete {{ escaped_object }}?{% endblocktrans %}
-</h1>
+    <h1 style="font-size:17px;font-weight:600;color:var(--surf-text);margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+        <span style="width:32px;height:32px;background:#fee2e2;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;">
+            <i class="bi bi-trash3" style="color:#dc2626;font-size:15px;"></i>
+        </span>
+        {% blocktrans with escaped_object=object_name %}Delete {{ escaped_object }}?{% endblocktrans %}
+    </h1>
 
-<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
-    <p style="font-size:13px;font-weight:600;color:#7f1d1d;margin-bottom:6px;">
-        <i class="bi bi-exclamation-triangle-fill" style="margin-right:6px;"></i>
-        {% trans "This action cannot be undone." %}
-    </p>
-    <p style="font-size:12px;color:#991b1b;">
-        {% blocktrans with escaped_object=object_name %}
-        Are you sure you want to delete the selected {{ escaped_object }}?
-        {% endblocktrans %}
-    </p>
-</div>
-
-{% if deleted_objects %}
-<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
-    <h3 style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:10px;">
-        {% trans "Objects to be deleted" %}
-    </h3>
-    <ul style="font-size:12px;color:#374151;padding-left:18px;line-height:1.9;">
-        {% for item in deleted_objects %}
-        <li>{{ item }}</li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
-
-<form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="post" value="yes">
-    <div style="display:flex;gap:10px;align-items:center;">
-        <button type="submit" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;">
-            <i class="bi bi-trash3 me-2"></i>{% trans "Yes, I'm sure — Delete" %}
-        </button>
-        <a href="{{ opts.get_change_url|default:'..' }}" style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;text-decoration:none;">
-            {% trans "No, go back" %}
-        </a>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:600;color:#991b1b;margin-bottom:4px;">
+            ⚠ {% trans "This action cannot be undone." %}
+        </p>
+        <p style="font-size:12px;color:#b91c1c;margin:0;">
+            {% blocktrans with escaped_object=object_name %}
+            Are you sure you want to delete the selected {{ escaped_object }}?
+            {% endblocktrans %}
+        </p>
     </div>
-</form>
+
+    {% if deleted_objects %}
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <div style="font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--surf-muted);margin-bottom:10px;">
+            Objects to be deleted
+        </div>
+        <ul style="font-size:12px;color:#374151;padding-left:18px;line-height:2;">
+            {% for item in deleted_objects %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="post" value="yes">
+        <div style="display:flex;gap:10px;align-items:center;">
+            <button type="submit"
+                    style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:9px 20px;font-size:12px;font-family:var(--mono);font-weight:500;cursor:pointer;letter-spacing:.3px;">
+                Yes, delete
+            </button>
+            <a href=".."
+               style="background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;border-radius:6px;padding:9px 20px;font-size:12px;font-family:var(--mono);font-weight:500;text-decoration:none;">
+                Cancel
+            </a>
+        </div>
+    </form>
+
 </div>
 {% endblock %}

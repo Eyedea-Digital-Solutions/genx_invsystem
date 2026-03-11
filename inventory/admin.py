@@ -120,6 +120,29 @@ class StockInline(admin.StackedInline):
         return False
 
 
+# ─── FREE ACCESSORY INLINE ───────────────────────────────────────────────────
+# Must be defined BEFORE ProductAdmin which references it in `inlines`
+class ProductFreeAccessoryInline(admin.TabularInline):
+    """
+    Shown inside ProductAdmin so managers can attach free accessories
+    directly on the product edit page.
+    """
+    model               = ProductFreeAccessory
+    extra               = 1
+    fk_name             = 'trigger_product'
+    fields              = ['accessory_product', 'quantity', 'label', 'is_active']
+    verbose_name        = 'Free Accessory'
+    verbose_name_plural = 'Free Accessories (auto-added to cart)'
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Limit accessory choices to the same joint as the trigger product."""
+        if db_field.name == 'accessory_product' and hasattr(request, '_product_joint'):
+            kwargs['queryset'] = Product.objects.filter(
+                joint=request._product_joint, is_active=True
+            ).order_by('name')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
 # ─── PRODUCT ─────────────────────────────────────────────────────────────────
 class ProductAdmin(admin.ModelAdmin):
     list_display   = ['name', 'code', 'barcode_display', 'joint', 'category', 'brand',
@@ -356,31 +379,14 @@ class StockTransferAdmin(admin.ModelAdmin):
         n = queryset.filter(status='pending').update(status='completed')
         self.message_user(request, f'{n} transfer(s) marked as completed.')
 
-class ProductFreeAccessoryInline(admin.TabularInline):
-    """
-    Shown inside ProductAdmin so managers can attach free accessories
-    directly on the product edit page.
-    """
-    model          = ProductFreeAccessory
-    extra          = 1
-    fk_name        = 'trigger_product'
-    fields         = ['accessory_product', 'quantity', 'label', 'is_active']
-    verbose_name   = 'Free Accessory'
-    verbose_name_plural = 'Free Accessories (auto-added to cart)'
 
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Limit accessory choices to the same joint as the trigger product."""
-        if db_field.name == 'accessory_product' and hasattr(request, '_product_joint'):
-            kwargs['queryset'] = Product.objects.filter(
-                joint=request._product_joint, is_active=True
-            ).order_by('name')
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+genx_admin_site.register(StockTransfer, StockTransferAdmin)
 
 
+# ─── FREE ACCESSORY (standalone) ─────────────────────────────────────────────
 class ProductFreeAccessoryAdmin(admin.ModelAdmin):
     """
     Standalone admin for browsing/editing all free accessory bundles.
-    Accessible via the Inventory section of the admin.
     """
     list_display  = ['trigger_product', 'joint_display', 'arrow', 'accessory_product',
                      'quantity', 'label', 'accessory_stock', 'is_active']
@@ -423,4 +429,5 @@ class ProductFreeAccessoryAdmin(admin.ModelAdmin):
             )
         return format_html('<span style="color:#16a34a;font-weight:600;">{}</span>', qty)
 
-genx_admin_site.register(StockTransfer, StockTransferAdmin, ProductFreeAccessory, ProductFreeAccessoryAdmin)
+
+genx_admin_site.register(ProductFreeAccessory, ProductFreeAccessoryAdmin)

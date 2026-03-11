@@ -1,18 +1,17 @@
 {% extends "admin/base_site.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Popup closed" %} | GenX POS Admin{% endblock %}
+{% block title %}Done | GenX POS{% endblock %}
 
 {% block content %}
-<div style="text-align:center;padding:60px 20px;">
-    <i class="bi bi-check-circle" style="font-size:48px;color:#16a34a;display:block;margin-bottom:12px;"></i>
-    <h2 style="font-size:18px;font-weight:800;color:#111827;margin-bottom:8px;">Done!</h2>
-    <p style="color:#6b7280;font-size:13px;">This window can be closed.</p>
+<div style="text-align:center;padding:72px 20px;">
+    <div style="width:56px;height:56px;background:#d1fae5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;">
+        <i class="bi bi-check-lg" style="font-size:24px;color:#16a34a;"></i>
+    </div>
+    <h2 style="font-size:16px;font-weight:600;color:var(--surf-text);margin-bottom:6px;">Done</h2>
+    <p style="font-family:var(--mono);font-size:11px;color:var(--surf-muted);">This window can be closed.</p>
 </div>
 <script>
-// Auto-close popup after 1.5s if opened as popup
-if (window.opener) {
-    setTimeout(function() { window.close(); }, 1500);
-}
+if (window.opener) { setTimeout(() => window.close(), 1500); }
 </script>
 {% endblock %}

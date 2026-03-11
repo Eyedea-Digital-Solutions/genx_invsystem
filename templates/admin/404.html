@@ -1,13 +1,14 @@
 {% extends "admin/base_site.html" %}
-{% block title %}Page Not Found | GenX POS Admin{% endblock %}
+{% block title %}404 — Not Found | GenX POS{% endblock %}
 {% block content %}
-<div style="text-align:center;padding:60px 20px;">
-    <div style="font-size:64px;margin-bottom:12px;">🔍</div>
-    <h1 style="font-size:24px;font-weight:800;color:#111827;margin-bottom:8px;">404 — Page Not Found</h1>
-    <p style="color:#6b7280;font-size:14px;margin-bottom:24px;">
-        The page you are looking for does not exist or has been moved.
+<div style="text-align:center;padding:80px 20px;">
+    <div style="font-family:var(--mono);font-size:72px;font-weight:600;color:#e5e7eb;line-height:1;margin-bottom:16px;">404</div>
+    <h1 style="font-size:18px;font-weight:600;color:var(--surf-text);margin-bottom:8px;">Page not found</h1>
+    <p style="color:var(--surf-muted);font-size:13px;margin-bottom:28px;">
+        The page you're looking for doesn't exist or has been moved.
     </p>
-    <a href="{% url 'genx_admin:index' %}" style="background:#0d0d14;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">
+    <a href="{% url 'admin:index' %}"
+       style="display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:#fff;padding:9px 20px;border-radius:6px;font-size:12px;font-family:var(--mono);font-weight:500;text-decoration:none;letter-spacing:.3px;">
         ← Return to Dashboard
     </a>
 </div>

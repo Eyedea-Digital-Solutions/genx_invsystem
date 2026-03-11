@@ -1,5 +1,5 @@
 """
-expenses/forms.py
+expense/forms.py
 """
 from django import forms
 from .models import Expense, ExpenseCategory
@@ -24,16 +24,31 @@ class ExpenseForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['category'].queryset = ExpenseCategory.objects.filter(is_active=True)
-        self.fields['notes'].required    = False
+        self.fields['notes'].required     = False
         self.fields['reference'].required = False
 
 
 class ExpenseFilterForm(forms.Form):
-    joint = forms.ChoiceField(required=False, widget=forms.Select(attrs={'class': 'form-select form-select-sm', 'style': 'width:160px;'}))
-    category = forms.ChoiceField(required=False, widget=forms.Select(attrs={'class': 'form-select form-select-sm', 'style': 'width:160px;'}))
-    payment_method = forms.ChoiceField(required=False, widget=forms.Select(attrs={'class': 'form-select form-select-sm', 'style': 'width:130px;'}))
-    date_from = forms.DateField(required=False, widget=forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date', 'style': 'width:140px;'}))
-    date_to   = forms.DateField(required=False, widget=forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date', 'style': 'width:140px;'}))
+    joint = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm', 'style': 'width:160px;'})
+    )
+    category = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm', 'style': 'width:160px;'})
+    )
+    payment_method = forms.ChoiceField(
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm', 'style': 'width:130px;'})
+    )
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date', 'style': 'width:140px;'})
+    )
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date', 'style': 'width:140px;'})
+    )
 
     def __init__(self, joints, *args, **kwargs):
         super().__init__(*args, **kwargs)

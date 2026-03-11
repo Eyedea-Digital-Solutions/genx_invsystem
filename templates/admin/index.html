@@ -1,268 +1,185 @@
 {% extends "admin/base_site.html" %}
 {% load i18n %}
 
-{% block title %}Dashboard | GenX POS Admin{% endblock %}
+{% block title %}Dashboard | GenX POS{% endblock %}
 
 {% block content_title %}
-<h1 style="font-size:20px;font-weight:800;color:#111827;margin-bottom:20px;">
-    <i class="bi bi-speedometer2" style="color:#e94560;margin-right:8px;"></i>
-    System Dashboard
+<h1>
+    <i class="bi bi-speedometer2" style="color:var(--accent);margin-right:8px;"></i>
+    Dashboard
 </h1>
 {% endblock %}
 
 {% block content %}
-{% load i18n %}
 
-{# ── BIG STAT CARDS ──────────────────────────────────────────────────── #}
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:24px;">
+{# ── BIG STAT CARDS ─────────────────────────────────────────────── #}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:22px;">
 
-    <a href="{% url 'genx_admin:sales_sale_changelist' %}?is_held__exact=0" style="text-decoration:none;">
-        <div class="gx-dash-card" style="border-left:4px solid #16a34a;">
-            <div class="gx-dc-icon" style="background:#dcfce7;color:#16a34a;"><i class="bi bi-cash-coin"></i></div>
-            <div class="gx-dc-label">Today's Revenue</div>
-            <div class="gx-dc-val" style="color:#16a34a;">${{ today_total|floatformat:2 }}</div>
-            <div class="gx-dc-sub">{{ today_count }} sale{{ today_count|pluralize }}</div>
-        </div>
+    <a href="{% url 'admin:sales_sale_changelist' %}?is_held__exact=0" class="gx-dash-card" style="border-top:3px solid #22c55e;">
+        <div class="gx-dc-icon" style="background:#dcfce7;color:#16a34a;"><i class="bi bi-cash-coin"></i></div>
+        <div class="gx-dc-label">Today's Revenue</div>
+        <div class="gx-dc-val" style="color:#15803d;">${{ today_total|floatformat:2 }}</div>
+        <div class="gx-dc-sub">{{ today_count }} sale{{ today_count|pluralize }}</div>
     </a>
 
-    <a href="{% url 'genx_admin:sales_sale_changelist' %}?is_held__exact=0" style="text-decoration:none;">
-        <div class="gx-dash-card" style="border-left:4px solid #2563eb;">
-            <div class="gx-dc-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-bar-chart-fill"></i></div>
-            <div class="gx-dc-label">Month Revenue</div>
-            <div class="gx-dc-val" style="color:#2563eb;">${{ month_total|floatformat:2 }}</div>
-            <div class="gx-dc-sub">{{ month_count }} sale{{ month_count|pluralize }}</div>
-        </div>
+    <a href="{% url 'admin:sales_sale_changelist' %}?is_held__exact=0" class="gx-dash-card" style="border-top:3px solid #3b82f6;">
+        <div class="gx-dc-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-bar-chart-fill"></i></div>
+        <div class="gx-dc-label">Month Revenue</div>
+        <div class="gx-dc-val" style="color:#1d4ed8;">${{ month_total|floatformat:2 }}</div>
+        <div class="gx-dc-sub">{{ month_count }} sale{{ month_count|pluralize }}</div>
     </a>
 
-    <a href="{% url 'genx_admin:ecocash_ecocashtransaction_changelist' %}?status__exact=pending" style="text-decoration:none;">
-        <div class="gx-dash-card" style="border-left:4px solid #d97706;">
-            <div class="gx-dc-icon" style="background:#fef3c7;color:#d97706;"><i class="bi bi-phone"></i></div>
-            <div class="gx-dc-label">Pending EcoCash</div>
-            <div class="gx-dc-val" style="{% if pending_ecocash %}color:#d97706;{% endif %}">{{ pending_ecocash }}</div>
-            <div class="gx-dc-sub">awaiting confirmation</div>
-        </div>
+    <a href="{% url 'admin:ecocash_ecocashtransaction_changelist' %}?status__exact=pending" class="gx-dash-card" style="border-top:3px solid #f59e0b;">
+        <div class="gx-dc-icon" style="background:#fef3c7;color:#d97706;"><i class="bi bi-phone"></i></div>
+        <div class="gx-dc-label">Pending EcoCash</div>
+        <div class="gx-dc-val" style="{% if pending_ecocash %}color:#d97706;{% endif %}">{{ pending_ecocash }}</div>
+        <div class="gx-dc-sub">awaiting confirmation</div>
     </a>
 
-    <a href="{% url 'genx_admin:inventory_stock_changelist' %}" style="text-decoration:none;">
-        <div class="gx-dash-card" style="border-left:4px solid #dc2626;">
-            <div class="gx-dc-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-exclamation-triangle"></i></div>
-            <div class="gx-dc-label">Low Stock Items</div>
-            <div class="gx-dc-val" style="{% if low_stock_count %}color:#dc2626;{% endif %}">{{ low_stock_count }}</div>
-            <div class="gx-dc-sub">need restocking</div>
-        </div>
+    <a href="{% url 'admin:inventory_stock_changelist' %}" class="gx-dash-card" style="border-top:3px solid #ef4444;">
+        <div class="gx-dc-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-exclamation-triangle"></i></div>
+        <div class="gx-dc-label">Low Stock Items</div>
+        <div class="gx-dc-val" style="{% if low_stock_count %}color:#dc2626;{% endif %}">{{ low_stock_count }}</div>
+        <div class="gx-dc-sub">need restocking</div>
     </a>
 
     {% if held_count %}
-    <a href="{% url 'genx_admin:sales_sale_changelist' %}?is_held__exact=1" style="text-decoration:none;">
-        <div class="gx-dash-card" style="border-left:4px solid #7c3aed;">
-            <div class="gx-dc-icon" style="background:#ede9fe;color:#7c3aed;"><i class="bi bi-pause-circle"></i></div>
-            <div class="gx-dc-label">Held Transactions</div>
-            <div class="gx-dc-val" style="color:#7c3aed;">{{ held_count }}</div>
-            <div class="gx-dc-sub">on hold</div>
-        </div>
+    <a href="{% url 'admin:sales_sale_changelist' %}?is_held__exact=1" class="gx-dash-card" style="border-top:3px solid #8b5cf6;">
+        <div class="gx-dc-icon" style="background:#ede9fe;color:#7c3aed;"><i class="bi bi-pause-circle"></i></div>
+        <div class="gx-dc-label">Held Transactions</div>
+        <div class="gx-dc-val" style="color:#7c3aed;">{{ held_count }}</div>
+        <div class="gx-dc-sub">on hold</div>
     </a>
     {% endif %}
 
-    <a href="{% url 'genx_admin:promotions_promotion_changelist' %}" style="text-decoration:none;">
-        <div class="gx-dash-card" style="border-left:4px solid #059669;">
-            <div class="gx-dc-icon" style="background:#d1fae5;color:#059669;"><i class="bi bi-tag"></i></div>
-            <div class="gx-dc-label">Active Promotions</div>
-            <div class="gx-dc-val" style="color:#059669;">{{ active_promos }}</div>
-            <div class="gx-dc-sub">currently running</div>
-        </div>
+    <a href="{% url 'admin:promotions_promotion_changelist' %}" class="gx-dash-card" style="border-top:3px solid #10b981;">
+        <div class="gx-dc-icon" style="background:#d1fae5;color:#059669;"><i class="bi bi-tag"></i></div>
+        <div class="gx-dc-label">Active Promotions</div>
+        <div class="gx-dc-val" style="color:#047857;">{{ active_promos }}</div>
+        <div class="gx-dc-sub">currently running</div>
     </a>
 
 </div>
 
-{# ── QUICK LINKS ─────────────────────────────────────────────────────── #}
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px;">
+{# ── QUICK-LINK SECTIONS ─────────────────────────────────────────── #}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:22px;">
 
-    {# Sales & EcoCash #}
-    <div class="gx-section-card">
-        <div class="gx-sc-head">
-            <i class="bi bi-cart-fill"></i> Sales & Payments
-        </div>
-        <div class="gx-sc-body">
-            <a href="{% url 'genx_admin:sales_sale_changelist' %}" class="gx-qlink">
-                <i class="bi bi-receipt"></i> All Sales
-            </a>
-            <a href="{% url 'genx_admin:sales_sale_changelist' %}?is_held__exact=0&payment_method__exact=ecocash" class="gx-qlink">
-                <i class="bi bi-phone"></i> EcoCash Sales
-            </a>
-            <a href="{% url 'genx_admin:sales_saleitem_changelist' %}" class="gx-qlink">
-                <i class="bi bi-list-ul"></i> Sale Items
-            </a>
-            <a href="{% url 'genx_admin:ecocash_ecocashtransaction_changelist' %}?status__exact=pending" class="gx-qlink gx-qlink-warn">
-                <i class="bi bi-hourglass-split"></i> Pending EcoCash
-            </a>
-            <a href="{% url 'genx_admin:ecocash_ecocashtransaction_changelist' %}" class="gx-qlink">
-                <i class="bi bi-clock-history"></i> All EcoCash Transactions
-            </a>
-            <a href="{% url 'genx_admin:sales_saleauditlog_changelist' %}" class="gx-qlink">
-                <i class="bi bi-journal-text"></i> Audit Logs
-            </a>
+    <div class="gx-section">
+        <div class="gx-section-head"><i class="bi bi-cart-fill"></i> Sales &amp; Payments</div>
+        <div class="gx-section-body">
+            <a href="{% url 'admin:sales_sale_changelist' %}" class="gx-qlink"><i class="bi bi-receipt"></i> All Sales</a>
+            <a href="{% url 'admin:sales_sale_changelist' %}?payment_method__exact=ecocash&is_held__exact=0" class="gx-qlink"><i class="bi bi-phone"></i> EcoCash Sales</a>
+            <a href="{% url 'admin:sales_saleitem_changelist' %}" class="gx-qlink"><i class="bi bi-list-ul"></i> Sale Items</a>
+            <a href="{% url 'admin:ecocash_ecocashtransaction_changelist' %}?status__exact=pending" class="gx-qlink warn"><i class="bi bi-hourglass-split"></i> Pending EcoCash</a>
+            <a href="{% url 'admin:ecocash_ecocashtransaction_changelist' %}" class="gx-qlink"><i class="bi bi-clock-history"></i> All EcoCash</a>
+            <a href="{% url 'admin:sales_saleauditlog_changelist' %}" class="gx-qlink"><i class="bi bi-journal-text"></i> Audit Logs</a>
         </div>
     </div>
 
-    {# Inventory #}
-    <div class="gx-section-card">
-        <div class="gx-sc-head">
-            <i class="bi bi-boxes"></i> Inventory
-        </div>
-        <div class="gx-sc-body">
-            <a href="{% url 'genx_admin:inventory_product_changelist' %}" class="gx-qlink">
-                <i class="bi bi-tags"></i> Products
-            </a>
-            <a href="{% url 'genx_admin:inventory_product_add' %}" class="gx-qlink gx-qlink-add">
-                <i class="bi bi-plus-circle"></i> Add Product
-            </a>
-            <a href="{% url 'genx_admin:inventory_stock_changelist' %}" class="gx-qlink">
-                <i class="bi bi-box-seam"></i> Stock Levels
-            </a>
-            <a href="{% url 'genx_admin:inventory_stocktransfer_changelist' %}" class="gx-qlink">
-                <i class="bi bi-arrow-left-right"></i> Stock Transfers
-            </a>
-            <a href="{% url 'genx_admin:inventory_stocktake_changelist' %}" class="gx-qlink">
-                <i class="bi bi-clipboard-check"></i> Stock Takes
-            </a>
-            <a href="{% url 'genx_admin:inventory_category_changelist' %}" class="gx-qlink">
-                <i class="bi bi-folder"></i> Categories
-            </a>
-            <a href="{% url 'genx_admin:inventory_supplier_changelist' %}" class="gx-qlink">
-                <i class="bi bi-truck"></i> Suppliers
-            </a>
-            <a href="{% url 'genx_admin:inventory_brand_changelist' %}" class="gx-qlink">
-                <i class="bi bi-bookmark"></i> Brands
-            </a>
+    <div class="gx-section">
+        <div class="gx-section-head"><i class="bi bi-boxes"></i> Inventory</div>
+        <div class="gx-section-body">
+            <a href="{% url 'admin:inventory_product_changelist' %}" class="gx-qlink"><i class="bi bi-tags"></i> Products</a>
+            <a href="{% url 'admin:inventory_product_add' %}" class="gx-qlink add"><i class="bi bi-plus-circle"></i> Add Product</a>
+            <a href="{% url 'admin:inventory_stock_changelist' %}" class="gx-qlink"><i class="bi bi-box-seam"></i> Stock Levels</a>
+            <a href="{% url 'admin:inventory_stocktransfer_changelist' %}" class="gx-qlink"><i class="bi bi-arrow-left-right"></i> Transfers</a>
+            <a href="{% url 'admin:inventory_stocktake_changelist' %}" class="gx-qlink"><i class="bi bi-clipboard-check"></i> Stock Takes</a>
+            <a href="{% url 'admin:inventory_supplier_changelist' %}" class="gx-qlink"><i class="bi bi-truck"></i> Suppliers</a>
+            <a href="{% url 'admin:inventory_brand_changelist' %}" class="gx-qlink"><i class="bi bi-bookmark"></i> Brands</a>
+            <a href="{% url 'admin:inventory_category_changelist' %}" class="gx-qlink"><i class="bi bi-folder"></i> Categories</a>
         </div>
     </div>
 
-    {# Promotions #}
-    <div class="gx-section-card">
-        <div class="gx-sc-head">
-            <i class="bi bi-tag-fill"></i> Promotions
-        </div>
-        <div class="gx-sc-body">
-            <a href="{% url 'genx_admin:promotions_promotion_changelist' %}" class="gx-qlink">
-                <i class="bi bi-megaphone"></i> All Promotions
-            </a>
-            <a href="{% url 'genx_admin:promotions_promotion_add' %}" class="gx-qlink gx-qlink-add">
-                <i class="bi bi-plus-circle"></i> New Promotion
-            </a>
-            <a href="{% url 'genx_admin:promotions_spendthresholdpromo_changelist' %}" class="gx-qlink">
-                <i class="bi bi-cash"></i> Spend Threshold Rules
-            </a>
-            <a href="{% url 'genx_admin:promotions_freegiftpromo_changelist' %}" class="gx-qlink">
-                <i class="bi bi-gift"></i> Free Gift Rules
-            </a>
-            <a href="{% url 'genx_admin:promotions_bundlepromo_changelist' %}" class="gx-qlink">
-                <i class="bi bi-collection"></i> Bundle Rules
-            </a>
+    <div class="gx-section">
+        <div class="gx-section-head"><i class="bi bi-tag-fill"></i> Promotions</div>
+        <div class="gx-section-body">
+            <a href="{% url 'admin:promotions_promotion_changelist' %}" class="gx-qlink"><i class="bi bi-megaphone"></i> All Promotions</a>
+            <a href="{% url 'admin:promotions_promotion_add' %}" class="gx-qlink add"><i class="bi bi-plus-circle"></i> New Promotion</a>
+            <a href="{% url 'admin:promotions_spendthresholdpromo_changelist' %}" class="gx-qlink"><i class="bi bi-cash"></i> Spend Threshold</a>
+            <a href="{% url 'admin:promotions_freegiftpromo_changelist' %}" class="gx-qlink"><i class="bi bi-gift"></i> Free Gift Rules</a>
+            <a href="{% url 'admin:promotions_bundlepromo_changelist' %}" class="gx-qlink"><i class="bi bi-collection"></i> Bundle Rules</a>
         </div>
     </div>
 
-    {# Users & Joints #}
-    <div class="gx-section-card">
-        <div class="gx-sc-head">
-            <i class="bi bi-people-fill"></i> Users & Joints
-        </div>
-        <div class="gx-sc-body">
-            <a href="{% url 'genx_admin:users_user_changelist' %}" class="gx-qlink">
-                <i class="bi bi-person-badge"></i> All Users
-            </a>
-            <a href="{% url 'genx_admin:users_user_add' %}" class="gx-qlink gx-qlink-add">
-                <i class="bi bi-person-plus"></i> Add User
-            </a>
-            <a href="{% url 'genx_admin:inventory_joint_changelist' %}" class="gx-qlink">
-                <i class="bi bi-shop"></i> Joints / Stores
-            </a>
-            {% comment %} <a href="{% url 'genx_admin:auth_group_changelist' %}" class="gx-qlink">
-                <i class="bi bi-shield"></i> Permission Groups
-            </a> {% endcomment %}
+    <div class="gx-section">
+        <div class="gx-section-head"><i class="bi bi-people-fill"></i> Users &amp; Joints</div>
+        <div class="gx-section-body">
+            <a href="{% url 'admin:users_user_changelist' %}" class="gx-qlink"><i class="bi bi-person-badge"></i> All Users</a>
+            <a href="{% url 'admin:users_user_add' %}" class="gx-qlink add"><i class="bi bi-person-plus"></i> Add User</a>
+            <a href="{% url 'admin:inventory_joint_changelist' %}" class="gx-qlink"><i class="bi bi-shop"></i> Joints / Stores</a>
         </div>
     </div>
 
 </div>
 
-{# ── DEFAULT APP LIST (keep for completeness) ──────────────────────────── #}
+{# ── ALL MODELS (collapsed) ──────────────────────────────────────── #}
 <details style="margin-bottom:16px;">
-    <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#6b7280;padding:8px 0;">
-        All Models (expand)
+    <summary style="cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--surf-muted);padding:6px 0;letter-spacing:.4px;user-select:none;">
+        ALL MODELS ▾
     </summary>
-    <div style="margin-top:8px;">
+    <div style="margin-top:10px;">
         {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
     </div>
 </details>
 
 <style>
-/* ── dashboard cards ─────────────────── */
 .gx-dash-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.05);
-    position: relative;
-    overflow: hidden;
-    transition: box-shadow .15s, transform .12s;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:var(--radius);
+    padding:14px;
+    text-decoration:none;
+    display:block;
+    transition:box-shadow .12s, transform .1s;
 }
-.gx-dash-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.10); transform: translateY(-1px); }
+.gx-dash-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.09); transform:translateY(-1px); }
 .gx-dc-icon {
-    width: 38px; height: 38px;
-    border-radius: 9px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 17px;
-    margin-bottom: 10px;
+    width:34px; height:34px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; margin-bottom:10px;
 }
 .gx-dc-label {
-    font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .5px;
-    color: #6b7280; margin-bottom: 2px;
+    font-family:var(--mono); font-size:10px; font-weight:500;
+    text-transform:uppercase; letter-spacing:1px;
+    color:var(--surf-muted); margin-bottom:3px;
 }
-.gx-dc-val {
-    font-size: 26px; font-weight: 900;
-    color: #111827; line-height: 1.1;
-    margin-bottom: 2px;
-}
-.gx-dc-sub { font-size: 11px; color: #9ca3af; }
+.gx-dc-val { font-size:22px; font-weight:700; color:var(--surf-text); line-height:1.1; margin-bottom:2px; }
+.gx-dc-sub { font-size:11px; color:#94a3b8; }
 
-/* ── section cards ───────────────────── */
-.gx-section-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+.gx-section {
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:var(--radius);
+    overflow:hidden;
 }
-.gx-sc-head {
-    background: #0d0d14;
-    color: #fff;
-    font-size: 11px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: .5px;
-    padding: 9px 14px;
-    display: flex; align-items: center; gap: 7px;
+.gx-section-head {
+    background:var(--ink);
+    color:rgba(255,255,255,.7);
+    font-family:var(--mono);
+    font-size:10px; font-weight:500;
+    text-transform:uppercase; letter-spacing:1.5px;
+    padding:8px 14px;
+    display:flex; align-items:center; gap:7px;
 }
-.gx-sc-body {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: #e5e7eb;
+.gx-section-body {
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:1px; background:#e5e7eb;
 }
 .gx-qlink {
-    background: #fff;
-    display: flex; align-items: center; gap: 7px;
-    padding: 10px 14px;
-    font-size: 12px; font-weight: 600;
-    color: #374151; text-decoration: none;
-    transition: background .1s, color .1s;
+    background:#fff;
+    display:flex; align-items:center; gap:7px;
+    padding:9px 13px;
+    font-size:12px; font-weight:500;
+    color:#374151; text-decoration:none;
+    transition:background .08s, color .08s;
 }
-.gx-qlink:hover { background: #f9fafb; color: #111827; }
-.gx-qlink i { font-size: 13px; color: #9ca3af; }
-.gx-qlink:hover i { color: #e94560; }
-.gx-qlink-add { color: #16a34a !important; }
-.gx-qlink-add i { color: #16a34a !important; }
-.gx-qlink-warn { color: #d97706 !important; }
-.gx-qlink-warn i { color: #d97706 !important; }
+.gx-qlink:hover { background:#f8fafc; color:var(--surf-text); }
+.gx-qlink i { font-size:12px; color:#94a3b8; }
+.gx-qlink:hover i { color:var(--accent); }
+.gx-qlink.add { color:#15803d; }
+.gx-qlink.add i { color:#16a34a; }
+.gx-qlink.warn { color:#b45309; }
+.gx-qlink.warn i { color:#f59e0b; }
 </style>
 
 {% endblock %}

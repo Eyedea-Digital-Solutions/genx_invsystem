@@ -30,7 +30,7 @@
     </div>
     {% for jt in joint_totals %}
     <div class="col-6 col-md-3">
-        <div class="stat-card joint-{{ jt.joint.name }}">
+        <div class="stat-card">
             <div class="text-muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">{{ jt.joint.display_name }}</div>
             <div style="font-size:20px;font-weight:800;">${{ jt.month_total|floatformat:2 }}</div>
             <div class="text-muted" style="font-size:12px;">expenses this month</div>
@@ -50,7 +50,7 @@
             <div class="col-6 col-sm-auto">{{ filter_form.date_to }}</div>
             <div class="col-12 col-sm-auto d-flex gap-2">
                 <button type="submit" class="btn btn-dark btn-sm">Filter</button>
-                <a href="{% url 'expenses:expense_list' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                <a href="{% url 'expense:expense_list' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
             </div>
         </form>
     </div>
@@ -64,11 +64,11 @@
     </div>
     <div class="d-flex gap-2">
         {% if user.is_manager_role %}
-        <a href="{% url 'expenses:category_list' %}" class="btn btn-outline-secondary btn-sm" style="font-size:12px;">
+        <a href="{% url 'expense:category_list' %}" class="btn btn-outline-secondary btn-sm" style="font-size:12px;">
             <i class="bi bi-tags me-1"></i>Categories
         </a>
         {% endif %}
-        <a href="{% url 'expenses:expense_create' %}" class="btn btn-dark btn-sm">
+        <a href="{% url 'expense:expense_create' %}" class="btn btn-dark btn-sm">
             <i class="bi bi-plus-lg me-1"></i>Record Expense
         </a>
     </div>
@@ -81,49 +81,58 @@
             <table class="table table-sm table-hover mb-0" style="font-size:13px;min-width:700px;">
                 <thead class="table-light">
                     <tr>
-                        <th>Date</th>
+                        <th style="padding:10px 12px;">Date</th>
                         <th>Joint</th>
                         <th>Category</th>
                         <th>Description</th>
                         <th>Payment</th>
                         <th>Reference</th>
-                        <th>Recorded By</th>
-                        <th class="text-end">Amount</th>
+                        <th class="d-none d-md-table-cell">Recorded By</th>
+                        <th class="text-end" style="padding-right:12px;">Amount</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for exp in expenses %}
                     <tr>
-                        <td class="text-muted" style="white-space:nowrap;">{{ exp.expense_date|date:"d M Y" }}</td>
+                        <td class="text-muted" style="white-space:nowrap;padding:10px 12px;">{{ exp.expense_date|date:"d M Y" }}</td>
                         <td>{{ exp.joint.display_name }}</td>
                         <td><span class="badge bg-light text-dark border">{{ exp.category.name }}</span></td>
                         <td class="fw-semibold">{{ exp.description }}</td>
                         <td><span class="badge bg-light text-dark border">{{ exp.get_payment_method_display }}</span></td>
                         <td class="text-muted">{{ exp.reference|default:"—" }}</td>
-                        <td class="d-none d-md-table-cell">{{ exp.recorded_by.get_full_name|default:exp.recorded_by.username }}</td>
-                        <td class="text-end fw-bold text-danger">${{ exp.amount|floatformat:2 }}</td>
-                        <td>
+                        <td class="d-none d-md-table-cell text-muted">{{ exp.recorded_by.get_full_name|default:exp.recorded_by.username }}</td>
+                        <td class="text-end fw-bold text-danger" style="padding-right:12px;">${{ exp.amount|floatformat:2 }}</td>
+                        <td style="white-space:nowrap;">
                             {% if user.is_manager_role %}
                             <div class="d-flex gap-1">
-                                <a href="{% url 'expenses:expense_edit' exp.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;">Edit</a>
-                                <form action="{% url 'expenses:expense_delete' exp.pk %}" method="post" onsubmit="return confirm('Delete this expense?');">
+                                <a href="{% url 'expense:expense_edit' exp.pk %}"
+                                   class="btn btn-sm btn-outline-secondary" style="font-size:11px;">Edit</a>
+                                <form action="{% url 'expense:expense_delete' exp.pk %}" method="post"
+                                      onsubmit="return confirm('Delete this expense?');">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:11px;"><i class="bi bi-trash"></i></button>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:11px;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </form>
                             </div>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="9" class="text-center text-muted py-5">No expenses found</td></tr>
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-5">
+                            <i class="bi bi-receipt" style="font-size:28px;display:block;margin-bottom:8px;"></i>
+                            No expenses found
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
                 {% if expenses %}
                 <tfoot class="table-light">
                     <tr>
-                        <td colspan="7" class="text-end fw-bold">Total</td>
-                        <td class="text-end fw-bold text-danger">${{ total|floatformat:2 }}</td>
+                        <td colspan="7" class="text-end fw-bold" style="padding:10px 12px;">Total</td>
+                        <td class="text-end fw-bold text-danger" style="padding-right:12px;">${{ total|floatformat:2 }}</td>
                         <td></td>
                     </tr>
                 </tfoot>

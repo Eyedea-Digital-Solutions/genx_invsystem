@@ -9,8 +9,10 @@
         {# ── BREADCRUMB ── #}
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb" style="font-size:13px;">
-                <li class="breadcrumb-item"><a href="{% url 'expenses:expense_list' %}">Expenses</a></li>
-                <li class="breadcrumb-item active">{% if form.instance.pk %}Edit #{{ form.instance.pk }}{% else %}New Expense{% endif %}</li>
+                <li class="breadcrumb-item"><a href="{% url 'expense:expense_list' %}">Expenses</a></li>
+                <li class="breadcrumb-item active">
+                    {% if form.instance.pk %}Edit #{{ form.instance.pk }}{% else %}New Expense{% endif %}
+                </li>
             </ol>
         </nav>
 
@@ -23,9 +25,13 @@
                         <i class="bi bi-receipt-cutoff" style="font-size:20px;color:#dc2626;"></i>
                     </div>
                     <div>
-                        <div style="font-weight:700;font-size:16px;">{% if form.instance.pk %}Edit Expense{% else %}Record New Expense{% endif %}</div>
+                        <div style="font-weight:700;font-size:16px;">
+                            {% if form.instance.pk %}Edit Expense{% else %}Record New Expense{% endif %}
+                        </div>
                         {% if form.instance.pk %}
-                        <div class="text-muted" style="font-size:12px;">Editing expense #{{ form.instance.pk }} — {{ form.instance.expense_date }}</div>
+                        <div class="text-muted" style="font-size:12px;">
+                            Editing expense #{{ form.instance.pk }} — {{ form.instance.expense_date }}
+                        </div>
                         {% else %}
                         <div class="text-muted" style="font-size:12px;">Fill in the details below to record an expense</div>
                         {% endif %}
@@ -35,7 +41,6 @@
                 <form method="post" novalidate>
                     {% csrf_token %}
 
-                    {# ── NON-FIELD ERRORS ── #}
                     {% if form.non_field_errors %}
                     <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:13px;border-radius:10px;">
                         {% for error in form.non_field_errors %}{{ error }}{% endfor %}
@@ -129,7 +134,7 @@
                             <i class="bi bi-check-lg me-1"></i>
                             {% if form.instance.pk %}Save Changes{% else %}Record Expense{% endif %}
                         </button>
-                        <a href="{% url 'expenses:expense_list' %}" class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;">
+                        <a href="{% url 'expense:expense_list' %}" class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;">
                             Cancel
                         </a>
                     </div>

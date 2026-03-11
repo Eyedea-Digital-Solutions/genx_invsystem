@@ -4,271 +4,310 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% trans "Admin Login" %} | GenX POS</title>
+    <title>Admin Login | GenX POS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        :root {
-            --ink:    #0d0d14;
-            --panel:  #17171f;
-            --card:   #1e1e28;
-            --border: rgba(255,255,255,.09);
-            --accent: #e94560;
-            --text:   rgba(255,255,255,.85);
-            --muted:  rgba(255,255,255,.35);
-        }
+    :root {
+        --ink: #0a0a0f;
+        --ink2: #111118;
+        --card: #15151e;
+        --border: rgba(255,255,255,.08);
+        --border2: rgba(255,255,255,.13);
+        --accent: #e63950;
+        --text: rgba(255,255,255,.88);
+        --muted: rgba(255,255,255,.38);
+        --mono: 'IBM Plex Mono', monospace;
+        --sans: 'IBM Plex Sans', system-ui, sans-serif;
+    }
 
-        html, body {
-            min-height: 100vh;
-            background: var(--ink);
-            font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
-        }
+    html, body {
+        min-height: 100vh;
+        background: var(--ink);
+        font-family: var(--sans);
+    }
 
-        /* ── background texture ─────────────────── */
-        body::before {
-            content: '';
-            position: fixed; inset: 0;
-            background:
-                radial-gradient(ellipse 60% 60% at 20% 30%, rgba(233,69,96,.12) 0%, transparent 70%),
-                radial-gradient(ellipse 50% 50% at 80% 70%, rgba(37,99,235,.10) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-        }
+    /* scan-line overlay */
+    body::before {
+        content: '';
+        position: fixed; inset: 0;
+        background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0,0,0,.04) 2px,
+            rgba(0,0,0,.04) 4px
+        );
+        pointer-events: none;
+        z-index: 0;
+    }
 
-        /* ── grid dots ──────────────────────────── */
-        body::after {
-            content: '';
-            position: fixed; inset: 0;
-            background-image: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px);
-            background-size: 28px 28px;
-            pointer-events: none;
-            z-index: 0;
-        }
+    /* ambient glow */
+    body::after {
+        content: '';
+        position: fixed; inset: 0;
+        background:
+            radial-gradient(ellipse 55% 55% at 15% 25%, rgba(230,57,80,.1) 0%, transparent 70%),
+            radial-gradient(ellipse 40% 40% at 85% 75%, rgba(59,130,246,.07) 0%, transparent 70%);
+        pointer-events: none;
+        z-index: 0;
+    }
 
-        .login-wrap {
-            position: relative; z-index: 1;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-        }
+    .wrap {
+        position: relative; z-index: 1;
+        min-height: 100vh;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 24px;
+    }
 
-        /* ── logo / header ──────────────────────── */
-        .brand {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-        .brand .wordmark {
-            font-size: 36px;
-            font-weight: 900;
-            color: #fff;
-            letter-spacing: -1.5px;
-            line-height: 1;
-        }
-        .brand .wordmark span { color: var(--accent); }
-        .brand .tagline {
-            font-size: 11px;
-            color: var(--muted);
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-top: 6px;
-        }
-        .brand .admin-badge {
-            display: inline-block;
-            background: rgba(233,69,96,.15);
-            border: 1px solid rgba(233,69,96,.3);
-            color: var(--accent);
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            padding: 3px 10px;
-            border-radius: 20px;
-            margin-top: 8px;
-        }
+    /* ── BRAND ── */
+    .brand { text-align: center; margin-bottom: 36px; }
 
-        /* ── card ───────────────────────────────── */
-        .login-card {
-            width: 100%;
-            max-width: 400px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 18px;
-            padding: 36px 32px;
-            box-shadow: 0 32px 80px rgba(0,0,0,.6);
-        }
+    .brand-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
 
-        .login-card h2 {
-            font-size: 15px;
-            font-weight: 800;
-            color: #fff;
-            margin-bottom: 24px;
-            text-align: center;
-        }
+    .brand-logo {
+        width: 42px; height: 42px;
+        background: var(--accent);
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--mono);
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        letter-spacing: -1px;
+    }
 
-        /* ── error box ──────────────────────────── */
-        .errornote {
-            background: rgba(220,38,38,.12);
-            border: 1px solid rgba(220,38,38,.3);
-            border-radius: 8px;
-            color: #fca5a5;
-            font-size: 12px;
-            font-weight: 600;
-            padding: 11px 14px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    .brand-name {
+        font-family: var(--mono);
+        font-size: 22px;
+        font-weight: 600;
+        color: #fff;
+        letter-spacing: -1px;
+    }
+    .brand-name em { color: var(--accent); font-style: normal; }
 
-        /* ── form fields ────────────────────────── */
-        .form-group { margin-bottom: 16px; }
-        .form-group label {
-            display: block;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            color: var(--muted);
-            margin-bottom: 6px;
-        }
-        .form-group input {
-            width: 100%;
-            background: rgba(255,255,255,.06);
-            border: 1px solid rgba(255,255,255,.12);
-            border-radius: 10px;
-            color: #fff;
-            padding: 12px 14px;
-            font-size: 14px;
-            font-family: inherit;
-            transition: border-color .15s, box-shadow .15s;
-        }
-        .form-group input::placeholder { color: var(--muted); }
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(233,69,96,.15);
-            background: rgba(255,255,255,.08);
-        }
+    .brand-sub {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--muted);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+    }
 
-        /* ── submit ─────────────────────────────── */
-        .submit-row { margin-top: 24px; }
-        .submit-btn {
-            width: 100%;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            padding: 14px;
-            font-size: 14px;
-            font-weight: 800;
-            font-family: inherit;
-            cursor: pointer;
-            letter-spacing: .2px;
-            transition: opacity .15s, transform .1s;
-        }
-        .submit-btn:hover { opacity: .88; }
-        .submit-btn:active { transform: scale(.98); }
+    /* ── CARD ── */
+    .card {
+        width: 100%; max-width: 380px;
+        background: var(--card);
+        border: 1px solid var(--border2);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px var(--border);
+    }
 
-        /* ── links ──────────────────────────────── */
-        .login-footer {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 11px;
-            color: var(--muted);
-        }
-        .login-footer a { color: rgba(255,255,255,.5); text-decoration: none; }
-        .login-footer a:hover { color: #fff; }
+    .card-head {
+        background: var(--ink2);
+        border-bottom: 1px solid var(--border);
+        padding: 14px 24px;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-head-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    .card-head-dot {
+        width: 7px; height: 7px;
+        background: var(--accent);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--accent);
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: .4; }
+    }
 
-        /* ── footer bar ─────────────────────────── */
-        .page-footer {
-            position: relative; z-index: 1;
-            margin-top: 40px;
-            font-size: 10px;
-            color: rgba(255,255,255,.2);
-            text-align: center;
-            letter-spacing: .5px;
-        }
+    .card-body { padding: 28px 24px; }
+
+    /* ── ERROR ── */
+    .error-box {
+        background: rgba(220,38,38,.1);
+        border: 1px solid rgba(220,38,38,.25);
+        border-radius: 6px;
+        color: #fca5a5;
+        font-size: 12px;
+        font-family: var(--mono);
+        padding: 10px 14px;
+        margin-bottom: 20px;
+        display: flex; align-items: flex-start; gap: 8px;
+    }
+
+    /* ── FIELDS ── */
+    .field { margin-bottom: 18px; }
+    .field label {
+        display: block;
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--muted);
+        margin-bottom: 7px;
+    }
+    .field input {
+        width: 100%;
+        background: rgba(255,255,255,.05);
+        border: 1px solid var(--border2);
+        border-radius: 6px;
+        color: var(--text);
+        padding: 11px 14px;
+        font-size: 13px;
+        font-family: var(--sans);
+        transition: border-color .15s, box-shadow .15s;
+    }
+    .field input::placeholder { color: rgba(255,255,255,.2); }
+    .field input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(230,57,80,.15);
+        background: rgba(255,255,255,.07);
+    }
+    .field-error {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: #fca5a5;
+        margin-top: 4px;
+    }
+
+    /* ── SUBMIT ── */
+    .submit { margin-top: 24px; }
+    .submit-btn {
+        width: 100%;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 13px;
+        font-size: 13px;
+        font-family: var(--mono);
+        font-weight: 500;
+        letter-spacing: .5px;
+        cursor: pointer;
+        transition: opacity .12s, transform .1s;
+    }
+    .submit-btn:hover { opacity: .88; }
+    .submit-btn:active { transform: scale(.98); }
+
+    /* ── FOOTER LINK ── */
+    .card-footer {
+        padding: 14px 24px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+    }
+    .card-footer a {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        text-decoration: none;
+    }
+    .card-footer a:hover { color: rgba(255,255,255,.6); }
+
+    /* ── PAGE FOOTER ── */
+    .page-footer {
+        position: relative; z-index: 1;
+        margin-top: 36px;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: rgba(255,255,255,.15);
+        letter-spacing: 1px;
+        text-align: center;
+    }
     </style>
 </head>
 <body>
-<div class="login-wrap">
+<div class="wrap">
 
     <div class="brand">
-        <div class="wordmark">GenX<span>POS</span></div>
-        <div class="tagline">Eyedentity · GenX · Armor Sole</div>
-        <div class="admin-badge"><i class="bi bi-shield-lock me-1"></i>Admin Portal</div>
+        <div class="brand-mark">
+            <div class="brand-logo">GX</div>
+            <div class="brand-name">GenX<em>POS</em></div>
+        </div>
+        <div class="brand-sub">Eyedentity · GenX · Armor Sole</div>
     </div>
 
-    <div class="login-card">
-        <h2>{% trans "Sign in to continue" %}</h2>
+    <div class="card">
+        <div class="card-head">
+            <span class="card-head-label">Admin Portal</span>
+            <span class="card-head-dot"></span>
+        </div>
 
-        {% if form.errors %}
-        <div class="errornote">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            {% if form.errors.items|length == 1 %}
-                {% trans "Please enter the correct username and password for a staff account." %}
-            {% else %}
-                {% trans "Please correct the errors below." %}
+        <div class="card-body">
+
+            {% if form.errors %}
+            <div class="error-box">
+                <span>⚠</span>
+                <span>
+                {% if form.errors.items|length == 1 %}
+                    {% trans "Incorrect username or password. Please try again." %}
+                {% else %}
+                    {% trans "Please correct the errors below." %}
+                {% endif %}
+                </span>
+            </div>
             {% endif %}
+
+            <form method="post" action="{{ app_path }}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="field">
+                    <label for="id_username">Username</label>
+                    <input type="text" id="id_username" name="username"
+                           value="{{ form.username.value|default:'' }}"
+                           autocomplete="username" autofocus
+                           placeholder="your username">
+                    {% if form.username.errors %}
+                    <div class="field-error">{{ form.username.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="id_password">Password</label>
+                    <input type="password" id="id_password" name="password"
+                           autocomplete="current-password"
+                           placeholder="••••••••">
+                    {% if form.password.errors %}
+                    <div class="field-error">{{ form.password.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="submit">
+                    <button type="submit" class="submit-btn">
+                        SIGN IN →
+                    </button>
+                </div>
+            </form>
+
         </div>
-        {% endif %}
 
-        {% if user.is_authenticated and not user.is_staff %}
-        <div class="errornote">
-            <i class="bi bi-x-circle-fill"></i>
-            {% trans "You do not have staff access." %}
-        </div>
-        {% endif %}
-
-        <form method="post" action="{{ app_path }}">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ next }}">
-
-            <div class="form-group">
-                <label for="id_username">
-                    <i class="bi bi-person me-1"></i>{% trans "Username" %}
-                </label>
-                <input type="text" id="id_username" name="username"
-                       value="{{ form.username.value|default:'' }}"
-                       autocomplete="username" autofocus
-                       placeholder="Enter your username">
-                {% if form.username.errors %}
-                <div style="color:#fca5a5;font-size:11px;margin-top:4px;">{{ form.username.errors.0 }}</div>
-                {% endif %}
-            </div>
-
-            <div class="form-group">
-                <label for="id_password">
-                    <i class="bi bi-lock me-1"></i>{% trans "Password" %}
-                </label>
-                <input type="password" id="id_password" name="password"
-                       autocomplete="current-password"
-                       placeholder="Enter your password">
-                {% if form.password.errors %}
-                <div style="color:#fca5a5;font-size:11px;margin-top:4px;">{{ form.password.errors.0 }}</div>
-                {% endif %}
-            </div>
-
-            <div class="submit-row">
-                <button type="submit" class="submit-btn">
-                    <i class="bi bi-box-arrow-in-right me-2"></i>
-                    {% trans "Sign In" %}
-                </button>
-            </div>
-        </form>
-
-        <div class="login-footer">
-            <a href="/users/login/">← Back to POS Login</a>
+        <div class="card-footer">
+            <a href="/users/login/">← Back to POS login</a>
         </div>
     </div>
 
     <div class="page-footer">GENX POS ADMIN · HARARE, ZIMBABWE</div>
+
 </div>
 </body>
 </html>
