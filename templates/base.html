@@ -1,418 +1,374 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    
-    <!-- Primary Meta Tags -->
-    <title>{% block title %}Eyedentity Eyewear | Premium Eyewear in Harare, Zimbabwe{% endblock %}</title>
-    <meta name="title" content="{% block meta_title %}Eyedentity Eyewear - Premium Eyewear Solutions in Zimbabwe{% endblock %}">
-    <meta name="description" content="{% block description %}Shop premium photochromic, polarized, anti-blue light glasses and optical frames in Harare, Zimbabwe. Quality eyewear for style and protection. Same-day delivery available.{% endblock %}">
-    <meta name="keywords" content="{% block keywords %}eyewear Zimbabwe, glasses Harare, photochromic glasses, polarized sunglasses, blue light glasses, optical frames, prescription glasses Zimbabwe, sunglasses Harare{% endblock %}">
-    <meta name="author" content="Eyedentity Eyewear">
-    <meta name="robots" content="index, follow">
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
-    <meta property="og:url" content="{{ request.build_absolute_uri }}">
-    <meta property="og:title" content="{% block og_title %}Eyedentity Eyewear - Premium Eyewear in Zimbabwe{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}Shop premium eyewear in Harare, Zimbabwe. Photochromic, Polarized, Anti-Blue Light glasses and more. Quality vision care for everyone.{% endblock %}">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:site_name" content="Eyedentity Eyewear">
-    <meta property="og:locale" content="en_ZW">
-    
-    <!-- Twitter Card -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="{{ request.build_absolute_uri }}">
-    <meta property="twitter:title" content="{% block twitter_title %}Eyedentity Eyewear Zimbabwe{% endblock %}">
-    <meta property="twitter:description" content="{% block twitter_description %}Premium eyewear solutions in Harare. Quality, style, and eye protection.{% endblock %}">
-   
-    <!-- Canonical URL -->
-    <link rel="canonical" href="{% block canonical %}{{ request.build_absolute_uri }}{% endblock %}">
-    
-    <!-- Favicon -->
-    {% load static %}
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon.png' %}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon.png' %}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/apple-touch-icon.png' %}">
-    <link rel="manifest" href="{% static 'site.webmanifest' %}">
-    <meta name="theme-color" content="#38bdf8">
-    
-    <!-- Preconnect to external domains -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
-    <link rel="stylesheet" href="{% static 'css/enhancements.css' %}">
-    
+    <title>{% block title %}POS{% endblock %} | GenX POS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {% block extra_css %}{% endblock %}
-    
-    <!-- Structured Data -->
-    {% block structured_data %}
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Store",
-      "name": "Eyedentity Eyewear",
-      "image": "{{ request.scheme }}://{{ request.get_host }}{% static 'images/White bold.png' %}",
-      "description": "Premium eyewear solutions in Harare, Zimbabwe",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Shop 15, Summer City Mall",
-        "addressLocality": "Harare",
-        "addressCountry": "ZW"
-      },
-      "telephone": "+263784342632",
-      "url": "{{ request.scheme }}://{{ request.get_host }}",
-      "priceRange": "$10-$50",
-      "openingHoursSpecification": [
-        {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-          "opens": "09:00",
-          "closes": "18:00"
-        },
-        {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": "Saturday",
-          "opens": "09:00",
-          "closes": "16:00"
+    <style>
+        :root {
+            --sidebar-w: 230px;
+            --topbar-h: 54px;
+            --ink: #0d0d14;
+            --accent: #e94560;
+            --green: #16a34a;
+            --amber: #d97706;
+            --purple: #7c3aed;
+            --blue: #2563eb;
+            --paper: #f5f4f0;
+            --card: #ffffff;
+            --border: #e5e3de;
         }
-      ],
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": "-17.8178",
-        "longitude": "31.0492"
-      }
-    }
-    </script>
-    {% endblock %}
-    
-    <!-- Analytics -->
-    {% if not debug %}
-    <!-- Google Analytics 4 -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-XXXXXXXXXX');
-    </script>
-    
-    <!-- Facebook Pixel -->
-    <script>
-        !function(f,b,e,v,n,t,s)
-        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-        n.queue=[];t=b.createElement(e);t.async=!0;
-        t.src=v;s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s)}(window, document,'script',
-        'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', 'YOUR_PIXEL_ID');
-        fbq('track', 'PageView');
-    </script>
-    <noscript><img height="1" width="1" style="display:none"
-        src="https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1"/></noscript>
-    {% endif %}
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            background: var(--paper);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 14px;
+            color: #0d0d14;
+            margin: 0;
+        }
+
+        /* ─── SIDEBAR ─── */
+        .sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0;
+            width: var(--sidebar-w);
+            background: var(--ink);
+            z-index: 300;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.25s ease;
+        }
+        .sidebar-brand {
+            padding: 16px 18px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .sidebar-brand .b-name {
+            color: #fff; font-weight: 800; font-size: 15px; letter-spacing: -0.3px;
+        }
+        .sidebar-brand .b-name span { color: var(--accent); }
+        .sidebar-brand .b-sub {
+            color: rgba(255,255,255,0.3); font-size: 10px; margin-top: 2px;
+        }
+        .nav-section {
+            font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+            text-transform: uppercase; color: rgba(255,255,255,0.25);
+            padding: 14px 18px 4px;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.6);
+            padding: 8px 18px;
+            font-size: 13px;
+            display: flex; align-items: center; gap: 10px;
+            border-left: 3px solid transparent;
+            transition: all 0.15s; text-decoration: none;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: rgba(255,255,255,0.07);
+            border-left-color: var(--accent);
+        }
+        .sidebar .nav-link .bi { font-size: 15px; flex-shrink: 0; }
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 12px 18px;
+        }
+        .sidebar-footer .user-name {
+            color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 6px;
+        }
+        .sidebar::-webkit-scrollbar { width: 3px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+
+        /* ─── OVERLAY (mobile) ─── */
+        .sidebar-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 299;
+        }
+        .sidebar-overlay.show { display: block; }
+
+        /* ─── MAIN WRAPPER ─── */
+        .main-wrapper {
+            margin-left: var(--sidebar-w);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.25s ease;
+        }
+
+        .page-content {
+            flex: 1;
+        }
+        /* ─── TOPBAR ─── */
+        .topbar {
+            height: var(--topbar-h);
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center;
+            padding: 0 20px;
+            position: sticky; top: 0; z-index: 100;
+            gap: 10px;
+        }
+        .topbar h6 { margin: 0; font-weight: 600; font-size: 15px; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Hamburger — hidden on large screens */
+        .sidebar-toggle {
+            display: none;
+            background: none; border: none;
+            color: #0d0d14; font-size: 20px;
+            cursor: pointer; padding: 4px 6px;
+            flex-shrink: 0;
+        }
+
+        /* ─── PAGE CONTENT ─── */
+        .page-content { padding: 20px 22px; }
+
+        /* ─── STAT CARDS ─── */
+        .stat-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+        .stat-value { font-size: 24px; font-weight: 700; line-height: 1.2; }
+        .stat-icon {
+            width: 42px; height: 42px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 19px;
+        }
+
+        /* ─── JOINT COLOURS ─── */
+        .joint-eyedentity  { border-left: 4px solid var(--purple) !important; }
+        .joint-genx        { border-left: 4px solid var(--blue)   !important; }
+        .joint-armor_sole  { border-left: 4px solid var(--amber)  !important; }
+
+        /* ─── BADGES ─── */
+        .badge-clearance { background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px; }
+        .badge-sale      { background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px; }
+        .badge-free      { background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px; }
+        .low-stock-badge  { background:#fef9c3;color:#713f12;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px; }
+        .out-of-stock-badge { background:#fee2e2;color:#7f1d1d;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px; }
+
+        /* ─── RESPONSIVE TABLE WRAPPER ─── */
+        .table-responsive-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+        /* ─── BREAKPOINTS ─── */
+
+        /* Medium screens: narrow sidebar */
+        @media (max-width: 1024px) {
+            :root { --sidebar-w: 200px; }
+            .page-content { padding: 16px 16px; }
+        }
+
+        /* Small screens: hidden sidebar, hamburger shown */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-toggle { display: flex; align-items: center; }
+            .main-wrapper { margin-left: 0 !important; }
+            .topbar { padding: 0 14px; }
+            .topbar h6 { font-size: 14px; }
+            .page-content { padding: 14px 12px; }
+            .stat-value { font-size: 20px; }
+            /* Stack stat cards 2-up on small */
+            .row.g-3 > [class*="col-md-3"],
+            .row.g-3 > [class*="col-md-4"] {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-content { padding: 10px 10px; }
+            /* Single column on phones */
+            .row.g-3 > [class*="col-md-3"],
+            .row.g-3 > [class*="col-md-4"],
+            .row.g-3 > [class*="col-md-6"],
+            .row.g-3 > [class*="col-lg-"] {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+        }
+
+        @media print {
+            .sidebar, .topbar, .no-print { display: none !important; }
+            .main-wrapper { margin-left: 0; }
+            .page-content { padding: 0; }
+        }
+    </style>
 </head>
-<body>
-    <!-- Trust Badge Banner -->
-    <div class="trust-banner">
-        <div class="trust-banner-content">
-            <div class="trust-item">
-                <i class="bi bi-shield-check"></i>
-                <span>100% Authentic</span>
-            </div>
-            <div class="trust-item">
-                <i class="bi bi-truck"></i>
-                <span>Arranged Delivery</span>
-            </div>
-            <div class="trust-item">
-                <i class="bi bi-arrow-clockwise"></i>
-                <span>30-Day Returns</span>
-            </div>
-            <div class="trust-item">
-                <i class="bi bi-headset"></i>
-                <span>Expert Support</span>
-            </div>
-        </div>
+<body {% block body_class %}{% endblock %}>
+
+{% if user.is_authenticated %}
+
+<!-- Overlay for mobile sidebar -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ─── SIDEBAR ─── -->
+<nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="b-name"><i class="bi bi-shop me-1"></i>GenX <span>POS</span></div>
+        <div class="b-sub">Eyedentity · GenX · Armor Sole</div>
     </div>
 
-    <!-- Navigation -->
-    <nav class="main-nav">
-        <div class="nav-container">
-            <a class="nav-brand" href="{% url 'home' %}" aria-label="Eyedentity Eyewear Home">
-                <img src="{% static 'images/White bold.png' %}" alt="Eyedentity Eyewear Logo" height="48" width="auto">
-            </a>
-            
-            <button class="nav-toggle" type="button" onclick="toggleNav()" aria-label="Toggle navigation menu" aria-expanded="false">
-                <i class="bi bi-list"></i>
-            </button>
-            
-            <div class="nav-links desktop-nav">
-                <a class="nav-link" href="{% url 'home' %}">Home</a>
-                <a class="nav-link" href="{% url 'categories' %}">Categories</a>
-                <a class="nav-link" href="{% url 'shop' %}">Shop</a>
-                <a class="nav-link" href="{% url 'blog_list' %}">Blog</a>
-                <a class="nav-link" href="{% url 'about' %}">About</a>
-            </div>
-        </div>
+    <div class="nav-section">POS</div>
+    <a href="{% url 'sales:pos' %}" class="nav-link {% if request.resolver_match.url_name == 'pos' %}active{% endif %}">
+        <i class="bi bi-display"></i> POS Terminal
+    </a>
+    <a href="{% url 'sales:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-grid"></i> Dashboard
+    </a>
+    <a href="{% url 'sales:make_sale' %}" class="nav-link {% if request.resolver_match.url_name == 'make_sale' %}active{% endif %}">
+        <i class="bi bi-cart-plus"></i> New Sale (Classic)
+    </a>
+    <a href="{% url 'sales:manual_sale' %}" class="nav-link {% if request.resolver_match.url_name == 'manual_sale' %}active{% endif %}">
+        <i class="bi bi-camera"></i> Manual Sale
+    </a>
+    <a href="{% url 'sales:sale_list' %}" class="nav-link {% if request.resolver_match.url_name == 'sale_list' %}active{% endif %}">
+        <i class="bi bi-list-ul"></i> Sales History
+    </a>
+    {% if user.is_manager_role %}
+    <a href="{% url 'sales:reports' %}" class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+        <i class="bi bi-bar-chart"></i> Reports
+    </a>
+    {% endif %}
+
+    <div class="nav-section">Inventory</div>
+    <a href="{% url 'inventory:inventory_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'inventory_dashboard' %}active{% endif %}">
+        <i class="bi bi-boxes"></i> Stock Overview
+    </a>
+    <a href="{% url 'inventory:product_list' %}" class="nav-link {% if request.resolver_match.url_name == 'product_list' %}active{% endif %}">
+        <i class="bi bi-tags"></i> Products
+    </a>
+    {% if user.is_manager_role %}
+    <a href="{% url 'inventory:stock_take_list' %}" class="nav-link {% if request.resolver_match.url_name == 'stock_take_list' %}active{% endif %}">
+        <i class="bi bi-clipboard-check"></i> Stock Takes
+    </a>
+    <a href="{% url 'inventory:transfer_create' %}" class="nav-link {% if request.resolver_match.url_name == 'transfer_create' %}active{% endif %}">
+        <i class="bi bi-arrow-left-right"></i> Transfer Stock
+    </a>
+    <a href="{% url 'inventory:category_list' %}" class="nav-link {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}">
+        <i class="bi bi-folder"></i> Categories
+    </a>
+    <a href="{% url 'inventory:supplier_list' %}" class="nav-link {% if request.resolver_match.url_name == 'supplier_list' %}active{% endif %}">
+        <i class="bi bi-truck"></i> Suppliers
+    </a>
+    {% endif %}
+
+    <div class="nav-section">Expenses</div>
+        <a href="{% url 'expense:expense_list' %}" class="nav-link {% if request.resolver_match.app_name == 'expense' %}active{% endif %}">
+            <i class="bi bi-receipt-cutoff"></i> Expenses
+        </a>
         
-        <div class="mobile-nav" id="mobileNav">
-            <a class="nav-link" href="{% url 'home' %}">
-                <i class="bi bi-house"></i>
-                <span>Home</span>
-            </a>
-            <a class="nav-link" href="{% url 'categories' %}">
-                <i class="bi bi-grid"></i>
-                <span>Categories</span>
-            </a>
-            <a class="nav-link" href="{% url 'shop' %}">
-                <i class="bi bi-shop"></i>
-                <span>Shop</span>
-            </a>
-            <a class="nav-link" href="{% url 'blog_list' %}">
-                <i class="bi bi-journal-text"></i>
-                <span>Blog</span>
-            </a>
-            <a class="nav-link" href="{% url 'about' %}">
-                <i class="bi bi-info-circle"></i>
-                <span>About</span>
-            </a>
-        </div>
-    </nav>
+    {% if user.is_manager_role %}
+    <div class="nav-section">Promotions</div>
+    <a href="{% url 'promotions:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'promotions' %}active{% endif %}">
+        <i class="bi bi-tag"></i> Promotions
+    </a>
+    {% endif %}
 
-    <!-- Main Content -->
-    <main class="main-content" role="main">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- WhatsApp Float Button (Enhanced) -->
-    <a href="https://wa.me/263784342632?text=Hi!%20I'm%20interested%20in%20your%20eyewear%20collection" 
-       target="_blank" 
-       rel="noopener noreferrer"
-       class="whatsapp-float" 
-       aria-label="Contact us on WhatsApp">
-        <i class="bi bi-whatsapp"></i>
-        <span class="whatsapp-pulse"></span>
-        <span class="whatsapp-text">Need help? Chat with us!</span>
+    <div class="nav-section">EcoCash</div>
+    <a href="{% url 'ecocash:pending_payments' %}" class="nav-link {% if request.resolver_match.url_name == 'pending_payments' %}active{% endif %}">
+        <i class="bi bi-phone"></i> Pending Payments
+    </a>
+    <a href="{% url 'ecocash:transaction_list' %}" class="nav-link {% if request.resolver_match.url_name == 'transaction_list' %}active{% endif %}">
+        <i class="bi bi-receipt"></i> Transactions
     </a>
 
-    <!-- Social Proof Notification (disabled) -->
-    <!--
-    <div id="socialProof" class="social-proof-notification" style="display: none;">
-        <div class="social-proof-content">
-            <i class="bi bi-check-circle-fill"></i>
-            <span class="social-proof-text"></span>
+    {% if user.is_admin_role %}
+    <div class="nav-section">Admin</div>
+    <a href="{% url 'users:user_list' %}" class="nav-link {% if request.resolver_match.app_name == 'users' %}active{% endif %}">
+        <i class="bi bi-people"></i> Users
+    </a>
+    <a href="{% url 'admin:index' %}" class="nav-link" target="_blank">
+        <i class="bi bi-gear"></i> Django Admin
+    </a>
+    {% endif %}
+
+    <div class="sidebar-footer">
+        <div class="user-name">
+            {{ user.get_full_name|default:user.username }}
+            <span class="badge bg-secondary ms-1" style="font-size:9px;">{{ user.get_role_display }}</span>
+        </div>
+        <a href="{% url 'users:logout' %}" class="nav-link" style="padding:6px 0;font-size:12px;">
+            <i class="bi bi-box-arrow-left"></i> Logout
+        </a>
+    </div>
+</nav>
+
+<!-- ─── MAIN ─── -->
+<div class="main-wrapper">
+    <div class="topbar">
+        <!-- Hamburger (visible on mobile only) -->
+        <button class="sidebar-toggle" onclick="openSidebar()" aria-label="Open menu">
+            <i class="bi bi-list"></i>
+        </button>
+
+        <h6>{% block page_title %}{% endblock %}</h6>
+
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            {% if user.primary_joint %}
+            <span class="badge bg-light text-dark border d-none d-sm-inline-flex" style="font-size:11px;">
+                <i class="bi bi-shop me-1"></i>{{ user.primary_joint.display_name }}
+            </span>
+            {% endif %}
+            <!-- Quick POS link on mobile topbar -->
+            <a href="{% url 'sales:pos' %}" class="btn btn-sm d-md-none"
+               style="background:var(--accent);color:#fff;font-size:11px;padding:4px 10px;border-radius:6px;">
+                <i class="bi bi-display me-1"></i>POS
+            </a>
         </div>
     </div>
-    -->
 
-    <!-- Footer -->
-    <footer class="main-footer">
-        <div class="footer-container">
-            <div class="footer-grid">
-                <div class="footer-col">
-                    <h4>Eyedentity Eyewear</h4>
-                    <p class="footer-text">Premium eyewear solutions in Harare, Zimbabwe. Quality vision care for everyone.</p>
-                    <div class="footer-social">
-                        <a href="#" class="social-link" aria-label="Follow us on Facebook"><i class="bi bi-facebook"></i></a>
-                        <a href="#" class="social-link" aria-label="Follow us on Instagram"><i class="bi bi-instagram"></i></a>
-                        <a href="#" class="social-link" aria-label="Follow us on Twitter"><i class="bi bi-twitter"></i></a>
-                    </div>
-                </div>
-                
-                <div class="footer-col">
-                    <h4>Quick Links</h4>
-                    <a href="{% url 'shop' %}" class="footer-link">Shop All</a>
-                    <a href="{% url 'categories' %}" class="footer-link">Categories</a>
-                    <a href="{% url 'blog_list' %}" class="footer-link">Blog</a>
-                    <a href="{% url 'about' %}" class="footer-link">About Us</a>
-                    <a href="#" class="footer-link">Size Guide</a>
-                    <a href="#" class="footer-link">Care Tips</a>
-                </div>
-                
-                <div class="footer-col">
-                    <h4>Contact</h4>
-                    <p class="footer-text">
-                        <i class="bi bi-geo-alt-fill"></i>
-                        Shop 15, Summer City Mall, Harare
-                    </p>
-                    <p class="footer-text">
-                        <i class="bi bi-telephone-fill"></i>
-                        <a href="tel:+263784342632">+263 784 342 632</a>
-                    </p>
-                    <p class="footer-text">
-                        <i class="bi bi-envelope-fill"></i>
-                        <a href="mailto:info@eyedentity.co.zw">info@eyedentity.co.zw</a>
-                    </p>
-                </div>
-                
-                <div class="footer-col">
-                    <h4>Customer Care</h4>
-                    <a href="#" class="footer-link">Delivery</a>
-                    <a href="#" class="footer-link">Returns & Exchanges</a>
-                    <a href="#" class="footer-link">Payment Options</a>
-                    <a href="#" class="footer-link">Privacy Policy</a>
-                </div>
-            </div>
-            
-            <!-- Payment & Trust Badges -->
-            <div class="footer-badges">
-                <div class="payment-methods">
-                    <span class="badge-label">We Accept:</span>
-                    <div class="payment-icons">
-                        <img src="{% static 'images/ecocash.png' %}" alt="EcoCash" loading="lazy">
-                        <!-- <img src="{% static 'images/onemoney.png' %}" alt="OneMoney" loading="lazy"> -->
-                        <i class="bi bi-cash"></i>
-                    </div>
-                </div>
-                <div class="security-badges">
-                    <i class="bi bi-shield-lock-fill"></i>
-                    <span>Secure Shopping</span>
-                </div>
-            </div>
-            
-            <div class="footer-bottom">
-                <p>&copy; 2025 Eyedentity Eyewear. All rights reserved.</p>
-                <p class="footer-credit">
-                    Website by <a href="https://eyedeadigital.com" target="_blank" rel="noopener">Eyedear Digital Solutions</a>
-                </p>
-            </div>
+    {% if messages %}
+    <div class="px-3 pt-2">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show py-2" role="alert" style="font-size:13px;">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    </footer>
+        {% endfor %}
+    </div>
+    {% endif %}
 
-    <!-- Scripts -->
-    <script>
-        // Navigation Toggle
-        function toggleNav() {
-            const mobileNav = document.getElementById('mobileNav');
-            const toggle = document.querySelector('.nav-toggle');
-            const icon = toggle.querySelector('i');
-            const isActive = mobileNav.classList.toggle('active');
-            
-            icon.className = isActive ? 'bi bi-x' : 'bi bi-list';
-            toggle.setAttribute('aria-expanded', isActive);
-            
-            // Prevent body scroll when menu is open
-            document.body.style.overflow = isActive ? 'hidden' : '';
-        }
+    <div class="page-content">
+        {% block content %}{% endblock %}
+    </div>
+</div>
 
-        // Close mobile nav when clicking outside
-        document.addEventListener('click', function(e) {
-            const nav = document.querySelector('.main-nav');
-            const mobileNav = document.getElementById('mobileNav');
-            if (!nav.contains(e.target) && mobileNav.classList.contains('active')) {
-                toggleNav();
-            }
-        });
+{% else %}
+{% block auth_content %}{% endblock %}
+{% endif %}
 
-        // Social Proof Notifications (disabled)
-        /*
-        const socialProofMessages = [
-            "John from Harare just purchased Photochromic Glasses",
-            "Sarah from Bulawayo ordered Anti-Blue Light Glasses",
-            "Mike from Mutare bought Polarized Sunglasses",
-            "Lisa from Gweru just ordered Optical Frames",
-            "David from Masvingo purchased Reading Glasses"
-        ];
-        
-        function showSocialProof() {
-            const notification = document.getElementById('socialProof');
-            const textElement = notification.querySelector('.social-proof-text');
-            const randomMessage = socialProofMessages[Math.floor(Math.random() * socialProofMessages.length)];
-            
-            textElement.textContent = randomMessage;
-            notification.style.display = 'flex';
-            
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 5000);
-        }
-        
-        // Show social proof every 15 seconds
-        setInterval(showSocialProof, 15000);
-        setTimeout(showSocialProof, 5000);
-        */
-        
-        // Lazy Loading Images
-        if ('loading' in HTMLImageElement.prototype) {
-            const images = document.querySelectorAll('img[loading="lazy"]');
-            images.forEach(img => {
-                img.src = img.dataset.src || img.src;
-            });
-        } else {
-            // Fallback for browsers that don't support lazy loading
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js';
-            document.body.appendChild(script);
-        }
-        
-        // Smooth Scroll
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    e.preventDefault();
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-        
-        // Add to cart tracking (Analytics)
-        function trackAddToCart(productName, price) {
-            if (typeof gtag !== 'undefined') {
-                gtag('event', 'add_to_cart', {
-                    currency: 'USD',
-                    value: price,
-                    items: [{
-                        item_name: productName,
-                        price: price
-                    }]
-                });
-            }
-            if (typeof fbq !== 'undefined') {
-                fbq('track', 'AddToCart', {
-                    content_name: productName,
-                    value: price,
-                    currency: 'USD'
-                });
-            }
-        }
-        
-        // Performance: Report Web Vitals
-        if ('PerformanceObserver' in window) {
-            // Largest Contentful Paint
-            new PerformanceObserver((entryList) => {
-                for (const entry of entryList.getEntries()) {
-                    console.log('LCP:', entry.renderTime || entry.loadTime);
-                }
-            }).observe({entryTypes: ['largest-contentful-paint']});
-            
-            // First Input Delay
-            new PerformanceObserver((entryList) => {
-                for (const entry of entryList.getEntries()) {
-                    console.log('FID:', entry.processingStart - entry.startTime);
-                }
-            }).observe({entryTypes: ['first-input']});
-        }
-    </script>
-    
-    {% block extra_js %}{% endblock %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarOverlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('show');
+    document.body.style.overflow = '';
+}
+// Close sidebar on nav link click (mobile)
+document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth <= 768) closeSidebar();
+    });
+});
+// Close on resize if screen grows
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) closeSidebar();
+});
+</script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>
