@@ -294,6 +294,10 @@
         <i class="bi bi-receipt"></i> Transactions
     </a>
 
+    <a href="{% url 'cashup:dashboard' %}" class="nav-link">
+        <i class="bi bi-cash-stack me-2"></i>Cash-Up
+    </a>
+
     {% if user.is_admin_role %}
     <div class="nav-section">Admin</div>
     <a href="{% url 'users:user_list' %}" class="nav-link {% if request.resolver_match.app_name == 'users' %}active{% endif %}">

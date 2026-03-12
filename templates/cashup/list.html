@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}All Cash-Ups{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <h5 class="fw-bold mb-0"><i class="bi bi-list-ul me-2"></i>All Cash-Ups</h5>
+    <div class="d-flex gap-2">
+      <a href="{% url 'cashup:report' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-bar-chart me-1"></i>Report</a>
+      <a href="{% url 'cashup:open' %}" class="btn btn-sm btn-success"><i class="bi bi-plus me-1"></i>New</a>
+    </div>
+  </div>
+
+  <form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-end">
+    {{ filter_form.joint }}
+    {{ filter_form.status }}
+    {{ filter_form.date_from }}
+    {{ filter_form.date_to }}
+    {{ filter_form.cashier }}
+    <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+    <a href="{% url 'cashup:list' %}" class="btn btn-sm btn-outline-secondary">Clear</a>
+  </form>
+
+  {% if totals.count %}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm"><div class="card-body py-3">
+        <div class="text-muted small">Records</div>
+        <div class="fs-4 fw-bold">{{ totals.count }}</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm"><div class="card-body py-3">
+        <div class="text-muted small">Cash</div>
+        <div class="fs-4 fw-bold text-success">${{ totals.total_cash|default:0|floatformat:2 }}</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm"><div class="card-body py-3">
+        <div class="text-muted small">EcoCash</div>
+        <div class="fs-4 fw-bold text-primary">${{ totals.total_ecocash|default:0|floatformat:2 }}</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card text-center shadow-sm"><div class="card-body py-3">
+        <div class="text-muted small">Card</div>
+        <div class="fs-4 fw-bold text-info">${{ totals.total_card|default:0|floatformat:2 }}</div>
+      </div></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th><th>Joint</th><th>Cashier</th><th>Shift</th><th>Status</th>
+              <th class="text-end">Expected</th><th class="text-end">Actual</th><th class="text-end">Variance</th>
+              <th>Submitted</th><th>Approved By</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cu in cash_ups %}
+            <tr class="{% if cu.status == 'disputed' %}table-danger{% elif cu.status == 'submitted' %}table-warning{% endif %}">
+              <td>{{ cu.shift_date|date:"d M Y" }}</td>
+              <td><span class="badge bg-light text-dark border">{{ cu.joint.display_name }}</span></td>
+              <td>{{ cu.cashier.get_full_name|default:cu.cashier.username }}</td>
+              <td>{{ cu.get_shift_display }}</td>
+              <td>
+                {% if cu.status == 'open' %}<span class="badge bg-secondary">Open</span>
+                {% elif cu.status == 'submitted' %}<span class="badge bg-warning text-dark">Submitted</span>
+                {% elif cu.status == 'approved' %}<span class="badge bg-success">Approved</span>
+                {% else %}<span class="badge bg-danger">Disputed</span>{% endif %}
+              </td>
+              <td class="text-end">${{ cu.total_expected|floatformat:2 }}</td>
+              <td class="text-end fw-semibold">${{ cu.total_actual|floatformat:2 }}</td>
+              <td class="text-end">
+                {% if cu.status != 'open' %}
+                {% with v=cu.total_variance %}
+                <span class="fw-bold {% if cu.is_balanced %}text-success{% elif v < 0 %}text-danger{% else %}text-warning{% endif %}">
+                  {% if v >= 0 %}+{% endif %}${{ v|floatformat:2 }}
+                </span>
+                {% endwith %}
+                {% else %}—{% endif %}
+              </td>
+              <td>{{ cu.submitted_at|date:"d M H:i"|default:"—" }}</td>
+              <td>{{ cu.approved_by.get_full_name|default:cu.approved_by.username|default:"—" }}</td>
+              <td><a href="{% url 'cashup:detail' cu.pk %}" class="btn btn-sm btn-outline-secondary py-0">View</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="11" class="text-center text-muted py-4">No cash-ups found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

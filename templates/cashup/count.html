@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% load custom_tags %}
+{% block title %}Count Cash-Up — {{ cashup.joint.display_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.denom-row { border-bottom: 1px solid #f3f4f6; }
+.denom-row:last-child { border-bottom: none; }
+.denom-input { text-align: center; font-size: 1.1rem; font-weight: 600; max-width: 90px; }
+.variance-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 50px; font-weight: 700; font-size: 0.85rem;
+}
+.variance-ok { background: #d1fae5; color: #065f46; }
+.variance-warn { background: #fef3c7; color: #92400e; }
+.variance-bad { background: #fee2e2; color: #7f1d1d; }
+.section-card { border: 1px solid #e5e7eb; border-radius: 10px; }
+.section-header { background: #f9fafb; border-radius: 10px 10px 0 0; padding: 12px 16px; font-weight: 600; font-size: 0.9rem; border-bottom: 1px solid #e5e7eb; }
+.live-total { font-size: 1.6rem; font-weight: 800; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h5 class="fw-bold mb-0"><i class="bi bi-calculator me-2 text-success"></i>Cash-Up Count</h5>
+      <small class="text-muted">{{ cashup.joint.display_name }} · {{ cashup.get_shift_display }} · {{ cashup.shift_date|date:"d M Y" }} · {{ cashup.cashier.get_full_name|default:cashup.cashier.username }}</small>
+    </div>
+    <a href="{% url 'cashup:dashboard' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  </div>
+
+  <form method="post" id="countForm">
+    {% csrf_token %}
+    <div class="row g-3">
+
+      <div class="col-lg-6">
+
+        <div class="section-card mb-3">
+          <div class="section-header d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-cash me-2 text-success"></i>Cash Denominations</span>
+            <span class="text-muted small">Opening float: <strong>${{ cashup.opening_float|floatformat:2 }}</strong></span>
+          </div>
+          <div class="p-3">
+
+            <div class="d-flex align-items-center justify-content-between mb-3 p-3 rounded" style="background:#f0fdf4;">
+              <span class="text-muted small">Denomination Total</span>
+              <span class="live-total text-success" id="denomTotal">$0.00</span>
+            </div>
+
+            {% for label, field_name, value in denominations %}
+            <div class="denom-row d-flex align-items-center justify-content-between py-2 px-1">
+              <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-dark" style="width:52px;font-size:0.8rem;">{{ label }}</span>
+                <span class="text-muted small">× count</span>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 denom-dec" data-val="{{ value }}">−</button>
+                {{ form|getfield:field_name }}
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 denom-inc" data-val="{{ value }}">+</button>
+                <span class="text-muted small denom-line" style="min-width:60px;text-align:right;" data-val="{{ value }}">$0.00</span>
+              </div>
+            </div>
+            {% endfor %}
+
+            <div class="denom-row d-flex align-items-center justify-content-between py-2 px-1">
+              <span class="badge bg-secondary">Coins/Cents</span>
+              <div class="input-group input-group-sm" style="max-width:150px;">
+                <span class="input-group-text">$</span>
+                {{ form.cash_denomination_cents }}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="section-card mb-3">
+          <div class="section-header"><i class="bi bi-phone me-2 text-primary"></i>EcoCash</div>
+          <div class="p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-muted small">Expected (from confirmed transactions)</span>
+              <strong>${{ cashup.expected_ecocash_total|floatformat:2 }}</strong>
+            </div>
+            {% if cashup.expenses_ecocash > 0 %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-muted small">EcoCash expenses</span>
+              <span class="text-danger">−${{ cashup.expenses_ecocash|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="text-muted small">Net expected</span>
+              <strong>${{ cashup.expected_ecocash_total|floatformat:2 }}</strong>
+            </div>
+            <label class="form-label fw-semibold small">Actual EcoCash received</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              {{ form.actual_ecocash }}
+            </div>
+            <div class="mt-2 text-end">
+              <span class="variance-pill" id="ecoVariance">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card mb-3">
+          <div class="section-header"><i class="bi bi-credit-card me-2 text-info"></i>Card</div>
+          <div class="p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="text-muted small">Expected (card sales)</span>
+              <strong>${{ cashup.expected_card|floatformat:2 }}</strong>
+            </div>
+            <label class="form-label fw-semibold small">Actual card received</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              {{ form.actual_card }}
+            </div>
+            <div class="mt-2 text-end">
+              <span class="variance-pill" id="cardVariance">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="col-lg-6">
+
+        <div class="section-card mb-3" style="position:sticky;top:16px;">
+          <div class="section-header"><i class="bi bi-speedometer2 me-2"></i>Live Summary</div>
+          <div class="p-3">
+
+            <table class="table table-sm mb-3">
+              <thead class="table-light">
+                <tr><th>Type</th><th class="text-end">Expected</th><th class="text-end">Actual</th><th class="text-end">Variance</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Cash</td>
+                  <td class="text-end text-muted small">${{ cashup.expected_cash_total|floatformat:2 }}<br><span style="font-size:10px;">float: −${{ cashup.opening_float|floatformat:2 }}{% if cashup.expenses_cash > 0 %} exp: −${{ cashup.expenses_cash|floatformat:2 }}{% endif %}</span></td>
+                  <td class="text-end fw-semibold" id="sumActualCash">$0.00</td>
+                  <td class="text-end fw-bold" id="sumCashVariance">—</td>
+                </tr>
+                <tr>
+                  <td>EcoCash</td>
+                  <td class="text-end text-muted">${{ cashup.expected_ecocash_total|floatformat:2 }}</td>
+                  <td class="text-end fw-semibold" id="sumActualEco">$0.00</td>
+                  <td class="text-end fw-bold" id="sumEcoVariance">—</td>
+                </tr>
+                <tr>
+                  <td>Card</td>
+                  <td class="text-end text-muted">${{ cashup.expected_card|floatformat:2 }}</td>
+                  <td class="text-end fw-semibold" id="sumActualCard">$0.00</td>
+                  <td class="text-end fw-bold" id="sumCardVariance">—</td>
+                </tr>
+                <tr class="table-light fw-bold">
+                  <td>TOTAL</td>
+                  <td class="text-end">${{ cashup.total_expected|floatformat:2 }}</td>
+                  <td class="text-end" id="sumActualTotal">$0.00</td>
+                  <td class="text-end" id="sumTotalVariance">—</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="text-center mb-3">
+              <div id="balanceIndicator" class="variance-pill variance-warn" style="font-size:1rem;padding:10px 24px;">
+                <i class="bi bi-question-circle me-1"></i> Calculating...
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Notes</label>
+              {{ form.notes }}
+            </div>
+
+            <div class="d-grid gap-2">
+              <button type="submit" name="save" class="btn btn-outline-primary fw-semibold">
+                <i class="bi bi-floppy me-2"></i>Save Draft
+              </button>
+              <button type="submit" name="submit" class="btn btn-success fw-bold" id="submitBtn">
+                <i class="bi bi-send-check me-2"></i>Submit for Manager Review
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card mb-3">
+          <div class="section-header"><i class="bi bi-receipt me-2 text-secondary"></i>Today's Sales ({{ cashup.shift_date|date:"d M" }})</div>
+          <div class="p-3">
+            {% for method, sales_list in sales_by_method.items %}
+            {% if sales_list %}
+            <div class="mb-3">
+              <div class="fw-semibold small text-uppercase text-muted mb-1">{{ method }}</div>
+              {% for sale in sales_list %}
+              <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                <span class="small text-muted">{{ sale.receipt_number }} · {{ sale.sale_date|time:"H:i" }}</span>
+                <span class="fw-semibold small">${{ sale.total_amount|floatformat:2 }}</span>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% if not sales_by_method.cash and not sales_by_method.ecocash and not sales_by_method.card and not sales_by_method.mixed %}
+            <p class="text-muted small mb-0">No sales recorded for this shift.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if expenses %}
+        <div class="section-card">
+          <div class="section-header"><i class="bi bi-file-earmark-minus me-2 text-danger"></i>Expenses</div>
+          <div class="p-3">
+            {% for exp in expenses %}
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+              <div>
+                <span class="small">{{ exp.description }}</span>
+                <span class="badge bg-light text-dark ms-1 small">{{ exp.get_payment_method_display }}</span>
+              </div>
+              <span class="fw-semibold small text-danger">−${{ exp.amount|floatformat:2 }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const DENOM_VALUES = { 100: 100, 50: 50, 20: 20, 10: 10, 5: 5, 2: 2, 1: 1 };
+const EXPECTED_CASH_NET = {{ cashup.expected_cash_total|floatformat:2 }} - {{ cashup.opening_float|floatformat:2 }} - {{ cashup.expenses_cash|floatformat:2 }};
+const EXPECTED_ECO = {{ cashup.expected_ecocash_total|floatformat:2 }} - {{ cashup.expenses_ecocash|floatformat:2 }};
+const EXPECTED_CARD = {{ cashup.expected_card|floatformat:2 }};
+
+function fmtAmt(v) {
+  const s = v >= 0 ? '+$' : '-$';
+  return s + Math.abs(v).toFixed(2);
+}
+
+function varianceClass(v) {
+  if (Math.abs(v) < 0.05) return 'variance-ok';
+  if (Math.abs(v) < 2) return 'variance-warn';
+  return 'variance-bad';
+}
+
+function varianceColor(v) {
+  if (Math.abs(v) < 0.05) return '#065f46';
+  if (v > 0) return '#166534';
+  return '#dc2626';
+}
+
+function computeLive() {
+  let denomTotal = 0;
+  document.querySelectorAll('.denom-input').forEach(inp => {
+    const val = parseInt(inp.dataset.val || inp.closest('.denom-row')?.querySelector('.denom-line')?.dataset?.val || 0);
+    const count = parseInt(inp.value || 0);
+    const lineEl = inp.closest('.denom-row')?.querySelector('.denom-line');
+    const lineAmt = count * val;
+    if (lineEl) lineEl.textContent = '$' + lineAmt.toFixed(2);
+    denomTotal += lineAmt;
+  });
+
+  const centsEl = document.getElementById('id_cash_denomination_cents');
+  const cents = parseFloat(centsEl?.value || 0) || 0;
+  denomTotal += cents;
+
+  const actualEco = parseFloat(document.getElementById('id_actual_ecocash')?.value || 0) || 0;
+  const actualCard = parseFloat(document.getElementById('id_actual_card')?.value || 0) || 0;
+
+  const cashVar = denomTotal - EXPECTED_CASH_NET;
+  const ecoVar = actualEco - EXPECTED_ECO;
+  const cardVar = actualCard - EXPECTED_CARD;
+  const totalVar = cashVar + ecoVar + cardVar;
+  const totalActual = denomTotal + actualEco + actualCard;
+
+  document.getElementById('denomTotal').textContent = '$' + denomTotal.toFixed(2);
+  document.getElementById('sumActualCash').textContent = '$' + denomTotal.toFixed(2);
+  document.getElementById('sumActualEco').textContent = '$' + actualEco.toFixed(2);
+  document.getElementById('sumActualCard').textContent = '$' + actualCard.toFixed(2);
+  document.getElementById('sumActualTotal').textContent = '$' + totalActual.toFixed(2);
+
+  const setVar = (id, v) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = fmtAmt(v);
+    el.style.color = varianceColor(v);
+  };
+  setVar('sumCashVariance', cashVar);
+  setVar('sumEcoVariance', ecoVar);
+  setVar('sumCardVariance', cardVar);
+  setVar('sumTotalVariance', totalVar);
+
+  const updatePill = (id, v) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'variance-pill ' + varianceClass(v);
+    el.textContent = fmtAmt(v);
+  };
+  updatePill('ecoVariance', ecoVar);
+  updatePill('cardVariance', cardVar);
+
+  const ind = document.getElementById('balanceIndicator');
+  if (Math.abs(totalVar) < 0.05) {
+    ind.className = 'variance-pill variance-ok';
+    ind.innerHTML = '<i class="bi bi-check-circle me-1"></i> Balanced ✓';
+  } else if (Math.abs(totalVar) < 2) {
+    ind.className = 'variance-pill variance-warn';
+    ind.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> Small Variance: ' + fmtAmt(totalVar);
+  } else {
+    ind.className = 'variance-pill variance-bad';
+    ind.innerHTML = '<i class="bi bi-x-circle me-1"></i> Variance: ' + fmtAmt(totalVar);
+  }
+}
+
+document.querySelectorAll('.denom-input, #id_actual_ecocash, #id_actual_card, #id_cash_denomination_cents').forEach(el => {
+  el.addEventListener('input', computeLive);
+});
+
+document.querySelectorAll('.denom-inc').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const row = this.closest('.denom-row');
+    const inp = row.querySelector('.denom-input');
+    inp.value = (parseInt(inp.value || 0) + 1);
+    computeLive();
+  });
+});
+
+document.querySelectorAll('.denom-dec').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const row = this.closest('.denom-row');
+    const inp = row.querySelector('.denom-input');
+    inp.value = Math.max(0, (parseInt(inp.value || 0) - 1));
+    computeLive();
+  });
+});
+
+document.querySelectorAll('.denom-input').forEach(inp => {
+  inp.dataset.val = inp.closest('.denom-row').querySelector('.denom-line')?.dataset?.val || 0;
+});
+
+(function patchDenomInputs() {
+  const rows = document.querySelectorAll('.denom-row');
+  rows.forEach(row => {
+    const inp = row.querySelector('.denom-input');
+    const line = row.querySelector('.denom-line');
+    if (inp && line) inp.dataset.val = line.dataset.val;
+  });
+})();
+
+computeLive();
+</script>
+{% endblock %}

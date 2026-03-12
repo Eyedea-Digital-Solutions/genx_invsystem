@@ -8,37 +8,93 @@
         <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
             <div class="card-body p-4">
                 <div class="row mb-3">
-                    <div class="col"><div class="text-muted" style="font-size:12px;">Receipt</div><div class="fw-bold">{{ sale.receipt_number }}</div></div>
-                    <div class="col"><div class="text-muted" style="font-size:12px;">Joint</div><div class="fw-bold">{{ sale.joint.display_name }}</div></div>
-                    <div class="col"><div class="text-muted" style="font-size:12px;">Date</div><div class="fw-bold">{{ sale.sale_date|date:"d M Y, H:i" }}</div></div>
-                    <div class="col"><div class="text-muted" style="font-size:12px;">Payment</div><div class="fw-bold">{{ sale.get_payment_method_display }}</div></div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-muted" style="font-size:12px;">Receipt</div>
+                        <div class="fw-bold">{{ sale.receipt_number }}</div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-muted" style="font-size:12px;">Joint</div>
+                        <div class="fw-bold">{{ sale.joint.display_name }}</div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-muted" style="font-size:12px;">Date</div>
+                        <div class="fw-bold">{{ sale.sale_date|date:"d M Y, H:i" }}</div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-muted" style="font-size:12px;">Payment</div>
+                        <div class="fw-bold">{{ sale.get_payment_method_display }}</div>
+                    </div>
                 </div>
+
                 {% if sale.customer_name %}
-                <div class="mb-3"><div class="text-muted" style="font-size:12px;">Customer</div><div>{{ sale.customer_name }}</div></div>
+                <div class="mb-3">
+                    <div class="text-muted" style="font-size:12px;">Customer</div>
+                    <div class="fw-bold">
+                        {{ sale.customer_name }}
+                        {% if sale.customer_phone %}
+                        <span class="text-muted fw-normal ms-2" style="font-size:12px;">{{ sale.customer_phone }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if sale.notes %}
+                <div class="mb-3">
+                    <div class="text-muted" style="font-size:12px;">Notes</div>
+                    <div>{{ sale.notes }}</div>
+                </div>
                 {% endif %}
 
                 <table class="table table-sm" style="font-size:13px;">
-                    <thead class="table-light"><tr><th>Product</th><th>Qty</th><th>Price</th><th class="text-end">Total</th></tr></thead>
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         {% for item in sale.items.all %}
                         <tr {% if item.is_free_gift %}style="color:#16a34a;"{% endif %}>
                             <td>
-                                {{ item.product.name }}
-                                {% if item.is_free_gift %}<span class="badge bg-success ms-1" style="font-size:9px;">FREE</span>{% endif %}
-                                {% if item.promotion_label %}<div class="text-muted" style="font-size:11px;">{{ item.promotion_label }}</div>{% endif %}
+                                {% if item.product %}
+                                    {{ item.product.name }}
+                                {% else %}
+                                    <span class="text-muted fst-italic">(deleted product)</span>
+                                {% endif %}
+                                {% if item.is_free_gift %}
+                                    <span class="badge bg-success ms-1" style="font-size:9px;">FREE</span>
+                                {% endif %}
+                                {% if item.promotion_label %}
+                                    <div class="text-muted" style="font-size:11px;">{{ item.promotion_label }}</div>
+                                {% endif %}
                             </td>
-                            <td>{{ item.quantity }}</td>
-                            <td>{% if item.is_free_gift %}Free{% else %}${{ item.unit_price }}{% endif %}</td>
-                            <td class="text-end fw-bold">{% if item.is_free_gift %}$0.00{% else %}${{ item.line_total }}{% endif %}</td>
+                            <td class="text-center">{{ item.quantity }}</td>
+                            <td class="text-end">
+                                {% if item.is_free_gift %}Free{% else %}${{ item.unit_price }}{% endif %}
+                            </td>
+                            <td class="text-end fw-bold">
+                                {% if item.is_free_gift %}$0.00{% else %}${{ item.line_total|floatformat:2 }}{% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
-                        <tr><td colspan="3" class="text-end">Subtotal</td><td class="text-end">${{ sale.subtotal }}</td></tr>
+                        <tr>
+                            <td colspan="3" class="text-end text-muted">Subtotal</td>
+                            <td class="text-end">${{ sale.subtotal|floatformat:2 }}</td>
+                        </tr>
                         {% if sale.discount_amount and sale.discount_amount > 0 %}
-                        <tr style="color:#16a34a;"><td colspan="3" class="text-end">{{ sale.discount_label|default:"Discount" }}</td><td class="text-end">-${{ sale.discount_amount }}</td></tr>
+                        <tr style="color:#16a34a;">
+                            <td colspan="3" class="text-end">{{ sale.discount_label|default:"Discount" }}</td>
+                            <td class="text-end">-${{ sale.discount_amount|floatformat:2 }}</td>
+                        </tr>
                         {% endif %}
-                        <tr class="fw-bold"><td colspan="3" class="text-end">TOTAL</td><td class="text-end">${{ sale.total_amount }}</td></tr>
+                        <tr class="fw-bold fs-6">
+                            <td colspan="3" class="text-end">TOTAL</td>
+                            <td class="text-end">${{ sale.total_amount|floatformat:2 }}</td>
+                        </tr>
                     </tfoot>
                 </table>
             </div>
@@ -49,21 +105,37 @@
         <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
             <div class="card-body p-4">
                 <h6 class="fw-bold mb-3">Actions</h6>
-                <a href="{% url 'sales:sale_receipt_thermal' sale.pk %}" target="_blank" class="btn btn-dark w-100 mb-2" style="font-size:13px;"><i class="bi bi-printer me-2"></i>Print Thermal Receipt</a>
-                <a href="{% url 'sales:sale_list' %}" class="btn btn-outline-secondary w-100" style="font-size:13px;">← Back to Sales</a>
+                <a href="{% url 'sales:sale_receipt_thermal' sale.pk %}" target="_blank"
+                   class="btn btn-dark w-100 mb-2" style="font-size:13px;">
+                    <i class="bi bi-printer me-2"></i>Print Thermal Receipt
+                </a>
+                <a href="{% url 'sales:sale_list' %}" class="btn btn-outline-secondary w-100" style="font-size:13px;">
+                    ← Back to Sales
+                </a>
             </div>
         </div>
 
-        {% if audit_log %}
+        {# Audit logs — sale.audit_logs is a queryset (FK, not OneToOne) #}
+        {% with logs=sale.audit_logs.all %}
+        {% if logs %}
         <div class="card border-0 shadow-sm" style="border-radius:14px;">
             <div class="card-body p-4">
-                <h6 class="fw-bold mb-2">Audit</h6>
-                <div style="font-size:12px;color:#666;">
-                    {{ audit_log.action|upper }} by {{ audit_log.performed_by }} at {{ audit_log.timestamp|date:"d M Y H:i" }}
+                <h6 class="fw-bold mb-3">Audit Trail</h6>
+                {% for log in logs %}
+                <div class="mb-2 pb-2 {% if not forloop.last %}border-bottom{% endif %}">
+                    <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;">
+                        {{ log.action }}
+                    </div>
+                    <div style="font-size:11px;color:#6b7280;">
+                        {% if log.performed_by %}{{ log.performed_by.get_full_name|default:log.performed_by.username }}{% else %}System{% endif %}
+                        · {{ log.timestamp|date:"d M Y H:i" }}
+                    </div>
                 </div>
+                {% endfor %}
             </div>
         </div>
         {% endif %}
+        {% endwith %}
     </div>
 </div>
 {% endblock %}

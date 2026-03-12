@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block title %}Cash-Up — {{ cashup }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.variance-chip { display:inline-flex;align-items:center;padding:4px 12px;border-radius:50px;font-weight:700;font-size:0.82rem; }
+.vc-ok { background:#d1fae5;color:#065f46; }
+.vc-warn { background:#fef3c7;color:#92400e; }
+.vc-bad { background:#fee2e2;color:#7f1d1d; }
+.section-card { border:1px solid #e5e7eb;border-radius:10px;overflow:hidden; }
+.section-hdr { background:#f9fafb;padding:12px 16px;font-weight:600;font-size:0.9rem;border-bottom:1px solid #e5e7eb; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <a href="{% url 'cashup:dashboard' %}" class="btn btn-sm btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i></a>
+      <span class="fw-bold fs-5">Cash-Up Detail</span>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      {% if cashup.status == 'open' or cashup.status == 'disputed' %}
+        {% if cashup.cashier == user or user.is_manager_role %}
+        <a href="{% url 'cashup:count' cashup.pk %}" class="btn btn-sm btn-primary"><i class="bi bi-pencil me-1"></i>Edit / Count</a>
+        {% endif %}
+      {% endif %}
+      {% if cashup.status == 'approved' %}
+        <span class="badge bg-success fs-6 py-2 px-3"><i class="bi bi-check-circle me-1"></i>Approved</span>
+      {% elif cashup.status == 'disputed' %}
+        <span class="badge bg-danger fs-6 py-2 px-3"><i class="bi bi-x-circle me-1"></i>Disputed</span>
+      {% elif cashup.status == 'submitted' %}
+        <span class="badge bg-warning text-dark fs-6 py-2 px-3"><i class="bi bi-hourglass-split me-1"></i>Pending Review</span>
+      {% else %}
+        <span class="badge bg-secondary fs-6 py-2 px-3">Open</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small mb-1">Joint</div>
+          <div class="fw-bold">{{ cashup.joint.display_name }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small mb-1">Cashier</div>
+          <div class="fw-bold">{{ cashup.cashier.get_full_name|default:cashup.cashier.username }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small mb-1">Date / Shift</div>
+          <div class="fw-bold">{{ cashup.shift_date|date:"d M Y" }} · {{ cashup.get_shift_display }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center h-100 {% if cashup.is_balanced %}border-success{% elif cashup.total_variance < -2 %}border-danger{% else %}border-warning{% endif %}">
+        <div class="card-body py-3">
+          <div class="text-muted small mb-1">Total Variance</div>
+          {% with v=cashup.total_variance %}
+          <div class="fw-bold fs-5 {% if cashup.is_balanced %}text-success{% elif v < 0 %}text-danger{% else %}text-warning{% endif %}">
+            {% if v >= 0 %}+{% endif %}${{ v|floatformat:2 }}
+          </div>
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-7">
+
+      <div class="section-card mb-3">
+        <div class="section-hdr"><i class="bi bi-table me-2"></i>Reconciliation</div>
+        <div class="p-3">
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Method</th>
+                <th class="text-end">Sales</th>
+                <th class="text-end">Adjustments</th>
+                <th class="text-end">Net Expected</th>
+                <th class="text-end">Actual</th>
+                <th class="text-end">Variance</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><i class="bi bi-cash text-success me-1"></i>Cash</td>
+                <td class="text-end">${{ cashup.expected_cash_total|floatformat:2 }}</td>
+                <td class="text-end text-muted small">
+                  float: −${{ cashup.opening_float|floatformat:2 }}
+                  {% if cashup.expenses_cash > 0 %}<br>exp: −${{ cashup.expenses_cash|floatformat:2 }}{% endif %}
+                </td>
+                <td class="text-end">${{ cashup.expected_cash_total|add:"-"|add:cashup.opening_float|floatformat:2 }}</td>
+                <td class="text-end fw-semibold">${{ cashup.actual_cash|floatformat:2 }}</td>
+                <td class="text-end">
+                  {% with v=cashup.cash_variance %}
+                  <span class="variance-chip {% if cashup.is_balanced %}vc-ok{% elif v < 0 %}vc-bad{% else %}vc-warn{% endif %}">
+                    {% if v >= 0 %}+{% endif %}${{ v|floatformat:2 }}
+                  </span>
+                  {% endwith %}
+                </td>
+              </tr>
+              <tr>
+                <td><i class="bi bi-phone text-primary me-1"></i>EcoCash</td>
+                <td class="text-end">${{ cashup.expected_ecocash_total|floatformat:2 }}</td>
+                <td class="text-end text-muted small">
+                  {% if cashup.expenses_ecocash > 0 %}exp: −${{ cashup.expenses_ecocash|floatformat:2 }}{% else %}—{% endif %}
+                </td>
+                <td class="text-end">${{ cashup.expected_ecocash_total|floatformat:2 }}</td>
+                <td class="text-end fw-semibold">${{ cashup.actual_ecocash|floatformat:2 }}</td>
+                <td class="text-end">
+                  {% with v=cashup.ecocash_variance %}
+                  <span class="variance-chip {% if v == 0 %}vc-ok{% elif v < 0 %}vc-bad{% else %}vc-warn{% endif %}">
+                    {% if v >= 0 %}+{% endif %}${{ v|floatformat:2 }}
+                  </span>
+                  {% endwith %}
+                </td>
+              </tr>
+              <tr>
+                <td><i class="bi bi-credit-card text-info me-1"></i>Card</td>
+                <td class="text-end">${{ cashup.expected_card|floatformat:2 }}</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end">${{ cashup.expected_card|floatformat:2 }}</td>
+                <td class="text-end fw-semibold">${{ cashup.actual_card|floatformat:2 }}</td>
+                <td class="text-end">
+                  {% with v=cashup.card_variance %}
+                  <span class="variance-chip {% if v == 0 %}vc-ok{% elif v < 0 %}vc-bad{% else %}vc-warn{% endif %}">
+                    {% if v >= 0 %}+{% endif %}${{ v|floatformat:2 }}
+                  </span>
+                  {% endwith %}
+                </td>
+              </tr>
+              <tr class="table-light fw-bold">
+                <td>TOTAL</td>
+                <td class="text-end">${{ cashup.total_expected|floatformat:2 }}</td>
+                <td></td>
+                <td class="text-end">${{ cashup.total_expected|floatformat:2 }}</td>
+                <td class="text-end">${{ cashup.total_actual|floatformat:2 }}</td>
+                <td class="text-end">
+                  {% with v=cashup.total_variance %}
+                  <span class="variance-chip {% if cashup.is_balanced %}vc-ok{% elif v < 0 %}vc-bad{% else %}vc-warn{% endif %}" style="font-size:0.9rem;">
+                    {% if v >= 0 %}+{% endif %}${{ v|floatformat:2 }}
+                  </span>
+                  {% endwith %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-card mb-3">
+        <div class="section-hdr"><i class="bi bi-cash me-2"></i>Denomination Breakdown</div>
+        <div class="p-3">
+          <div class="row row-cols-4 g-2 text-center">
+            {% if cashup.cash_denomination_100 %}<div class="col"><div class="border rounded p-2"><div class="fw-bold">$100</div><div class="text-muted small">×{{ cashup.cash_denomination_100 }}</div><div class="text-success small">${{ cashup.cash_denomination_100|floatformat:0 }}00</div></div></div>{% endif %}
+            {% if cashup.cash_denomination_50 %}<div class="col"><div class="border rounded p-2"><div class="fw-bold">$50</div><div class="text-muted small">×{{ cashup.cash_denomination_50 }}</div></div></div>{% endif %}
+            {% if cashup.cash_denomination_20 %}<div class="col"><div class="border rounded p-2"><div class="fw-bold">$20</div><div class="text-muted small">×{{ cashup.cash_denomination_20 }}</div></div></div>{% endif %}
+            {% if cashup.cash_denomination_10 %}<div class="col"><div class="border rounded p-2"><div class="fw-bold">$10</div><div class="text-muted small">×{{ cashup.cash_denomination_10 }}</div></div></div>{% endif %}
+            {% if cashup.cash_denomination_5 %}<div class="col"><div class="border rounded p-2"><div class="fw-bold">$5</div><div class="text-muted small">×{{ cashup.cash_denomination_5 }}</div></div></div>{% endif %}
+            {% if cashup.cash_denomination_2 %}<div class="col"><div class="border rounded p-2"><div class="fw-bold">$2</div><div class="text-muted small">×{{ cashup.cash_denomination_2 }}</div></div></div>{% endif %}
+            {% if cashup.cash_denomination_1 %}<div class="col"><div class="border rounded p-2"><div class="fw-bold">$1</div><div class="text-muted small">×{{ cashup.cash_denomination_1 }}</div></div></div>{% endif %}
+            {% if cashup.cash_denomination_cents %}<div class="col"><div class="border rounded p-2"><div class="fw-bold">Cents</div><div class="text-muted small">${{ cashup.cash_denomination_cents }}</div></div></div>{% endif %}
+          </div>
+          <div class="text-end fw-bold mt-2 border-top pt-2">Denomination Total: ${{ cashup.denomination_total|floatformat:2 }}</div>
+        </div>
+      </div>
+
+      {% if sales %}
+      <div class="section-card mb-3">
+        <div class="section-hdr"><i class="bi bi-receipt me-2"></i>Sales ({{ sales|length }} transactions)</div>
+        <div class="p-0">
+          <div class="table-responsive" style="max-height:300px;overflow-y:auto;">
+            <table class="table table-sm table-hover mb-0 small">
+              <thead class="table-light sticky-top">
+                <tr><th>Receipt</th><th>Time</th><th>Method</th><th class="text-end">Total</th></tr>
+              </thead>
+              <tbody>
+                {% for sale in sales %}
+                <tr>
+                  <td><a href="{% url 'sales:sale_detail' sale.pk %}">{{ sale.receipt_number }}</a></td>
+                  <td>{{ sale.sale_date|time:"H:i" }}</td>
+                  <td><span class="badge bg-light text-dark border">{{ sale.get_payment_method_display }}</span></td>
+                  <td class="text-end fw-semibold">${{ sale.total_amount|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if expenses %}
+      <div class="section-card">
+        <div class="section-hdr"><i class="bi bi-file-earmark-minus me-2 text-danger"></i>Expenses</div>
+        <div class="p-0">
+          <table class="table table-sm mb-0 small">
+            <thead class="table-light">
+              <tr><th>Description</th><th>Category</th><th>Method</th><th class="text-end">Amount</th></tr>
+            </thead>
+            <tbody>
+              {% for exp in expenses %}
+              <tr>
+                <td>{{ exp.description }}</td>
+                <td>{{ exp.category }}</td>
+                <td>{{ exp.get_payment_method_display }}</td>
+                <td class="text-end text-danger fw-semibold">−${{ exp.amount|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <div class="col-lg-5">
+
+      {% if cashup.notes %}
+      <div class="section-card mb-3">
+        <div class="section-hdr"><i class="bi bi-chat-left-text me-2"></i>Cashier Notes</div>
+        <div class="p-3 text-muted small">{{ cashup.notes }}</div>
+      </div>
+      {% endif %}
+
+      {% if cashup.manager_notes %}
+      <div class="section-card mb-3 border-{% if cashup.status == 'approved' %}success{% else %}danger{% endif %}">
+        <div class="section-hdr"><i class="bi bi-person-badge me-2"></i>Manager Notes</div>
+        <div class="p-3 small">{{ cashup.manager_notes }}</div>
+        {% if cashup.approved_by %}
+        <div class="px-3 pb-2 text-muted small">— {{ cashup.approved_by.get_full_name|default:cashup.approved_by.username }}
+          {% if cashup.approved_at %}· {{ cashup.approved_at|date:"d M Y H:i" }}{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if review_form and user.is_manager_role %}
+      <div class="section-card mb-3 border-warning">
+        <div class="section-hdr bg-warning bg-opacity-10 border-warning"><i class="bi bi-clipboard-check me-2"></i>Manager Review</div>
+        <div class="p-3">
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              {% for radio in review_form.action %}
+              <div class="form-check mb-2">
+                {{ radio.tag }}
+                <label class="form-check-label fw-semibold" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Notes (required when disputing)</label>
+              {{ review_form.manager_notes }}
+            </div>
+            {% if review_form.non_field_errors %}
+            <div class="alert alert-danger small py-2">{{ review_form.non_field_errors }}</div>
+            {% endif %}
+            <button type="submit" class="btn btn-warning w-100 fw-bold">Submit Review</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="section-card">
+        <div class="section-hdr"><i class="bi bi-clock-history me-2"></i>Audit Trail</div>
+        <div class="p-3">
+          {% for log in audit_logs %}
+          <div class="d-flex gap-2 mb-3">
+            <div class="flex-shrink-0 mt-1">
+              <span class="badge bg-secondary rounded-pill" style="font-size:0.7rem;">{{ log.timestamp|time:"H:i" }}</span>
+            </div>
+            <div>
+              <div class="fw-semibold small text-uppercase">{{ log.action|replace:"_":" " }}</div>
+              <div class="text-muted" style="font-size:0.78rem;">
+                {{ log.performed_by.get_full_name|default:log.performed_by.username|default:"System" }}
+                · {{ log.timestamp|date:"d M Y" }}
+              </div>
+              {% if log.details %}
+              <div class="text-muted" style="font-size:0.75rem;">
+                {% for k, v in log.details.items %}{{ k }}: {{ v }}{% if not forloop.last %} · {% endif %}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-muted small">No audit trail yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Cash-Up Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="fw-bold mb-0"><i class="bi bi-cash-stack me-2 text-success"></i>Cash-Up</h4>
+      <small class="text-muted">{{ today|date:"l, d F Y" }}</small>
+    </div>
+    <div class="d-flex gap-2">
+      {% if user.is_manager_role %}
+      <a href="{% url 'cashup:list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-list-ul me-1"></i>All Cash-Ups</a>
+      <a href="{% url 'cashup:report' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-bar-chart me-1"></i>Report</a>
+      {% endif %}
+      <a href="{% url 'cashup:open' %}" class="btn btn-sm btn-success"><i class="bi bi-plus-circle me-1"></i>New Cash-Up</a>
+    </div>
+  </div>
+
+  {% if user.is_manager_role and pending_review %}
+  <div class="card border-warning mb-4 shadow-sm">
+    <div class="card-header bg-warning bg-opacity-10 border-warning d-flex align-items-center justify-content-between">
+      <span class="fw-semibold text-warning-emphasis"><i class="bi bi-hourglass-split me-2"></i>Awaiting Your Review</span>
+      <span class="badge bg-warning text-dark">{{ pending_review|length }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th><th>Joint</th><th>Cashier</th><th>Shift</th>
+              <th class="text-end">Expected</th><th class="text-end">Actual</th><th class="text-end">Variance</th>
+              <th>Submitted</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cu in pending_review %}
+            <tr>
+              <td>{{ cu.shift_date|date:"d M Y" }}</td>
+              <td><span class="badge bg-secondary">{{ cu.joint.display_name }}</span></td>
+              <td>{{ cu.cashier.get_full_name|default:cu.cashier.username }}</td>
+              <td>{{ cu.get_shift_display }}</td>
+              <td class="text-end">${{ cu.total_expected|floatformat:2 }}</td>
+              <td class="text-end fw-semibold">${{ cu.total_actual|floatformat:2 }}</td>
+              <td class="text-end">
+                {% with v=cu.total_variance %}
+                <span class="fw-bold {% if v >= 0 %}text-success{% else %}text-danger{% endif %}">
+                  {% if v >= 0 %}+{% endif %}${{ v|floatformat:2 }}
+                </span>
+                {% endwith %}
+              </td>
+              <td class="text-muted">{{ cu.submitted_at|timesince }} ago</td>
+              <td><a href="{% url 'cashup:detail' cu.pk %}" class="btn btn-sm btn-warning">Review</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if user.is_manager_role and today_stats %}
+  <div class="row g-3 mb-4">
+    {% for joint_pk, stat in today_stats.items %}
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h6 class="fw-bold mb-0">{{ stat.joint.display_name }}</h6>
+            {% if stat.disputed > 0 %}<span class="badge bg-danger">{{ stat.disputed }} disputed</span>{% endif %}
+          </div>
+          <div class="fs-4 fw-bold text-success">${{ stat.total_actual|floatformat:2 }}</div>
+          <div class="text-muted small">{{ stat.count }} approved cash-up{{ stat.count|pluralize }} today</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if my_open %}
+  <div class="card border-primary mb-4 shadow-sm">
+    <div class="card-header bg-primary bg-opacity-10 border-primary">
+      <span class="fw-semibold text-primary"><i class="bi bi-pencil-square me-2"></i>My Open Cash-Ups</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr><th>Date</th><th>Joint</th><th>Shift</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for cu in my_open %}
+            <tr>
+              <td>{{ cu.shift_date|date:"d M Y" }}</td>
+              <td>{{ cu.joint.display_name }}</td>
+              <td>{{ cu.get_shift_display }}</td>
+              <td>
+                {% if cu.status == 'open' %}
+                  <span class="badge bg-secondary">Open</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Submitted</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if cu.status == 'open' %}
+                  <a href="{% url 'cashup:count' cu.pk %}" class="btn btn-sm btn-primary">Continue</a>
+                {% else %}
+                  <a href="{% url 'cashup:detail' cu.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card shadow-sm">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">Recent Cash-Ups</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th><th>Joint</th>{% if user.is_manager_role %}<th>Cashier</th>{% endif %}
+              <th>Shift</th><th>Status</th>
+              <th class="text-end">Actual</th><th class="text-end">Variance</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cu in recent %}
+            <tr>
+              <td>{{ cu.shift_date|date:"d M Y" }}</td>
+              <td><span class="badge bg-light text-dark border">{{ cu.joint.display_name }}</span></td>
+              {% if user.is_manager_role %}<td>{{ cu.cashier.get_full_name|default:cu.cashier.username }}</td>{% endif %}
+              <td>{{ cu.get_shift_display }}</td>
+              <td>
+                {% if cu.status == 'open' %}<span class="badge bg-secondary">Open</span>
+                {% elif cu.status == 'submitted' %}<span class="badge bg-warning text-dark">Submitted</span>
+                {% elif cu.status == 'approved' %}<span class="badge bg-success">Approved</span>
+                {% else %}<span class="badge bg-danger">Disputed</span>{% endif %}
+              </td>
+              <td class="text-end fw-semibold">${{ cu.total_actual|floatformat:2 }}</td>
+              <td class="text-end">
+                {% with v=cu.total_variance %}
+                {% if cu.status != 'open' %}
+                <span class="{% if v >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                  {% if v >= 0 %}+{% endif %}${{ v|floatformat:2 }}
+                </span>
+                {% else %}—{% endif %}
+                {% endwith %}
+              </td>
+              <td><a href="{% url 'cashup:detail' cu.pk %}" class="btn btn-sm btn-outline-secondary btn-sm py-0">View</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-4">No cash-ups yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
