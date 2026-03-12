@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% block title %}Process Return{% endblock %}
+{% block page_title %}Returns{% endblock %}
+
+{% block extra_css %}
+<style>
+.steps-bar { display:flex;align-items:center;margin-bottom:28px;gap:0; }
+.step-item {
+    display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;
+    color:#ccc;flex:1;
+}
+.step-item.active { color:var(--accent); }
+.step-item.done { color:var(--green); }
+.step-num {
+    width:32px;height:32px;border-radius:50%;border:2px solid currentColor;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:12px;font-weight:700;flex-shrink:0;
+}
+.step-item.done .step-num { background:var(--green);border-color:var(--green);color:#fff; }
+.step-item.active .step-num { background:var(--accent);border-color:var(--accent);color:#fff; }
+.step-sep { flex:1;height:2px;background:var(--border-l);margin:0 8px; }
+.step-sep.done { background:var(--green); }
+
+.return-item-row {
+    display:flex;align-items:center;gap:14px;padding:14px;
+    border:1.5px solid var(--border-l);border-radius:var(--radius);
+    margin-bottom:10px;transition:border-color 0.15s;
+}
+.return-item-row:hover { border-color:var(--accent); }
+.return-item-row.selected { border-color:var(--accent);background:#faf8ff; }
+.return-qty-ctrl { display:flex;align-items:center;gap:8px;margin-left:auto; }
+.qty-spin {
+    width:32px;height:32px;border-radius:7px;border:1.5px solid var(--border-l);
+    background:none;cursor:pointer;font-size:16px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    transition:all 0.15s;
+}
+.qty-spin:hover { background:var(--ink);color:#fff;border-color:var(--ink); }
+.qty-display { width:36px;text-align:center;font-weight:700;font-size:15px; }
+
+.refund-option { display:none; }
+.refund-label {
+    display:flex;align-items:center;gap:12px;padding:14px 16px;
+    border:1.5px solid var(--border-l);border-radius:var(--radius);
+    cursor:pointer;transition:all 0.15s;margin-bottom:10px;
+}
+.refund-label:hover { border-color:var(--accent); }
+.refund-option:checked + .refund-label { border-color:var(--accent);background:#faf8ff; }
+.refund-icon { width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Process Return</h1>
+        <p>Process customer returns and refunds</p>
+    </div>
+</div>
+
+<!-- STEPS BAR -->
+<div class="steps-bar">
+    <div class="step-item {% if step >= 1 %}{% if step > 1 %}done{% else %}active{% endif %}{% endif %}">
+        <div class="step-num">{% if step > 1 %}<i class="bi bi-check"></i>{% else %}1{% endif %}</div>
+        <span class="d-none d-sm-inline">Find Receipt</span>
+    </div>
+    <div class="step-sep {% if step > 1 %}done{% endif %}"></div>
+    <div class="step-item {% if step >= 2 %}{% if step > 2 %}done{% else %}active{% endif %}{% endif %}">
+        <div class="step-num">{% if step > 2 %}<i class="bi bi-check"></i>{% else %}2{% endif %}</div>
+        <span class="d-none d-sm-inline">Select Items</span>
+    </div>
+    <div class="step-sep {% if step > 2 %}done{% endif %}"></div>
+    <div class="step-item {% if step >= 3 %}{% if step > 3 %}done{% else %}active{% endif %}{% endif %}">
+        <div class="step-num">{% if step > 3 %}<i class="bi bi-check"></i>{% else %}3{% endif %}</div>
+        <span class="d-none d-sm-inline">Refund Type</span>
+    </div>
+    <div class="step-sep {% if step > 3 %}done{% endif %}"></div>
+    <div class="step-item {% if step >= 4 %}active{% endif %}">
+        <div class="step-num">4</div>
+        <span class="d-none d-sm-inline">Confirm</span>
+    </div>
+</div>
+
+<!-- STEP 1: SEARCH -->
+{% if step == 1 %}
+<div style="max-width:520px;margin:0 auto;">
+    <div class="gx-card">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-search"></i>Find Original Sale</div>
+        </div>
+        <div class="gx-card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div style="margin-bottom:16px;">
+                    <label class="gx-form-label">Receipt Number</label>
+                    <input type="text" name="receipt_number" class="gx-input" placeholder="e.g. RCP-000123" required autofocus>
+                </div>
+                {% if error %}<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;color:#7f1d1d;font-size:13px;margin-bottom:14px;">⚠ {{ error }}</div>{% endif %}
+                <button type="submit" class="btn-gx btn-gx-primary">
+                    <i class="bi bi-search"></i> Find Receipt
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- STEP 2: SELECT ITEMS -->
+{% if step == 2 %}
+<div style="max-width:680px;margin:0 auto;">
+    <div class="gx-card" style="margin-bottom:16px;">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-receipt"></i>{{ sale.receipt_number }}</div>
+            <div style="font-size:12px;color:#aaa;">{{ sale.sale_date|date:"d M Y H:i" }} · {{ sale.joint.display_name }}</div>
+        </div>
+        <div style="padding:16px 20px;">
+            <p style="font-size:13px;color:#555;margin-bottom:16px;">Select items to return and specify quantities:</p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="receipt_number" value="{{ sale.receipt_number }}">
+                {% for item in sale_items %}
+                {% if not item.is_free_gift and item.returnable_qty > 0 %}
+                <div class="return-item-row" id="row-{{ item.pk }}">
+                    <input type="checkbox" name="return_{{ item.pk }}" id="chk-{{ item.pk }}" value="1" style="display:none;" onchange="toggleItem({{ item.pk }})">
+                    <label for="chk-{{ item.pk }}" style="cursor:pointer;display:flex;align-items:center;gap:10px;flex:1;">
+                        <div style="width:20px;height:20px;border-radius:5px;border:2px solid var(--border-l);display:flex;align-items:center;justify-content:center;transition:all 0.15s;" id="check-{{ item.pk }}">
+                            <i class="bi bi-check" style="display:none;color:var(--accent);font-size:12px;" id="checkmark-{{ item.pk }}"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:13px;">{{ item.product.name }}</div>
+                            <div style="font-size:12px;color:#aaa;">Qty sold: {{ item.quantity }} · ${{ item.unit_price }} each · Returnable: {{ item.returnable_qty }}</div>
+                        </div>
+                    </label>
+                    <div class="return-qty-ctrl" id="qty-ctrl-{{ item.pk }}" style="opacity:0.3;pointer-events:none;">
+                        <button type="button" class="qty-spin" onclick="adjQty({{ item.pk }}, -1)">−</button>
+                        <div class="qty-display" id="qty-{{ item.pk }}">1</div>
+                        <input type="hidden" name="qty_{{ item.pk }}" id="qinput-{{ item.pk }}" value="1">
+                        <button type="button" class="qty-spin" onclick="adjQty({{ item.pk }}, 1)">+</button>
+                    </div>
+                    <div style="text-align:right;min-width:60px;">
+                        <div style="font-weight:700;font-size:14px;" id="linetotal-{{ item.pk }}">
+                            ${{ item.unit_price }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0 0;border-top:1px solid var(--border-l);margin-top:8px;">
+                    <a href="/returns/" class="btn-gx btn-gx-ghost">← Start Over</a>
+                    <button type="submit" name="action" value="step3" class="btn-gx btn-gx-primary">
+                        Next: Choose Refund Type →
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- STEP 3: REFUND TYPE -->
+{% if step == 3 %}
+<div style="max-width:520px;margin:0 auto;">
+    <div class="gx-card">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-arrow-return-left"></i>Choose Refund Method</div>
+        </div>
+        <div class="gx-card-body">
+            <div style="background:var(--surf-alt);border-radius:9px;padding:12px 16px;margin-bottom:20px;">
+                <div style="font-size:12px;color:#aaa;margin-bottom:4px;">Return Value</div>
+                <div style="font-size:22px;font-weight:900;color:var(--accent);">${{ return_total|floatformat:2 }}</div>
+                <div style="font-size:12px;color:#aaa;margin-top:2px;">{{ return_items|length }} item(s)</div>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                {% for key, val in hidden_fields.items %}
+                <input type="hidden" name="{{ key }}" value="{{ val }}">
+                {% endfor %}
+
+                <input type="radio" class="refund-option" name="refund_type" id="rt-cash" value="cash" checked>
+                <label for="rt-cash" class="refund-label">
+                    <div class="refund-icon" style="background:#e8faf1;color:#065f46;"><i class="bi bi-cash"></i></div>
+                    <div><div style="font-weight:700;font-size:13px;">Cash Refund</div><div style="font-size:12px;color:#aaa;">Return cash to the customer</div></div>
+                </label>
+
+                <input type="radio" class="refund-option" name="refund_type" id="rt-credit" value="store_credit">
+                <label for="rt-credit" class="refund-label">
+                    <div class="refund-icon" style="background:#f3f0ff;color:var(--accent);"><i class="bi bi-star-fill"></i></div>
+                    <div><div style="font-weight:700;font-size:13px;">Store Credit (Loyalty Points)</div><div style="font-size:12px;color:#aaa;">Convert to loyalty points (+10% bonus)</div></div>
+                </label>
+
+                <input type="radio" class="refund-option" name="refund_type" id="rt-reversal" value="payment_reversal">
+                <label for="rt-reversal" class="refund-label">
+                    <div class="refund-icon" style="background:#eff6ff;color:var(--blue);"><i class="bi bi-arrow-counterclockwise"></i></div>
+                    <div><div style="font-weight:700;font-size:13px;">Payment Reversal</div><div style="font-size:12px;color:#aaa;">Reverse original EcoCash/card payment</div></div>
+                </label>
+
+                <div style="margin-top:16px;">
+                    <label class="gx-form-label">Reason for Return</label>
+                    <select name="reason" class="gx-select" required>
+                        <option value="">Select reason…</option>
+                        <option value="defective">Defective / Damaged</option>
+                        <option value="wrong_item">Wrong Item Sold</option>
+                        <option value="customer_changed_mind">Customer Changed Mind</option>
+                        <option value="quality_issue">Quality Issue</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div style="margin-top:12px;">
+                    <label class="gx-form-label">Notes (optional)</label>
+                    <textarea name="notes" class="gx-textarea" rows="2" placeholder="Any additional details…"></textarea>
+                </div>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;">
+                    <a href="/returns/" class="btn-gx btn-gx-ghost">← Back</a>
+                    <button type="submit" name="action" value="step4" class="btn-gx btn-gx-primary">
+                        Review & Confirm →
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- STEP 4: CONFIRM -->
+{% if step == 4 %}
+<div style="max-width:520px;margin:0 auto;">
+    <div class="gx-card">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-check-circle"></i>Confirm Return</div>
+        </div>
+        <div class="gx-card-body">
+            <div style="background:var(--surf-alt);border-radius:9px;padding:16px;margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                    <span style="font-size:13px;color:#888;">Original Receipt</span>
+                    <span style="font-weight:700;font-family:var(--mono);">{{ sale.receipt_number }}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                    <span style="font-size:13px;color:#888;">Refund Method</span>
+                    <span class="gx-badge gx-badge-purple">{{ refund_type|title }}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border-l);">
+                    <span style="font-size:14px;font-weight:600;">Refund Total</span>
+                    <span style="font-size:20px;font-weight:900;color:var(--accent2);">${{ return_total|floatformat:2 }}</span>
+                </div>
+            </div>
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#7f1d1d;">
+                ⚠ <strong>This action cannot be undone.</strong> Stock will be automatically restocked.
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                {% for key, val in hidden_fields.items %}
+                <input type="hidden" name="{{ key }}" value="{{ val }}">
+                {% endfor %}
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <a href="/returns/" class="btn-gx btn-gx-ghost">Cancel</a>
+                    <button type="submit" name="action" value="process" class="btn-gx btn-gx-danger">
+                        <i class="bi bi-check-lg"></i> Process Return
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleItem(pk) {
+    const chk = document.getElementById('chk-' + pk);
+    const ctrl = document.getElementById('qty-ctrl-' + pk);
+    const row = document.getElementById('row-' + pk);
+    const checkEl = document.getElementById('check-' + pk);
+    const checkmark = document.getElementById('checkmark-' + pk);
+    const isChecked = chk.checked = !chk.checked;
+    ctrl.style.opacity = isChecked ? '1' : '0.3';
+    ctrl.style.pointerEvents = isChecked ? '' : 'none';
+    row.classList.toggle('selected', isChecked);
+    checkEl.style.borderColor = isChecked ? 'var(--accent)' : '';
+    checkmark.style.display = isChecked ? '' : 'none';
+    updateTotal(pk);
+}
+function adjQty(pk, delta) {
+    const inp = document.getElementById('qinput-' + pk);
+    const disp = document.getElementById('qty-' + pk);
+    let val = parseInt(inp.value) + delta;
+    val = Math.max(1, val);
+    inp.value = val;
+    disp.textContent = val;
+    updateTotal(pk);
+}
+function updateTotal(pk) {
+    // Could fetch unit price from data attr if needed
+}
+</script>
+{% endblock %}

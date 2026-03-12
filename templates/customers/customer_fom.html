@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block title %}{% if customer %}Edit {{ customer.name }}{% else %}Add Customer{% endif %}{% endblock %}
+{% block page_title %}{% if customer %}Edit Customer{% else %}Add Customer{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+.cx-form-wrap {
+  max-width: 680px;
+}
+.cx-form-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  margin-bottom: 16px;
+}
+.cx-form-head {
+  background: #0d0d14;
+  padding: 16px 24px;
+  display: flex; align-items: center; gap: 12px;
+}
+.cx-form-head-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.cx-form-head-title { color: rgba(255,255,255,.9); font-weight: 700; font-size: 15px; }
+.cx-form-head-sub   { color: rgba(255,255,255,.4); font-size: 12px; margin-top: 1px; }
+
+.cx-form-body { padding: 24px; }
+.cx-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.cx-field-row.full { grid-template-columns: 1fr; }
+.cx-field { display: flex; flex-direction: column; gap: 5px; }
+.cx-label {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px;
+  color: #6b7280;
+}
+.cx-label span { color: #e94560; }
+.cx-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 13px;
+  font-size: 13px;
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+  width: 100%;
+}
+.cx-input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+.cx-error { font-size: 11px; color: #dc2626; margin-top: 2px; }
+
+.cx-actions { display: flex; gap: 10px; margin-top: 24px; }
+.cx-btn-submit {
+  padding: 11px 28px; border-radius: 9px;
+  background: #7c3aed; color: #fff;
+  border: none; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: opacity .15s;
+}
+.cx-btn-submit:hover { opacity: .88; }
+.cx-btn-cancel {
+  padding: 11px 24px; border-radius: 9px;
+  background: #f9fafb; color: #374151;
+  border: 1px solid #e5e7eb; font-size: 13px; font-weight: 600;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+}
+.cx-btn-cancel:hover { background: #f3f4f6; color: #111; }
+
+@media (max-width: 600px) {
+  .cx-field-row { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cx-form-wrap">
+
+  {# ── BREADCRUMB ── #}
+  <nav style="font-size:12px;color:#9ca3af;margin-bottom:16px;">
+    <a href="{% url 'customers:customer_list' %}" style="color:#6b7280;text-decoration:none;">Customers</a>
+    <span style="margin:0 6px;">›</span>
+    <span>{% if customer %}{{ customer.name }}{% else %}New Customer{% endif %}</span>
+  </nav>
+
+  <div class="cx-form-card">
+    <div class="cx-form-head">
+      <div class="cx-form-head-icon" style="background:#ede9fe;">
+        <i class="bi bi-person-badge" style="color:#7c3aed;"></i>
+      </div>
+      <div>
+        <div class="cx-form-head-title">
+          {% if customer %}Edit Customer — {{ customer.name }}{% else %}Add New Customer{% endif %}
+        </div>
+        <div class="cx-form-head-sub">
+          {% if customer %}Update customer details and loyalty settings{% else %}Register a customer for loyalty tracking and purchase history{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="cx-form-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#7f1d1d;">
+          {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+        </div>
+        {% endif %}
+
+        {# Name + Phone #}
+        <div class="cx-field-row">
+          <div class="cx-field">
+            <label class="cx-label">Full Name <span>*</span></label>
+            <input type="text" name="name" value="{{ form.name.value|default:'' }}"
+                   class="cx-input {% if form.name.errors %}border-danger{% endif %}"
+                   placeholder="e.g. Tendai Moyo" autofocus>
+            {% if form.name.errors %}<div class="cx-error">{{ form.name.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="cx-field">
+            <label class="cx-label">Phone Number</label>
+            <input type="tel" name="phone" value="{{ form.phone.value|default:'' }}"
+                   class="cx-input" placeholder="+263 77 123 4567">
+            {% if form.phone.errors %}<div class="cx-error">{{ form.phone.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+
+        {# Email + DOB #}
+        <div class="cx-field-row">
+          <div class="cx-field">
+            <label class="cx-label">Email Address</label>
+            <input type="email" name="email" value="{{ form.email.value|default:'' }}"
+                   class="cx-input" placeholder="customer@email.com">
+            {% if form.email.errors %}<div class="cx-error">{{ form.email.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="cx-field">
+            <label class="cx-label">Date of Birth</label>
+            <input type="date" name="date_of_birth" value="{{ form.date_of_birth.value|default:'' }}"
+                   class="cx-input">
+          </div>
+        </div>
+
+        {# Notes #}
+        <div class="cx-field-row full">
+          <div class="cx-field">
+            <label class="cx-label">Notes</label>
+            <textarea name="notes" rows="2" class="cx-input"
+                      placeholder="Any notes about this customer…">{{ form.notes.value|default:'' }}</textarea>
+          </div>
+        </div>
+
+        <div class="cx-actions">
+          <button type="submit" class="cx-btn-submit">
+            <i class="bi bi-check-lg me-1"></i>
+            {% if customer %}Save Changes{% else %}Add Customer{% endif %}
+          </button>
+          <a href="{% url 'customers:customer_list' %}" class="cx-btn-cancel">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

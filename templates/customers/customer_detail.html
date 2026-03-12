@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}{{ customer.name }} — Customer{% endblock %}
+{% block page_title %}Customer Profile{% endblock %}
+
+{% block extra_css %}
+<style>
+.loyalty-bar { height:8px;background:#f0eef8;border-radius:4px;overflow:hidden;margin-top:8px; }
+.loyalty-fill { height:100%;background:linear-gradient(90deg,var(--accent),#9b6bff);border-radius:4px;transition:width 0.6s; }
+.timeline-item { display:flex;gap:14px;margin-bottom:18px; }
+.timeline-dot { width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px; }
+.timeline-line { width:1px;background:var(--border-l);flex-shrink:0;margin-left:4.5px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gx-breadcrumb">
+    <a href="/customers/">Customers</a>
+    <span class="sep">/</span>
+    <span>{{ customer.name }}</span>
+</div>
+
+<div style="display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start;">
+
+    <!-- LEFT: Profile Card -->
+    <div>
+        <div class="gx-card" style="margin-bottom:16px;">
+            <div style="padding:24px;text-align:center;border-bottom:1px solid var(--border-l);">
+                <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#9b6bff);display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:800;margin:0 auto 14px;">
+                    {{ customer.name|slice:":1"|upper }}
+                </div>
+                <div style="font-size:18px;font-weight:800;margin-bottom:4px;">{{ customer.name }}</div>
+                <div style="font-size:12px;color:#aaa;">Customer since {{ customer.created_at|date:"F Y" }}</div>
+            </div>
+            <div style="padding:16px;">
+                {% if customer.phone %}
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;">
+                    <i class="bi bi-phone" style="color:var(--accent);width:18px;"></i>
+                    <span>{{ customer.phone }}</span>
+                </div>
+                {% endif %}
+                {% if customer.email %}
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;">
+                    <i class="bi bi-envelope" style="color:var(--accent);width:18px;"></i>
+                    <span>{{ customer.email }}</span>
+                </div>
+                {% endif %}
+                {% if customer.address %}
+                <div style="display:flex;align-items:flex-start;gap:10px;font-size:13px;">
+                    <i class="bi bi-geo-alt" style="color:var(--accent);width:18px;margin-top:2px;"></i>
+                    <span>{{ customer.address }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% if user.is_manager_role %}
+            <div style="padding:12px 16px;border-top:1px solid var(--border-l);display:flex;gap:8px;">
+                <a href="/customers/{{ customer.pk }}/edit/" class="btn-gx btn-gx-ghost btn-gx-sm" style="flex:1;justify-content:center;">Edit</a>
+                <a href="/customers/{{ customer.pk }}/loyalty/" class="btn-gx btn-gx-primary btn-gx-sm" style="flex:1;justify-content:center;">Adjust Points</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Loyalty Card -->
+        <div class="gx-card">
+            <div style="padding:20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;">
+                        <i class="bi bi-star-fill" style="color:#ffaa00;"></i> Loyalty Points
+                    </div>
+                    <span style="font-size:24px;font-weight:900;color:var(--accent);">{{ customer.loyalty_points }}</span>
+                </div>
+                <div class="loyalty-bar">
+                    <div class="loyalty-fill" style="width:{% widthratio customer.loyalty_points 500 100 %}%;"></div>
+                </div>
+                <div style="font-size:11px;color:#aaa;margin-top:6px;">{{ customer.loyalty_points }} / 500 pts to next reward</div>
+
+                <!-- Point History -->
+                {% if loyalty_transactions %}
+                <div style="margin-top:16px;border-top:1px solid var(--border-l);padding-top:14px;">
+                    <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#aaa;margin-bottom:10px;">Recent Activity</div>
+                    {% for tx in loyalty_transactions|slice:":5" %}
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border-l);font-size:12px;">
+                        <div>
+                            <div style="font-weight:600;">{{ tx.get_transaction_type_display }}</div>
+                            <div style="color:#aaa;font-size:11px;">{{ tx.created_at|date:"d M Y" }}</div>
+                        </div>
+                        <span style="font-weight:700;color:{% if tx.points > 0 %}var(--green){% else %}var(--accent2){% endif %};">
+                            {% if tx.points > 0 %}+{% endif %}{{ tx.points }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Purchase History -->
+    <div>
+        <!-- Spend Stats -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+            <div class="stat-card" style="border-top:3px solid var(--green);">
+                <div class="stat-label">Total Spend</div>
+                <div class="stat-value" style="color:var(--green);font-size:22px;">${{ customer.total_spend|default:0|floatformat:2 }}</div>
+            </div>
+            <div class="stat-card" style="border-top:3px solid var(--blue);">
+                <div class="stat-label">Purchases</div>
+                <div class="stat-value" style="color:var(--blue);font-size:22px;">{{ purchase_count|default:0 }}</div>
+            </div>
+            <div class="stat-card" style="border-top:3px solid var(--accent);">
+                <div class="stat-label">Avg Order</div>
+                <div class="stat-value" style="color:var(--accent);font-size:22px;">${{ avg_order|default:0|floatformat:2 }}</div>
+            </div>
+        </div>
+
+        <!-- Purchase History Table -->
+        <div class="gx-card">
+            <div class="gx-card-head">
+                <div class="gx-card-title"><i class="bi bi-clock-history"></i>Purchase History</div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table class="gx-table">
+                    <thead>
+                        <tr>
+                            <th>Receipt</th>
+                            <th>Date</th>
+                            <th>Joint</th>
+                            <th>Payment</th>
+                            <th>Items</th>
+                            <th class="text-end">Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales %}
+                        <tr>
+                            <td style="font-family:var(--mono);font-size:12px;font-weight:600;">{{ sale.receipt_number }}</td>
+                            <td style="color:#888;font-size:12px;">{{ sale.sale_date|date:"d M Y H:i" }}</td>
+                            <td><span class="gx-badge gx-badge-neutral">{{ sale.joint.display_name }}</span></td>
+                            <td><span class="gx-badge gx-badge-neutral">{{ sale.get_payment_method_display }}</span></td>
+                            <td style="font-size:12px;">{{ sale.items.count }}</td>
+                            <td class="text-end fw-bold">${{ sale.total_amount|floatformat:2 }}</td>
+                            <td>
+                                <a href="{% url 'sales:sale_detail' sale.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs">View</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" style="text-align:center;color:#bbb;padding:32px;">No purchases yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

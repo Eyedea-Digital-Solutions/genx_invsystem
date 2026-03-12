@@ -23,6 +23,9 @@ INSTALLED_APPS = [
     'promotions',
     'expense',
     'cashup',
+    'customers',
+    'returns',
+    'purchasing',
 ]
 
 MIDDLEWARE = [

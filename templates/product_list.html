@@ -4,130 +4,186 @@
 
 {% block extra_css %}
 <style>
-    .prod-thumb {
-        width: 44px; height: 44px;
-        object-fit: cover;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        background: #f5f4f0;
-        display: block;
-        flex-shrink: 0;
-    }
-    .prod-thumb-placeholder {
-        width: 44px; height: 44px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        background: #f0efeb;
-        display: flex; align-items: center; justify-content: center;
-        color: #ccc; font-size: 18px;
-        flex-shrink: 0;
-    }
-    .prod-name-cell {
-        display: flex; align-items: center; gap: 10px;
-    }
+.view-toggle { display:flex;gap:4px;background:var(--surf-alt);border:1px solid var(--border-l);border-radius:8px;padding:3px; }
+.view-btn { padding:5px 10px;border-radius:6px;border:none;background:none;cursor:pointer;color:#888;font-size:14px;transition:all 0.15s; }
+.view-btn.active { background:var(--surface);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+
+/* GRID VIEW */
+.prod-grid-view { display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px; }
+.pgv-card {
+    background:var(--surface);border:1px solid var(--border-l);border-radius:var(--radius);
+    overflow:hidden;transition:box-shadow 0.2s,transform 0.2s;
+}
+.pgv-card:hover { box-shadow:0 8px 28px rgba(0,0,0,0.1);transform:translateY(-2px); }
+.pgv-img {
+    width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:var(--surf-alt);
+    border-bottom:1px solid var(--border-l);
+}
+.pgv-img-ph {
+    width:100%;aspect-ratio:1/1;background:var(--surf-alt);
+    display:flex;align-items:center;justify-content:center;
+    color:#ddd;font-size:36px;border-bottom:1px solid var(--border-l);
+}
+.pgv-body { padding:12px; }
+.pgv-name { font-weight:700;font-size:13px;line-height:1.3;margin-bottom:6px;color:var(--ink); }
+.pgv-price { font-size:16px;font-weight:800;letter-spacing:-0.3px; }
+.pgv-stock { font-size:11px;color:#aaa;margin-top:3px; }
+.pgv-actions { padding:10px 12px;border-top:1px solid var(--border-l);display:flex;gap:6px;background:var(--surf-alt); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center gap-2 mb-4">
-    <form method="get" class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-        <select name="joint" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Products</h1>
+        <p>Manage your product catalogue and stock</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <div class="view-toggle">
+            <button class="view-btn active" id="btnTable" onclick="setView('table')" title="Table view"><i class="bi bi-list-ul"></i></button>
+            <button class="view-btn" id="btnGrid" onclick="setView('grid')" title="Grid view"><i class="bi bi-grid"></i></button>
+        </div>
+        {% if user.is_manager_role %}
+        <a href="{% url 'inventory:product_create' %}" class="btn-gx btn-gx-primary">
+            <i class="bi bi-plus-lg"></i> Add Product
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- FILTER -->
+<div class="filter-bar">
+    <form method="get" style="display:contents;">
+        <select name="joint" class="gx-select" onchange="this.form.submit()">
             <option value="">All Joints</option>
             {% for j in joints %}<option value="{{ j.pk }}" {% if selected_joint == j.pk|stringformat:"s" %}selected{% endif %}>{{ j.display_name }}</option>{% endfor %}
         </select>
-        <input type="text" name="q" value="{{ search }}" class="form-control form-control-sm" placeholder="Search products…" style="width:200px;">
-        <select name="filter" class="form-select form-select-sm" style="width:140px;" onchange="this.form.submit()">
+        <input type="text" name="q" value="{{ search }}" class="gx-input" placeholder="Search products…" style="min-width:200px;">
+        <select name="filter" class="gx-select" onchange="this.form.submit()">
             <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All Products</option>
             <option value="clearance" {% if filter_type == 'clearance' %}selected{% endif %}>Clearance</option>
             <option value="sale" {% if filter_type == 'sale' %}selected{% endif %}>On Sale</option>
             <option value="low_stock" {% if filter_type == 'low_stock' %}selected{% endif %}>Low Stock</option>
         </select>
-        <button type="submit" class="btn btn-dark btn-sm">Search</button>
+        <button type="submit" class="btn-gx btn-gx-dark">Search</button>
+        <a href="{% url 'inventory:product_list' %}" class="btn-gx btn-gx-ghost">Clear</a>
     </form>
-    {% if user.is_manager_role %}
-    <a href="{% url 'inventory:product_create' %}" class="btn btn-dark btn-sm ms-auto"><i class="bi bi-plus-lg me-1"></i>Add Product</a>
-    {% endif %}
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius:14px;">
-    <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0 align-middle" style="font-size:13px;">
-            <thead class="table-light">
+<!-- TABLE VIEW -->
+<div id="tableView" class="gx-card">
+    <div style="overflow-x:auto;">
+        <table class="gx-table">
+            <thead>
                 <tr>
                     <th style="width:56px;"></th>
-                    <th>Name</th>
-                    <th class="d-none d-md-table-cell">Code</th>
+                    <th>Product</th>
+                    <th>Code</th>
                     <th>Joint</th>
-                    <th class="d-none d-lg-table-cell">Category</th>
+                    <th>Category</th>
                     <th>Price</th>
                     <th>Stock</th>
-                    <th class="d-none d-sm-table-cell">Flags</th>
+                    <th>Flags</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for product in products %}
                 <tr>
-                    <!-- Thumbnail -->
-                    <td style="padding:8px 10px;">
+                    <td style="padding:8px 12px;">
                         {% if product.image %}
-                        <img src="{{ product.image.url }}"
-                             alt="{{ product.name }}"
-                             class="prod-thumb"
-                             loading="lazy"
+                        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="prod-thumb" loading="lazy"
                              onerror="this.outerHTML='<div class=\'prod-thumb-placeholder\'><i class=\'bi bi-image\'></i></div>'">
                         {% else %}
-                        <div class="prod-thumb-placeholder">
-                            <i class="bi bi-image"></i>
-                        </div>
+                        <div class="prod-thumb-placeholder"><i class="bi bi-image"></i></div>
                         {% endif %}
                     </td>
-
-                    <!-- Name -->
-                    <td class="fw-semibold">{{ product.name }}</td>
-
-                    <td class="text-muted d-none d-md-table-cell">{{ product.code|default:"—" }}</td>
-                    <td>{{ product.joint.display_name }}</td>
-                    <td class="d-none d-lg-table-cell">{{ product.category.name|default:"—" }}</td>
-
-                    <!-- Price -->
+                    <td style="font-weight:600;">{{ product.name }}</td>
+                    <td style="font-family:var(--mono);font-size:11px;color:#aaa;">{{ product.code|default:"—" }}</td>
+                    <td><span class="gx-badge gx-badge-neutral">{{ product.joint.display_name }}</span></td>
+                    <td style="color:#888;font-size:12px;">{{ product.category.name|default:"—" }}</td>
                     <td>
-                        ${{ product.effective_price }}
+                        <span style="font-weight:700;">${{ product.effective_price }}</span>
                         {% if product.price != product.effective_price %}
-                        <span class="text-muted text-decoration-line-through ms-1" style="font-size:11px;">${{ product.price }}</span>
+                        <span style="text-decoration:line-through;color:#bbb;font-size:11px;margin-left:4px;">${{ product.price }}</span>
                         {% endif %}
                     </td>
-
-                    <!-- Stock -->
                     <td>
                         {% if product.current_stock == 0 %}
-                        <span class="out-of-stock-badge">Out of stock</span>
+                        <span class="badge-out">Out of stock</span>
                         {% elif product.is_low_stock %}
-                        <span class="low-stock-badge">{{ product.current_stock }} low</span>
+                        <span class="badge-low-stock">{{ product.current_stock }} low</span>
                         {% else %}
-                        {{ product.current_stock }}
+                        <span style="font-weight:600;">{{ product.current_stock }}</span>
                         {% endif %}
                     </td>
-
-                    <!-- Flags -->
-                    <td class="d-none d-sm-table-cell">
+                    <td>
                         {% if product.is_clearance %}<span class="badge-clearance me-1">CLR</span>{% endif %}
                         {% if product.promotion_label == 'SALE' %}<span class="badge-sale">SALE</span>{% endif %}
                     </td>
-
-                    <!-- Actions -->
                     <td>
                         {% if user.is_manager_role %}
-                        <a href="{% url 'inventory:product_edit' product.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;">Edit</a>
-                        <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;"><i class="bi bi-plus"></i></a>
+                        <div style="display:flex;gap:5px;">
+                            <a href="{% url 'inventory:product_edit' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs">Edit</a>
+                            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs"><i class="bi bi-plus"></i></a>
+                        </div>
                         {% endif %}
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="9" class="text-center text-muted py-5">No products found</td></tr>
+                <tr><td colspan="9" style="text-align:center;color:#bbb;padding:48px;font-size:14px;">
+                    <i class="bi bi-tag" style="font-size:32px;display:block;margin-bottom:10px;"></i>No products found
+                </td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<!-- GRID VIEW -->
+<div id="gridView" class="prod-grid-view" style="display:none;">
+    {% for product in products %}
+    <div class="pgv-card">
+        {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="pgv-img" loading="lazy"
+             onerror="this.outerHTML='<div class=\'pgv-img-ph\'><i class=\'bi bi-image\'></i></div>'">
+        {% else %}
+        <div class="pgv-img-ph"><i class="bi bi-image"></i></div>
+        {% endif %}
+        <div class="pgv-body">
+            {% if product.is_clearance %}<span class="badge-clearance" style="margin-bottom:5px;display:inline-block;">CLR</span>{% endif %}
+            <div class="pgv-name">{{ product.name }}</div>
+            <div class="pgv-price">${{ product.effective_price }}</div>
+            <div class="pgv-stock">
+                {% if product.current_stock == 0 %}<span class="badge-out">Out</span>
+                {% elif product.is_low_stock %}<span class="badge-low-stock">{{ product.current_stock }} left</span>
+                {% else %}{{ product.current_stock }} in stock{% endif %}
+            </div>
+        </div>
+        {% if user.is_manager_role %}
+        <div class="pgv-actions">
+            <a href="{% url 'inventory:product_edit' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs" style="flex:1;justify-content:center;">Edit</a>
+            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs" title="Add stock"><i class="bi bi-plus"></i></a>
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div style="grid-column:1/-1;text-align:center;color:#bbb;padding:48px;">No products found</div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setView(v) {
+    document.getElementById('tableView').style.display = v === 'table' ? '' : 'none';
+    document.getElementById('gridView').style.display  = v === 'grid'  ? 'grid' : 'none';
+    document.getElementById('btnTable').classList.toggle('active', v === 'table');
+    document.getElementById('btnGrid').classList.toggle('active', v === 'grid');
+    localStorage.setItem('prodView', v);
+}
+// Restore preference
+const saved = localStorage.getItem('prodView');
+if (saved) setView(saved);
+</script>
 {% endblock %}

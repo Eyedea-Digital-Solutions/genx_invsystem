@@ -2,94 +2,132 @@
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi-card {
+    background: var(--surface); border: 1px solid var(--border-l);
+    border-radius: var(--radius); padding: 20px;
+    box-shadow: var(--shadow); position: relative; overflow: hidden;
+    transition: box-shadow 0.2s, transform 0.2s; text-decoration: none;
+    display: block;
+}
+.kpi-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.1); transform: translateY(-2px); }
+.kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--kpi-color, var(--accent));
+}
+.kpi-card .kpi-icon {
+    width: 42px; height: 42px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; background: var(--kpi-bg, #f3f0ff); color: var(--kpi-color, var(--accent));
+    margin-bottom: 12px;
+}
+.kpi-card .kpi-label {
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 4px;
+}
+.kpi-card .kpi-value { font-size: 26px; font-weight: 800; color: var(--ink); letter-spacing: -0.5px; line-height: 1.1; }
+.kpi-card .kpi-sub { font-size: 12px; color: #aaa; margin-top: 4px; }
+.kpi-card .kpi-trend {
+    position: absolute; top: 16px; right: 16px;
+    font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+}
+.trend-up { background: #e8faf1; color: #065f46; }
+.trend-down { background: #fef2f2; color: #7f1d1d; }
+
+.section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) { .section-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Today's Revenue</div>
-                    <div class="stat-value mt-1">${{ today_total|floatformat:2 }}</div>
-                    <div class="text-muted" style="font-size:12px;">{{ today_count }} sale{{ today_count|pluralize }}</div>
-                </div>
-                <div class="stat-icon" style="background:#dcfce7;color:#16a34a;"><i class="bi bi-cash-coin"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Month Revenue</div>
-                    <div class="stat-value mt-1">${{ month_total|floatformat:2 }}</div>
-                    <div class="text-muted" style="font-size:12px;">{{ month_count }} sale{{ month_count|pluralize }}</div>
-                </div>
-                <div class="stat-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-bar-chart"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Low Stock</div>
-                    <div class="stat-value mt-1">{{ low_stock_count }}</div>
-                    <div class="text-muted" style="font-size:12px;">need restocking</div>
-                </div>
-                <div class="stat-icon" style="background:#fef9c3;color:#a16207;"><i class="bi bi-exclamation-triangle"></i></div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="stat-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <div class="text-muted" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Expiring Soon</div>
-                    <div class="stat-value mt-1">{{ expiring_soon|length }}</div>
-                    <div class="text-muted" style="font-size:12px;">within 30 days</div>
-                </div>
-                <div class="stat-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-calendar-x"></i></div>
-            </div>
-        </div>
-    </div>
+<!-- KPI ROW -->
+<div class="kpi-grid">
+    <a href="{% url 'admin:sales_sale_changelist' %}?is_held__exact=0" class="kpi-card" style="--kpi-color:#00d68f;--kpi-bg:#e8faf1;">
+        <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
+        <div class="kpi-label">Today's Revenue</div>
+        <div class="kpi-value">${{ today_total|floatformat:2 }}</div>
+        <div class="kpi-sub">{{ today_count }} sale{{ today_count|pluralize }}</div>
+    </a>
+
+    <a href="{% url 'admin:sales_sale_changelist' %}?is_held__exact=0" class="kpi-card" style="--kpi-color:#4d9fff;--kpi-bg:#eff6ff;">
+        <div class="kpi-icon"><i class="bi bi-bar-chart-line"></i></div>
+        <div class="kpi-label">Month Revenue</div>
+        <div class="kpi-value">${{ month_total|floatformat:2 }}</div>
+        <div class="kpi-sub">{{ month_count }} sale{{ month_count|pluralize }}</div>
+    </a>
+
+    <a href="{% url 'admin:ecocash_ecocashtransaction_changelist' %}?status__exact=pending" class="kpi-card" style="--kpi-color:#ffaa00;--kpi-bg:#fffbeb;">
+        <div class="kpi-icon"><i class="bi bi-phone"></i></div>
+        <div class="kpi-label">Pending EcoCash</div>
+        <div class="kpi-value">{{ pending_ecocash }}</div>
+        <div class="kpi-sub">awaiting confirmation</div>
+    </a>
+
+    <a href="{% url 'admin:inventory_stock_changelist' %}" class="kpi-card" style="--kpi-color:#e63950;--kpi-bg:#fef2f2;">
+        <div class="kpi-icon"><i class="bi bi-exclamation-triangle"></i></div>
+        <div class="kpi-label">Low Stock</div>
+        <div class="kpi-value">{{ low_stock_count }}</div>
+        <div class="kpi-sub">items need restocking</div>
+    </a>
+
+    {% if held_count %}
+    <a href="{% url 'admin:sales_sale_changelist' %}?is_held__exact=1" class="kpi-card" style="--kpi-color:#8b5cf6;--kpi-bg:#f3f0ff;">
+        <div class="kpi-icon"><i class="bi bi-pause-circle"></i></div>
+        <div class="kpi-label">Held Transactions</div>
+        <div class="kpi-value">{{ held_count }}</div>
+        <div class="kpi-sub">on hold</div>
+    </a>
+    {% endif %}
+
+    <a href="{% url 'promotions:dashboard' %}" class="kpi-card" style="--kpi-color:#00d68f;--kpi-bg:#e8faf1;">
+        <div class="kpi-icon"><i class="bi bi-tag"></i></div>
+        <div class="kpi-label">Active Promos</div>
+        <div class="kpi-value">{{ active_promos }}</div>
+        <div class="kpi-sub">currently running</div>
+    </a>
 </div>
 
-<div class="row g-3 mb-4">
+<!-- JOINT STATS -->
+{% if joint_stats %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px;">
     {% for stat in joint_stats %}
-    <div class="col-12 col-sm-{% if joint_stats|length == 2 %}6{% else %}4{% endif %}">
-        <div class="stat-card joint-{{ stat.joint.name }}">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">{{ stat.joint.display_name }}</div>
-            <div style="font-size:20px;font-weight:800;">${{ stat.total|floatformat:2 }}</div>
-            <div class="text-muted" style="font-size:12px;">{{ stat.count }} sale{{ stat.count|pluralize }} today</div>
-        </div>
+    <div class="gx-card joint-{{ stat.joint.name }}" style="padding:16px;">
+        <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin-bottom:6px;">{{ stat.joint.display_name }}</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;">${{ stat.total|floatformat:2 }}</div>
+        <div style="font-size:12px;color:#aaa;margin-top:3px;">{{ stat.count }} sale{{ stat.count|pluralize }} today</div>
     </div>
     {% endfor %}
 </div>
+{% endif %}
 
-{% if low_stock %}
-<div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
-    <div class="card-header bg-white border-0 py-3" style="border-radius:12px 12px 0 0;">
-        <h6 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Low Stock Alerts</h6>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-sm mb-0" style="font-size:13px;min-width:400px;">
-                <thead class="table-light"><tr><th>Product</th><th>Joint</th><th>In Stock</th><th></th></tr></thead>
+<div class="section-grid">
+    <!-- LOW STOCK -->
+    {% if low_stock %}
+    <div class="gx-card">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-exclamation-triangle"></i>Low Stock Alerts</div>
+            <a href="{% url 'inventory:inventory_dashboard' %}" class="btn-gx btn-gx-ghost btn-gx-sm">View All</a>
+        </div>
+        <div style="overflow:auto;max-height:280px;">
+            <table class="gx-table">
+                <thead><tr><th>Product</th><th>Joint</th><th>Stock</th><th></th></tr></thead>
                 <tbody>
                     {% for product in low_stock %}
                     <tr>
-                        <td class="fw-semibold">{{ product.name }}</td>
-                        <td>{{ product.joint.display_name }}</td>
+                        <td class="fw-semibold" style="font-size:13px;">{{ product.name }}</td>
+                        <td><span class="gx-badge gx-badge-neutral">{{ product.joint.display_name }}</span></td>
                         <td>
                             {% if product.current_stock == 0 %}
-                            <span class="out-of-stock-badge">Out of stock</span>
+                            <span class="badge-out">Out of stock</span>
                             {% else %}
-                            <span class="low-stock-badge">{{ product.current_stock }} left</span>
+                            <span class="badge-low-stock">{{ product.current_stock }} left</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if user.is_manager_role %}
-                            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;">Restock</a>
+                            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs">Restock</a>
                             {% endif %}
                         </td>
                     </tr>
@@ -98,39 +136,32 @@
             </table>
         </div>
     </div>
-</div>
-{% endif %}
+    {% endif %}
 
-<div class="card border-0 shadow-sm" style="border-radius:12px;">
-    <div class="card-header bg-white border-0 py-3 d-flex align-items-center justify-content-between" style="border-radius:12px 12px 0 0;">
-        <h6 class="mb-0 fw-bold">Recent Sales</h6>
-        <a href="{% url 'sales:sale_list' %}" class="btn btn-sm btn-outline-secondary" style="font-size:11px;">View All</a>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-sm mb-0" style="font-size:13px;min-width:500px;">
-                <thead class="table-light">
-                    <tr>
-                        <th>Receipt</th>
-                        <th class="d-none d-sm-table-cell">Joint</th>
-                        <th class="d-none d-md-table-cell">Staff</th>
-                        <th class="d-none d-sm-table-cell">Payment</th>
-                        <th class="text-end">Total</th>
-                        <th></th>
-                    </tr>
-                </thead>
+    <!-- RECENT SALES -->
+    <div class="gx-card">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-receipt"></i>Recent Sales</div>
+            <a href="{% url 'sales:sale_list' %}" class="btn-gx btn-gx-ghost btn-gx-sm">View All</a>
+        </div>
+        <div style="overflow:auto;max-height:280px;">
+            <table class="gx-table">
+                <thead><tr><th>Receipt</th><th>Joint</th><th>Method</th><th class="text-end">Total</th><th></th></tr></thead>
                 <tbody>
                     {% for sale in recent_sales %}
                     <tr>
-                        <td class="fw-semibold">{{ sale.receipt_number }}</td>
-                        <td class="d-none d-sm-table-cell">{{ sale.joint.display_name }}</td>
-                        <td class="d-none d-md-table-cell">{{ sale.sold_by.get_full_name|default:sale.sold_by.username }}</td>
-                        <td class="d-none d-sm-table-cell"><span class="badge bg-light text-dark border">{{ sale.get_payment_method_display }}</span></td>
-                        <td class="text-end fw-bold">${{ sale.total_amount|floatformat:2 }}</td>
-                        <td><a href="{% url 'sales:sale_receipt_thermal' sale.pk %}" class="btn btn-sm btn-outline-secondary" style="font-size:10px;"><i class="bi bi-printer"></i></a></td>
+                        <td style="font-family:var(--mono);font-size:12px;font-weight:600;">{{ sale.receipt_number }}</td>
+                        <td style="font-size:12px;color:#888;">{{ sale.joint.display_name }}</td>
+                        <td><span class="gx-badge gx-badge-neutral">{{ sale.get_payment_method_display }}</span></td>
+                        <td class="text-end fw-bold" style="font-size:13px;">${{ sale.total_amount|floatformat:2 }}</td>
+                        <td>
+                            <a href="{% url 'sales:sale_receipt_thermal' sale.pk %}" target="_blank" class="btn-gx btn-gx-ghost btn-gx-xs">
+                                <i class="bi bi-printer"></i>
+                            </a>
+                        </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center text-muted py-4">No sales yet today</td></tr>
+                    <tr><td colspan="5" style="text-align:center;color:#bbb;padding:32px;">No sales yet today</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

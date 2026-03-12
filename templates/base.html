@@ -4,211 +4,404 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}POS{% endblock %} | GenX POS</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {% block extra_css %}{% endblock %}
     <style>
         :root {
-            --sidebar-w: 230px;
-            --topbar-h: 54px;
-            --ink: #0d0d14;
-            --accent: #e94560;
-            --green: #16a34a;
-            --amber: #d97706;
-            --purple: #7c3aed;
-            --blue: #2563eb;
-            --paper: #f5f4f0;
-            --card: #ffffff;
-            --border: #e5e3de;
+            --sidebar-w: 240px;
+            --topbar-h: 56px;
+            --ink:       #080810;
+            --ink2:      #0e0e1a;
+            --ink3:      #13131f;
+            --ink4:      #1a1a2e;
+            --surface:   #ffffff;
+            --surf-alt:  #f8f7fc;
+            --border:    rgba(255,255,255,0.07);
+            --border-l:  #e8e6f0;
+            --accent:    #6c47ff;
+            --accent2:   #e63950;
+            --green:     #00d68f;
+            --amber:     #ffaa00;
+            --blue:      #4d9fff;
+            --text:      rgba(255,255,255,0.9);
+            --muted:     rgba(255,255,255,0.38);
+            --muted2:    rgba(255,255,255,0.18);
+            --sans: 'Space Grotesk', system-ui, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+            --radius: 12px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08);
         }
-
-        *, *::before, *::after { box-sizing: border-box; }
-
-        html, body {
-            height: 100%;
-            overflow-x: hidden;
-        }
-
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
         body {
-            background: var(--paper);
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--surf-alt);
+            font-family: var(--sans);
             font-size: 14px;
-            color: #0d0d14;
-            margin: 0;
+            color: var(--ink);
+            overflow-x: hidden;
         }
 
-        /* ─── SIDEBAR ─── */
+        /* ── SIDEBAR ── */
         .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-w);
-            height: 100vh;
-            background: var(--ink);
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-w); height: 100vh;
+            background: var(--ink2);
             z-index: 300;
-            overflow-y: auto;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.25s ease;
-            will-change: transform;
-            -webkit-overflow-scrolling: touch;
+            overflow-y: auto; overflow-x: hidden;
+            display: flex; flex-direction: column;
+            transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+            border-right: 1px solid var(--border);
+        }
+        .sidebar::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 200px;
+            background: radial-gradient(ellipse at top left, rgba(108,71,255,0.18) 0%, transparent 70%);
+            pointer-events: none;
         }
         .sidebar-brand {
-            padding: 16px 18px 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            flex-shrink: 0;
+            padding: 20px 20px 16px;
+            border-bottom: 1px solid var(--border);
+            position: relative; z-index: 1;
+        }
+        .sidebar-brand .b-logo {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-brand .b-icon {
+            width: 36px; height: 36px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--mono); font-size: 13px; font-weight: 700;
+            color: #fff; letter-spacing: -1px;
+            box-shadow: 0 4px 16px rgba(108,71,255,0.4);
         }
         .sidebar-brand .b-name {
-            color: #fff; font-weight: 800; font-size: 15px; letter-spacing: -0.3px;
+            font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -0.5px;
         }
-        .sidebar-brand .b-name span { color: var(--accent); }
+        .sidebar-brand .b-name em { color: var(--accent2); font-style: normal; }
         .sidebar-brand .b-sub {
-            color: rgba(255,255,255,0.3); font-size: 10px; margin-top: 2px;
+            font-family: var(--mono); font-size: 9px; color: var(--muted);
+            letter-spacing: 1.5px; text-transform: uppercase; margin-top: 5px;
         }
+
         .nav-section {
-            font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
-            text-transform: uppercase; color: rgba(255,255,255,0.25);
-            padding: 14px 18px 4px;
-            flex-shrink: 0;
+            font-family: var(--mono); font-size: 9px; font-weight: 600;
+            letter-spacing: 1.5px; text-transform: uppercase;
+            color: var(--muted2); padding: 16px 20px 5px;
         }
         .sidebar .nav-link {
-            color: rgba(255,255,255,0.6);
-            padding: 8px 18px;
-            font-size: 13px;
             display: flex; align-items: center; gap: 10px;
-            border-left: 3px solid transparent;
-            transition: all 0.15s; text-decoration: none;
-            flex-shrink: 0;
+            padding: 9px 20px; color: var(--muted);
+            font-size: 13px; font-weight: 500;
+            border-left: 2px solid transparent;
+            text-decoration: none;
+            transition: all 0.15s;
+            position: relative;
         }
-        .sidebar .nav-link:hover,
+        .sidebar .nav-link .bi { font-size: 16px; flex-shrink: 0; }
+        .sidebar .nav-link:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.04); }
         .sidebar .nav-link.active {
-            color: #fff;
-            background: rgba(255,255,255,0.07);
+            color: #fff; background: rgba(108,71,255,0.12);
             border-left-color: var(--accent);
         }
-        .sidebar .nav-link .bi { font-size: 15px; flex-shrink: 0; }
+        .sidebar .nav-link.active .bi { color: var(--accent); }
+        .sidebar .nav-link .nav-badge {
+            margin-left: auto; background: var(--accent2);
+            color: #fff; font-size: 10px; font-weight: 700;
+            padding: 1px 6px; border-radius: 10px;
+        }
         .sidebar-footer {
             margin-top: auto;
-            border-top: 1px solid rgba(255,255,255,0.08);
-            padding: 12px 18px;
-            flex-shrink: 0;
+            border-top: 1px solid var(--border);
+            padding: 14px 20px;
         }
-        .sidebar-footer .user-name {
-            color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 6px;
+        .sidebar-user {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+        }
+        .sidebar-avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #9b6bff);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+        }
+        .sidebar-user-info .u-name { color: rgba(255,255,255,0.8); font-size: 13px; font-weight: 600; }
+        .sidebar-user-info .u-role {
+            font-family: var(--mono); font-size: 10px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
         .sidebar::-webkit-scrollbar { width: 3px; }
-        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
 
-        /* ─── OVERLAY (mobile) ─── */
+        /* ── OVERLAY ── */
         .sidebar-overlay {
-            display: none;
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 299;
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6); z-index: 299; backdrop-filter: blur(2px);
         }
         .sidebar-overlay.show { display: block; }
 
-        /* ─── MAIN WRAPPER ─── */
+        /* ── MAIN ── */
         .main-wrapper {
-            margin-left: var(--sidebar-w);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            transition: margin-left 0.25s ease;
+            margin-left: var(--sidebar-w); min-height: 100vh;
+            display: flex; flex-direction: column;
+            transition: margin-left 0.28s cubic-bezier(.4,0,.2,1);
         }
 
-        /* ─── TOPBAR ─── */
+        /* ── TOPBAR ── */
         .topbar {
             height: var(--topbar-h);
-            background: var(--card);
-            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-l);
             display: flex; align-items: center;
-            padding: 0 20px;
+            padding: 0 24px; gap: 12px;
             position: sticky; top: 0; z-index: 100;
-            gap: 10px;
-            flex-shrink: 0;
+            box-shadow: 0 1px 0 var(--border-l);
         }
-        .topbar h6 {
-            margin: 0; font-weight: 600; font-size: 15px;
-            flex-grow: 1; white-space: nowrap;
-            overflow: hidden; text-overflow: ellipsis;
-        }
-
-        /* Hamburger — hidden on large screens */
         .sidebar-toggle {
-            display: none;
-            background: none; border: none;
-            color: #0d0d14; font-size: 20px;
-            cursor: pointer; padding: 4px 6px;
-            flex-shrink: 0;
+            display: none; background: none; border: none;
+            color: var(--ink); font-size: 22px; cursor: pointer; padding: 4px;
         }
+        .topbar-title {
+            font-size: 16px; font-weight: 700; color: var(--ink);
+            letter-spacing: -0.3px; flex: 1;
+        }
+        .topbar-actions { display: flex; align-items: center; gap: 8px; }
+        .topbar-joint {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 12px;
+            background: var(--surf-alt); border: 1px solid var(--border-l);
+            border-radius: 8px; font-size: 12px; font-weight: 600; color: #555;
+        }
+        .topbar-joint .bi { color: var(--accent); }
+        .btn-pos {
+            display: flex; align-items: center; gap: 6px;
+            padding: 7px 14px; border-radius: 8px;
+            background: var(--accent); color: #fff;
+            font-size: 12px; font-weight: 600;
+            text-decoration: none; border: none; cursor: pointer;
+            transition: opacity 0.15s; letter-spacing: 0.2px;
+        }
+        .btn-pos:hover { opacity: 0.88; color: #fff; }
+        .topbar-icon-btn {
+            width: 36px; height: 36px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--surf-alt); border: 1px solid var(--border-l);
+            color: #666; font-size: 16px; cursor: pointer;
+            text-decoration: none; transition: all 0.15s;
+        }
+        .topbar-icon-btn:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
 
-        /* ─── PAGE CONTENT ─── */
-        .page-content { padding: 20px 22px; flex: 1; }
+        /* ── MESSAGES ── */
+        .messages-wrap { padding: 12px 24px 0; }
+        .gx-alert {
+            display: flex; align-items: center; gap: 10px;
+            padding: 11px 16px; border-radius: var(--radius);
+            font-size: 13px; font-weight: 500; margin-bottom: 6px;
+        }
+        .gx-alert-success { background: #e8faf1; color: #065f46; border: 1px solid #a7f3d0; }
+        .gx-alert-error,
+        .gx-alert-danger  { background: #fef2f2; color: #7f1d1d; border: 1px solid #fecaca; }
+        .gx-alert-warning { background: #fffbeb; color: #78350f; border: 1px solid #fde68a; }
+        .gx-alert-info    { background: #eff6ff; color: #1e3a5f; border: 1px solid #bfdbfe; }
+        .gx-alert .close-btn { margin-left:auto; background:none; border:none; cursor:pointer; opacity:.5; font-size:16px; line-height:1; }
+        .gx-alert .close-btn:hover { opacity:1; }
 
-        /* ─── STAT CARDS ─── */
+        /* ── PAGE CONTENT ── */
+        .page-content { padding: 24px; flex: 1; }
+
+        /* ── STAT CARDS ── */
         .stat-card {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 18px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            border: 1px solid var(--border);
+            background: var(--surface);
+            border: 1px solid var(--border-l);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: box-shadow 0.2s, transform 0.2s;
         }
-        .stat-value { font-size: 24px; font-weight: 700; line-height: 1.2; }
+        .stat-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.1); transform: translateY(-1px); }
+        .stat-value { font-size: 26px; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px; }
         .stat-icon {
-            width: 42px; height: 42px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center; font-size: 19px;
+            width: 44px; height: 44px; border-radius: 11px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+        }
+        .stat-label {
+            font-family: var(--mono); font-size: 10px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1px; color: #888;
+        }
+        .stat-sub { font-size: 12px; color: #999; margin-top: 2px; }
+
+        /* ── CARDS ── */
+        .gx-card {
+            background: var(--surface);
+            border: 1px solid var(--border-l);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .gx-card-head {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-l);
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--surface);
+        }
+        .gx-card-title {
+            font-size: 14px; font-weight: 700; color: var(--ink);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .gx-card-title .bi { color: var(--accent); }
+        .gx-card-body { padding: 20px; }
+
+        /* ── TABLES ── */
+        .gx-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .gx-table thead th {
+            background: var(--surf-alt);
+            font-family: var(--mono); font-size: 10px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1px; color: #888;
+            padding: 10px 16px; border-bottom: 1px solid var(--border-l);
+            white-space: nowrap;
+        }
+        .gx-table tbody tr { border-bottom: 1px solid #f0eef8; transition: background 0.1s; }
+        .gx-table tbody tr:last-child { border-bottom: none; }
+        .gx-table tbody tr:hover { background: #faf9fd; }
+        .gx-table td { padding: 11px 16px; vertical-align: middle; }
+        .gx-table tfoot td {
+            padding: 11px 16px; background: var(--surf-alt);
+            border-top: 2px solid var(--border-l);
+            font-weight: 700;
         }
 
-        /* ─── JOINT COLOURS ─── */
-        .joint-eyedentity  { border-left: 4px solid var(--purple) !important; }
-        .joint-genx        { border-left: 4px solid var(--blue)   !important; }
-        .joint-armor_sole  { border-left: 4px solid var(--amber)  !important; }
+        /* ── BADGES ── */
+        .gx-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 9px; border-radius: 20px;
+            font-size: 11px; font-weight: 600;
+        }
+        .gx-badge-success { background: #e8faf1; color: #065f46; }
+        .gx-badge-danger  { background: #fef2f2; color: #7f1d1d; }
+        .gx-badge-warning { background: #fffbeb; color: #78350f; }
+        .gx-badge-info    { background: #eff6ff; color: #1e40af; }
+        .gx-badge-purple  { background: #f3f0ff; color: #4c1d95; }
+        .gx-badge-dark    { background: #f1f0ff; color: #312e81; }
+        .gx-badge-neutral { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
 
-        /* ─── BADGES ─── */
-        .badge-clearance { background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px; }
-        .badge-sale      { background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px; }
-        .badge-free      { background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px; }
-        .low-stock-badge  { background:#fef9c3;color:#713f12;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px; }
-        .out-of-stock-badge { background:#fee2e2;color:#7f1d1d;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px; }
+        /* ── FORMS ── */
+        .gx-form-label {
+            font-family: var(--mono); font-size: 10px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1px; color: #666;
+            display: block; margin-bottom: 6px;
+        }
+        .gx-input, .gx-select, .gx-textarea {
+            width: 100%; border: 1.5px solid var(--border-l);
+            border-radius: 9px; padding: 9px 13px;
+            font-size: 13px; font-family: var(--sans);
+            background: #fff; color: var(--ink);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .gx-input:focus, .gx-select:focus, .gx-textarea:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(108,71,255,0.1);
+        }
+        .gx-input::placeholder { color: #bbb; }
 
-        /* ─── RESPONSIVE TABLE WRAPPER ─── */
-        .table-responsive-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        /* ── BUTTONS ── */
+        .btn-gx {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 9px 18px; border-radius: 9px;
+            font-size: 13px; font-weight: 600;
+            border: none; cursor: pointer;
+            text-decoration: none; transition: all 0.15s;
+            letter-spacing: 0.1px;
+        }
+        .btn-gx-primary { background: var(--accent); color: #fff; }
+        .btn-gx-primary:hover { background: #5b38e8; color: #fff; box-shadow: 0 4px 16px rgba(108,71,255,0.3); }
+        .btn-gx-dark { background: var(--ink); color: #fff; }
+        .btn-gx-dark:hover { background: var(--ink3); color: #fff; }
+        .btn-gx-ghost {
+            background: transparent; color: #555;
+            border: 1.5px solid var(--border-l);
+        }
+        .btn-gx-ghost:hover { background: var(--surf-alt); color: var(--ink); border-color: #ccc; }
+        .btn-gx-danger { background: #dc2626; color: #fff; }
+        .btn-gx-danger:hover { background: #b91c1c; color: #fff; }
+        .btn-gx-sm { padding: 6px 12px; font-size: 12px; border-radius: 7px; }
+        .btn-gx-xs { padding: 4px 9px; font-size: 11px; border-radius: 6px; }
 
-        /* ─── BREAKPOINTS ─── */
+        /* ── JOINT ACCENT BORDERS ── */
+        .joint-eyedentity  { border-left: 3px solid #8b5cf6 !important; }
+        .joint-genx        { border-left: 3px solid #3b82f6 !important; }
+        .joint-armor_sole  { border-left: 3px solid #f59e0b !important; }
+
+        /* ── STOCK BADGES ── */
+        .badge-low-stock  { background:#fef9c3;color:#713f12;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px; }
+        .badge-out        { background:#fee2e2;color:#7f1d1d;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px; }
+        .badge-clearance  { background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px; }
+        .badge-sale       { background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px; }
+
+        /* ── PROD THUMB ── */
+        .prod-thumb {
+            width: 42px; height: 42px; object-fit: cover;
+            border-radius: 9px; border: 1px solid var(--border-l);
+            background: var(--surf-alt); display: block; flex-shrink: 0;
+        }
+        .prod-thumb-placeholder {
+            width: 42px; height: 42px; border-radius: 9px;
+            border: 1px solid var(--border-l); background: var(--surf-alt);
+            display: flex; align-items: center; justify-content: center;
+            color: #ccc; font-size: 18px; flex-shrink: 0;
+        }
+
+        /* ── BREADCRUMB ── */
+        .gx-breadcrumb {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 12px; color: #999; margin-bottom: 20px;
+        }
+        .gx-breadcrumb a { color: var(--accent); text-decoration: none; font-weight: 500; }
+        .gx-breadcrumb a:hover { text-decoration: underline; }
+        .gx-breadcrumb .sep { color: #ccc; }
+
+        /* ── PAGE HEADER ── */
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
+        }
+        .page-header-left h1 {
+            font-size: 22px; font-weight: 800; color: var(--ink);
+            letter-spacing: -0.5px; line-height: 1.2;
+        }
+        .page-header-left p { font-size: 13px; color: #888; margin-top: 3px; }
+
+        /* ── FILTER BAR ── */
+        .filter-bar {
+            background: var(--surface); border: 1px solid var(--border-l);
+            border-radius: var(--radius); padding: 14px 16px;
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+            margin-bottom: 16px; box-shadow: var(--shadow);
+        }
+        .filter-bar .gx-input,
+        .filter-bar .gx-select { width: auto; min-width: 130px; max-width: 180px; }
+
+        /* ── RESPONSIVE ── */
         @media (max-width: 1024px) {
-            :root { --sidebar-w: 200px; }
-            .page-content { padding: 16px 16px; }
+            :root { --sidebar-w: 210px; }
+            .page-content { padding: 18px; }
         }
-
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
             .sidebar-toggle { display: flex; align-items: center; }
             .main-wrapper { margin-left: 0 !important; }
-            .topbar { padding: 0 14px; }
-            .topbar h6 { font-size: 14px; }
-            .page-content { padding: 14px 12px; }
-            .stat-value { font-size: 20px; }
-            .row.g-3 > [class*="col-md-3"],
-            .row.g-3 > [class*="col-md-4"] {
-                flex: 0 0 50%;
-                max-width: 50%;
-            }
+            .topbar { padding: 0 16px; }
+            .page-content { padding: 14px; }
+            .filter-bar { padding: 12px; }
+            .filter-bar .gx-input,
+            .filter-bar .gx-select { min-width: 100px; }
         }
-
         @media (max-width: 480px) {
-            .page-content { padding: 10px 10px; }
-            .row.g-3 > [class*="col-md-3"],
-            .row.g-3 > [class*="col-md-4"],
-            .row.g-3 > [class*="col-md-6"],
-            .row.g-3 > [class*="col-lg-"] {
-                flex: 0 0 100%;
-                max-width: 100%;
-            }
+            .page-content { padding: 10px; }
         }
-
         @media print {
             .sidebar, .topbar, .no-print { display: none !important; }
             .main-wrapper { margin-left: 0; }
@@ -216,17 +409,20 @@
         }
     </style>
 </head>
-<body {% block body_class %}{% endblock %}>
+<body>
 
 {% if user.is_authenticated %}
-
-<!-- Overlay for mobile sidebar -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-<!-- ─── SIDEBAR ─── -->
+<!-- SIDEBAR -->
 <nav class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-        <div class="b-name"><i class="bi bi-shop me-1"></i>GenX <span>POS</span></div>
+        <div class="b-logo">
+            <div class="b-icon">GX</div>
+            <div>
+                <div class="b-name">GenX<em>POS</em></div>
+            </div>
+        </div>
         <div class="b-sub">Eyedentity · GenX · Armor Sole</div>
     </div>
 
@@ -235,20 +431,14 @@
         <i class="bi bi-display"></i> POS Terminal
     </a>
     <a href="{% url 'sales:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-        <i class="bi bi-grid"></i> Dashboard
-    </a>
-    <a href="{% url 'sales:make_sale' %}" class="nav-link {% if request.resolver_match.url_name == 'make_sale' %}active{% endif %}">
-        <i class="bi bi-cart-plus"></i> New Sale (Classic)
-    </a>
-    <a href="{% url 'sales:manual_sale' %}" class="nav-link {% if request.resolver_match.url_name == 'manual_sale' %}active{% endif %}">
-        <i class="bi bi-camera"></i> Manual Sale
+        <i class="bi bi-grid-1x2"></i> Dashboard
     </a>
     <a href="{% url 'sales:sale_list' %}" class="nav-link {% if request.resolver_match.url_name == 'sale_list' %}active{% endif %}">
-        <i class="bi bi-list-ul"></i> Sales History
+        <i class="bi bi-receipt"></i> Sales History
     </a>
     {% if user.is_manager_role %}
     <a href="{% url 'sales:reports' %}" class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
-        <i class="bi bi-bar-chart"></i> Reports
+        <i class="bi bi-bar-chart-line"></i> Reports
     </a>
     {% endif %}
 
@@ -257,96 +447,100 @@
         <i class="bi bi-boxes"></i> Stock Overview
     </a>
     <a href="{% url 'inventory:product_list' %}" class="nav-link {% if request.resolver_match.url_name == 'product_list' %}active{% endif %}">
-        <i class="bi bi-tags"></i> Products
+        <i class="bi bi-tag"></i> Products
     </a>
     {% if user.is_manager_role %}
     <a href="{% url 'inventory:stock_take_list' %}" class="nav-link {% if request.resolver_match.url_name == 'stock_take_list' %}active{% endif %}">
         <i class="bi bi-clipboard-check"></i> Stock Takes
     </a>
     <a href="{% url 'inventory:transfer_create' %}" class="nav-link {% if request.resolver_match.url_name == 'transfer_create' %}active{% endif %}">
-        <i class="bi bi-arrow-left-right"></i> Transfer Stock
-    </a>
-    <a href="{% url 'inventory:category_list' %}" class="nav-link {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}">
-        <i class="bi bi-folder"></i> Categories
+        <i class="bi bi-arrow-left-right"></i> Transfers
     </a>
     <a href="{% url 'inventory:supplier_list' %}" class="nav-link {% if request.resolver_match.url_name == 'supplier_list' %}active{% endif %}">
         <i class="bi bi-truck"></i> Suppliers
     </a>
     {% endif %}
 
-    <div class="nav-section">Expenses</div>
+    <div class="nav-section">Customers</div>
+    <a href="/customers/" class="nav-link {% if 'customers' in request.path %}active{% endif %}">
+        <i class="bi bi-people"></i> Customers
+    </a>
+
+    <div class="nav-section">Operations</div>
+    <a href="/returns/" class="nav-link {% if 'returns' in request.path %}active{% endif %}">
+        <i class="bi bi-arrow-return-left"></i> Returns
+    </a>
+    <a href="/purchasing/" class="nav-link {% if 'purchasing' in request.path %}active{% endif %}">
+        <i class="bi bi-cart-check"></i> Purchase Orders
+    </a>
     <a href="{% url 'expense:expense_list' %}" class="nav-link {% if request.resolver_match.app_name == 'expense' %}active{% endif %}">
         <i class="bi bi-receipt-cutoff"></i> Expenses
     </a>
+    <a href="{% url 'cashup:dashboard' %}" class="nav-link {% if 'cashup' in request.path %}active{% endif %}">
+        <i class="bi bi-cash-stack"></i> Cash-Up
+    </a>
+    <a href="{% url 'ecocash:pending_payments' %}" class="nav-link {% if request.resolver_match.url_name == 'pending_payments' %}active{% endif %}">
+        <i class="bi bi-phone"></i> EcoCash
+    </a>
 
     {% if user.is_manager_role %}
-    <div class="nav-section">Promotions</div>
+    <div class="nav-section">Marketing</div>
     <a href="{% url 'promotions:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'promotions' %}active{% endif %}">
-        <i class="bi bi-tag"></i> Promotions
+        <i class="bi bi-megaphone"></i> Promotions
     </a>
     {% endif %}
-
-    <div class="nav-section">EcoCash</div>
-    <a href="{% url 'ecocash:pending_payments' %}" class="nav-link {% if request.resolver_match.url_name == 'pending_payments' %}active{% endif %}">
-        <i class="bi bi-phone"></i> Pending Payments
-    </a>
-    <a href="{% url 'ecocash:transaction_list' %}" class="nav-link {% if request.resolver_match.url_name == 'transaction_list' %}active{% endif %}">
-        <i class="bi bi-receipt"></i> Transactions
-    </a>
-
-    <a href="{% url 'cashup:dashboard' %}" class="nav-link">
-        <i class="bi bi-cash-stack me-2"></i>Cash-Up
-    </a>
 
     {% if user.is_admin_role %}
     <div class="nav-section">Admin</div>
     <a href="{% url 'users:user_list' %}" class="nav-link {% if request.resolver_match.app_name == 'users' %}active{% endif %}">
-        <i class="bi bi-people"></i> Users
+        <i class="bi bi-shield-person"></i> Users
     </a>
     <a href="{% url 'admin:index' %}" class="nav-link" target="_blank">
-        <i class="bi bi-gear"></i> Django Admin
+        <i class="bi bi-gear-wide-connected"></i> Django Admin
     </a>
     {% endif %}
 
     <div class="sidebar-footer">
-        <div class="user-name">
-            {{ user.get_full_name|default:user.username }}
-            <span class="badge bg-secondary ms-1" style="font-size:9px;">{{ user.get_role_display }}</span>
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">{{ user.username|slice:":1"|upper }}</div>
+            <div class="sidebar-user-info">
+                <div class="u-name">{{ user.get_full_name|default:user.username }}</div>
+                <div class="u-role">{{ user.get_role_display }}</div>
+            </div>
         </div>
-        <a href="{% url 'users:logout' %}" class="nav-link" style="padding:6px 0;font-size:12px;">
-            <i class="bi bi-box-arrow-left"></i> Logout
+        <a href="{% url 'users:logout' %}" class="nav-link" style="padding:7px 0;font-size:12px;border-left:none !important;background:none !important;">
+            <i class="bi bi-box-arrow-left"></i> Sign Out
         </a>
     </div>
 </nav>
 
-<!-- ─── MAIN ─── -->
+<!-- MAIN -->
 <div class="main-wrapper">
     <div class="topbar">
-        <button class="sidebar-toggle" onclick="openSidebar()" aria-label="Open menu">
-            <i class="bi bi-list"></i>
-        </button>
-
-        <h6>{% block page_title %}{% endblock %}</h6>
-
-        <div class="d-flex align-items-center gap-2 ms-auto">
+        <button class="sidebar-toggle" onclick="openSidebar()"><i class="bi bi-list"></i></button>
+        <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+        <div class="topbar-actions">
             {% if user.primary_joint %}
-            <span class="badge bg-light text-dark border d-none d-sm-inline-flex" style="font-size:11px;">
-                <i class="bi bi-shop me-1"></i>{{ user.primary_joint.display_name }}
-            </span>
+            <div class="topbar-joint d-none d-sm-flex">
+                <i class="bi bi-shop"></i>{{ user.primary_joint.display_name }}
+            </div>
             {% endif %}
-            <a href="{% url 'sales:pos' %}" class="btn btn-sm d-md-none"
-               style="background:var(--accent);color:#fff;font-size:11px;padding:4px 10px;border-radius:6px;">
-                <i class="bi bi-display me-1"></i>POS
+            <a href="{% url 'sales:pos' %}" class="btn-pos d-none d-md-flex">
+                <i class="bi bi-display"></i> POS
+            </a>
+            <a href="{% url 'sales:sale_list' %}" class="topbar-icon-btn" title="Sales">
+                <i class="bi bi-receipt"></i>
             </a>
         </div>
     </div>
 
     {% if messages %}
-    <div class="px-3 pt-2">
+    <div class="messages-wrap">
         {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show py-2" role="alert" style="font-size:13px;">
+        <div class="gx-alert gx-alert-{{ message.tags|default:'info' }}">
+            <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
             {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button class="close-btn" onclick="this.closest('.gx-alert').remove()">×</button>
         </div>
         {% endfor %}
     </div>
@@ -373,16 +567,10 @@ function closeSidebar() {
     document.getElementById('sidebarOverlay').classList.remove('show');
     document.body.style.overflow = '';
 }
-// Close sidebar on nav link click (mobile)
 document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-    link.addEventListener('click', () => {
-        if (window.innerWidth <= 768) closeSidebar();
-    });
+    link.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
 });
-// Close on resize if screen grows
-window.addEventListener('resize', () => {
-    if (window.innerWidth > 768) closeSidebar();
-});
+window.addEventListener('resize', () => { if (window.innerWidth > 768) closeSidebar(); });
 </script>
 {% block extra_js %}{% endblock %}
 </body>

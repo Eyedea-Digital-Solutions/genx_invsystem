@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% block title %}{{ po.po_number }}{% endblock %}
+{% block page_title %}{{ po.po_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.po-detail-grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
+@media (max-width: 900px) { .po-detail-grid { grid-template-columns: 1fr; } }
+
+.po-info-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+  overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.05); margin-bottom: 16px;
+}
+.po-card-head {
+  background: #0d0d14; padding: 12px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.po-card-head-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,.5); }
+.po-card-body { padding: 18px; }
+
+.po-meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+@media (max-width: 600px) { .po-meta-grid { grid-template-columns: 1fr 1fr; } }
+.po-meta-item { }
+.po-meta-lbl  { font-size: 10px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+.po-meta-val  { font-size: 14px; font-weight: 700; }
+
+/* Status pill */
+.po-status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+}
+.s-draft     { background: #f3f4f6; color: #6b7280; }
+.s-ordered   { background: #dbeafe; color: #1e40af; }
+.s-partial   { background: #fef3c7; color: #92400e; }
+.s-received  { background: #dcfce7; color: #166534; }
+
+/* Items table */
+.po-items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.po-items-table th {
+  background: #f9fafb; padding: 9px 12px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px;
+  color: #6b7280; border-bottom: 1px solid #e5e7eb; text-align: left;
+}
+.po-items-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.po-items-table tr:last-child td { border-bottom: none; }
+
+/* Progress bar for partial receipt */
+.recv-progress { height: 6px; background: #f3f4f6; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+.recv-progress-fill { height: 100%; background: #16a34a; border-radius: 4px; transition: width .3s; }
+
+/* Timeline */
+.po-timeline { padding: 0; }
+.timeline-item { display: flex; gap: 12px; margin-bottom: 14px; }
+.timeline-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 4px;
+  background: #e5e7eb; border: 2px solid #e5e7eb;
+}
+.timeline-dot.active { background: #16a34a; border-color: #16a34a; }
+.timeline-content-title { font-size: 12px; font-weight: 700; }
+.timeline-content-sub   { font-size: 11px; color: #9ca3af; }
+
+.po-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 9px 18px; border-radius: 9px;
+  font-size: 13px; font-weight: 700;
+  text-decoration: none; cursor: pointer; border: none;
+  transition: opacity .12s;
+}
+.po-btn:hover { opacity: .85; }
+.po-btn-primary { background: #0d0d14; color: #fff; }
+.po-btn-success { background: #16a34a; color: #fff; }
+.po-btn-outline { background: #f9fafb; color: #374151; border: 1px solid #e5e7eb; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── BREADCRUMB + ACTIONS ── #}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+  <nav style="font-size:12px;color:#9ca3af;">
+    <a href="{% url 'purchasing:po_list' %}" style="color:#6b7280;text-decoration:none;">Purchase Orders</a>
+    <span style="margin:0 6px;">›</span>
+    <span style="font-weight:700;">{{ po.po_number }}</span>
+  </nav>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    {% if po.status == 'draft' %}
+      <form action="{% url 'purchasing:po_send' po.pk %}" method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="po-btn po-btn-primary">
+          <i class="bi bi-send"></i> Mark as Ordered
+        </button>
+      </form>
+    {% endif %}
+    {% if po.status == 'ordered' or po.status == 'partial' %}
+      <a href="{% url 'purchasing:grn_create' po.pk %}" class="po-btn po-btn-success">
+        <i class="bi bi-box-arrow-in-down"></i> Receive Stock (GRN)
+      </a>
+    {% endif %}
+    {% if po.status == 'draft' %}
+      <a href="{% url 'purchasing:po_edit' po.pk %}" class="po-btn po-btn-outline">
+        <i class="bi bi-pencil"></i> Edit
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="po-detail-grid">
+
+  {# ── LEFT COLUMN ── #}
+  <div>
+    {# META CARD #}
+    <div class="po-info-card">
+      <div class="po-card-head">
+        <span class="po-card-head-label">Purchase Order Details</span>
+        <span class="po-status-pill
+          {% if po.status == 'draft' %}s-draft
+          {% elif po.status == 'ordered' %}s-ordered
+          {% elif po.status == 'partial' %}s-partial
+          {% else %}s-received{% endif %}">
+          {{ po.get_status_display }}
+        </span>
+      </div>
+      <div class="po-card-body">
+        <div class="po-meta-grid">
+          <div class="po-meta-item">
+            <div class="po-meta-lbl">Supplier</div>
+            <div class="po-meta-val">{{ po.supplier.name }}</div>
+          </div>
+          <div class="po-meta-item">
+            <div class="po-meta-lbl">Joint</div>
+            <div class="po-meta-val">{{ po.joint.display_name }}</div>
+          </div>
+          <div class="po-meta-item">
+            <div class="po-meta-lbl">Created By</div>
+            <div class="po-meta-val">{{ po.created_by.get_full_name|default:po.created_by.username }}</div>
+          </div>
+          <div class="po-meta-item">
+            <div class="po-meta-lbl">Order Date</div>
+            <div class="po-meta-val">{{ po.order_date|date:"d M Y"|default:"—" }}</div>
+          </div>
+          <div class="po-meta-item">
+            <div class="po-meta-lbl">Expected Delivery</div>
+            <div class="po-meta-val">{{ po.expected_delivery|date:"d M Y"|default:"—" }}</div>
+          </div>
+          <div class="po-meta-item">
+            <div class="po-meta-lbl">Total Value</div>
+            <div class="po-meta-val" style="color:#16a34a;">${{ po.total_value|floatformat:2 }}</div>
+          </div>
+        </div>
+        {% if po.notes %}
+        <div style="background:#f9fafb;border-radius:8px;padding:10px 13px;font-size:13px;color:#6b7280;font-style:italic;">
+          {{ po.notes }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# LINE ITEMS #}
+    <div class="po-info-card">
+      <div class="po-card-head">
+        <span class="po-card-head-label">Line Items</span>
+        <span style="font-size:11px;color:rgba(255,255,255,.4);">{{ po.items.count }} item(s)</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="po-items-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th class="text-end">Qty Ordered</th>
+              <th class="text-end">Qty Received</th>
+              <th class="text-end">Unit Cost</th>
+              <th class="text-end">Line Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in po.items.all %}
+            <tr>
+              <td>
+                <div style="font-weight:600;">{{ item.product.name }}</div>
+                {% if item.product.code %}
+                <div style="font-size:11px;color:#9ca3af;">{{ item.product.code }}</div>
+                {% endif %}
+              </td>
+              <td class="text-end" style="font-weight:600;">{{ item.quantity_ordered }}</td>
+              <td class="text-end">
+                <div style="font-weight:600;color:{% if item.quantity_received >= item.quantity_ordered %}#16a34a{% elif item.quantity_received > 0 %}#d97706{% else %}#9ca3af{% endif %};">
+                  {{ item.quantity_received }}
+                </div>
+                {% if item.quantity_received > 0 %}
+                <div class="recv-progress" style="width:60px;display:inline-block;">
+                  <div class="recv-progress-fill" style="width:{% widthratio item.quantity_received item.quantity_ordered 100 %}%;"></div>
+                </div>
+                {% endif %}
+              </td>
+              <td class="text-end">${{ item.unit_cost|floatformat:2 }}</td>
+              <td class="text-end" style="font-weight:700;">${{ item.line_total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px;">No items added yet.</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f9fafb;font-weight:700;">
+              <td colspan="4" style="padding:10px 12px;text-align:right;">TOTAL</td>
+              <td style="padding:10px 12px;text-align:right;color:#16a34a;font-size:15px;">${{ po.total_value|floatformat:2 }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    {# GRNs #}
+    {% if po.grns.exists %}
+    <div class="po-info-card">
+      <div class="po-card-head">
+        <span class="po-card-head-label">Goods Received Notes</span>
+        <span style="font-size:11px;color:rgba(255,255,255,.4);">{{ po.grns.count }} GRN(s)</span>
+      </div>
+      <div style="padding:0;">
+        <table class="po-items-table">
+          <thead>
+            <tr><th>GRN #</th><th>Received By</th><th>Date</th><th>Notes</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for grn in po.grns.all %}
+            <tr>
+              <td style="font-weight:700;font-family:monospace;color:#2563eb;">{{ grn.grn_number }}</td>
+              <td>{{ grn.received_by.get_full_name|default:grn.received_by.username }}</td>
+              <td style="color:#6b7280;">{{ grn.received_date|date:"d M Y H:i" }}</td>
+              <td style="color:#6b7280;font-size:12px;">{{ grn.notes|default:"—"|truncatechars:40 }}</td>
+              <td><a href="{% url 'purchasing:grn_detail' grn.pk %}" class="po-btn po-btn-outline" style="padding:4px 10px;font-size:11px;">View</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── RIGHT COLUMN ── #}
+  <div>
+    {# STATUS TIMELINE #}
+    <div class="po-info-card">
+      <div class="po-card-head">
+        <span class="po-card-head-label">Order Timeline</span>
+      </div>
+      <div class="po-card-body">
+        <div class="po-timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot {% if po.status != 'draft' or po.status == 'draft' %}active{% endif %}"></div>
+            <div>
+              <div class="timeline-content-title">Draft Created</div>
+              <div class="timeline-content-sub">{{ po.created_at|date:"d M Y H:i" }}</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot {% if po.status != 'draft' %}active{% endif %}"></div>
+            <div>
+              <div class="timeline-content-title">Order Sent to Supplier</div>
+              <div class="timeline-content-sub">
+                {% if po.status != 'draft' %}{{ po.order_date|date:"d M Y"|default:"Date not set" }}
+                {% else %}<span style="color:#9ca3af;">Pending</span>{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot {% if po.status == 'partial' or po.status == 'received' %}active{% endif %}"></div>
+            <div>
+              <div class="timeline-content-title">Stock Being Received</div>
+              <div class="timeline-content-sub">
+                {% if po.status == 'partial' %}<span style="color:#d97706;">Partially received</span>
+                {% elif po.status == 'received' %}Completed
+                {% else %}<span style="color:#9ca3af;">Pending</span>{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot {% if po.status == 'received' %}active{% endif %}" style="{% if po.status == 'received' %}background:#16a34a;border-color:#16a34a;{% endif %}"></div>
+            <div>
+              <div class="timeline-content-title">Fully Received</div>
+              <div class="timeline-content-sub">
+                {% if po.status == 'received' %}<span style="color:#16a34a;font-weight:700;">✓ Complete</span>
+                {% else %}<span style="color:#9ca3af;">Pending</span>{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# SUPPLIER INFO #}
+    <div class="po-info-card">
+      <div class="po-card-head">
+        <span class="po-card-head-label">Supplier Info</span>
+      </div>
+      <div class="po-card-body">
+        <div style="font-weight:700;font-size:14px;margin-bottom:8px;">{{ po.supplier.name }}</div>
+        {% if po.supplier.contact_person %}
+        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;"><i class="bi bi-person me-1"></i>{{ po.supplier.contact_person }}</div>
+        {% endif %}
+        {% if po.supplier.phone %}
+        <div style="font-size:12px;color:#6b7280;margin-bottom:4px;"><i class="bi bi-phone me-1"></i>{{ po.supplier.phone }}</div>
+        {% endif %}
+        {% if po.supplier.email %}
+        <div style="font-size:12px;color:#2563eb;margin-bottom:4px;"><i class="bi bi-envelope me-1"></i>{{ po.supplier.email }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

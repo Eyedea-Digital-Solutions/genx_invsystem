@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Purchase Orders{% endblock %}
+{% block page_title %}Purchase Orders{% endblock %}
+
+{% block content %}
+
+<!-- STATUS STATS -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+    <div class="stat-card">
+        <div class="stat-label">Draft</div>
+        <div class="stat-value" style="color:var(--text-secondary);margin-top:8px;">{{ draft_count|default:0 }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Ordered</div>
+        <div class="stat-value" style="color:var(--amber);margin-top:8px;">{{ ordered_count|default:0 }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Partially Received</div>
+        <div class="stat-value" style="color:var(--blue);margin-top:8px;">{{ partial_count|default:0 }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Fully Received</div>
+        <div class="stat-value" style="color:var(--green);margin-top:8px;">{{ received_count|default:0 }}</div>
+    </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+    <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;flex:1;">
+        <select name="status" class="form-select form-select-sm" style="width:160px;">
+            <option value="">All Statuses</option>
+            <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Draft</option>
+            <option value="ordered" {% if request.GET.status == 'ordered' %}selected{% endif %}>Ordered</option>
+            <option value="partially_received" {% if request.GET.status == 'partially_received' %}selected{% endif %}>Partial</option>
+            <option value="fully_received" {% if request.GET.status == 'fully_received' %}selected{% endif %}>Received</option>
+        </select>
+        <select name="supplier" class="form-select form-select-sm" style="width:160px;">
+            <option value="">All Suppliers</option>
+            {% for s in suppliers %}<option value="{{ s.pk }}" {% if request.GET.supplier == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn-gx-dark btn-gx-sm"><i class="bi bi-funnel"></i> Filter</button>
+        <a href="/purchasing/" class="btn-gx-ghost btn-gx-sm">Clear</a>
+    </form>
+    <a href="/purchasing/new/" class="btn-gx-primary btn-gx-sm"><i class="bi bi-plus-lg"></i> New PO</a>
+</div>
+
+<div class="gx-card">
+    <table class="gx-table">
+        <thead>
+            <tr>
+                <th>PO Number</th>
+                <th>Supplier</th>
+                <th class="d-none d-md-table-cell">Joint</th>
+                <th>Status</th>
+                <th class="d-none d-sm-table-cell">Lines</th>
+                <th class="d-none d-lg-table-cell">Created</th>
+                <th class="d-none d-lg-table-cell">Expected</th>
+                <th class="td-right">Total</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for po in purchase_orders %}
+            <tr>
+                <td style="font-family:var(--font-mono);font-size:11.5px;font-weight:700;">{{ po.po_number }}</td>
+                <td style="font-weight:500;">{{ po.supplier.name }}</td>
+                <td class="d-none d-md-table-cell"><span class="gx-badge gx-badge-neutral">{{ po.joint.display_name }}</span></td>
+                <td>
+                    {% if po.status == 'draft' %}<span class="gx-badge gx-badge-neutral">Draft</span>
+                    {% elif po.status == 'ordered' %}<span class="gx-badge gx-badge-warning">Ordered</span>
+                    {% elif po.status == 'partially_received' %}<span class="gx-badge gx-badge-info">Partial</span>
+                    {% elif po.status == 'fully_received' %}<span class="gx-badge gx-badge-success">Received</span>
+                    {% else %}<span class="gx-badge gx-badge-neutral">{{ po.get_status_display }}</span>{% endif %}
+                </td>
+                <td class="d-none d-sm-table-cell" style="color:var(--text-secondary);">{{ po.lines.count }} item{{ po.lines.count|pluralize }}</td>
+                <td class="d-none d-lg-table-cell" style="color:var(--text-muted);font-size:12px;">{{ po.created_at|date:"d M Y" }}</td>
+                <td class="d-none d-lg-table-cell" style="color:var(--text-muted);font-size:12px;">{{ po.expected_delivery|date:"d M Y"|default:"—" }}</td>
+                <td class="td-right" style="font-family:var(--font-mono);font-weight:700;">${{ po.total_value|default:"0.00"|floatformat:2 }}</td>
+                <td style="white-space:nowrap;">
+                    <div style="display:flex;gap:4px;">
+                        <a href="/purchasing/{{ po.pk }}/" class="btn-gx-ghost btn-gx-xs">View</a>
+                        {% if po.status == 'ordered' or po.status == 'partially_received' %}
+                        <a href="/purchasing/{{ po.pk }}/receive/" class="btn-gx-primary btn-gx-xs"><i class="bi bi-box-seam"></i> Receive</a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9"><div class="gx-empty"><i class="bi bi-truck gx-empty-icon"></i><div class="gx-empty-title">No purchase orders yet</div><div>Create your first PO to start tracking supplier orders.</div></div></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

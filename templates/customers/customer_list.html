@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Customers{% endblock %}
+{% block page_title %}Customers{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Customers</h1>
+        <p>Customer profiles, purchase history & loyalty points</p>
+    </div>
+    <a href="/customers/create/" class="btn-gx btn-gx-primary">
+        <i class="bi bi-person-plus"></i> Add Customer
+    </a>
+</div>
+
+<!-- STATS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:24px;">
+    <div class="stat-card" style="border-top:3px solid var(--accent);">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="stat-label">Total Customers</div>
+                <div class="stat-value mt-1" style="color:var(--accent);">{{ total_customers|default:0 }}</div>
+            </div>
+            <div class="stat-icon" style="background:#f3f0ff;color:var(--accent);"><i class="bi bi-people"></i></div>
+        </div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid var(--green);">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="stat-label">Total Loyalty Pts</div>
+                <div class="stat-value mt-1" style="color:var(--green);">{{ total_loyalty|default:0 }}</div>
+            </div>
+            <div class="stat-icon" style="background:#e8faf1;color:var(--green);"><i class="bi bi-star"></i></div>
+        </div>
+    </div>
+    <div class="stat-card" style="border-top:3px solid var(--blue);">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="stat-label">New This Month</div>
+                <div class="stat-value mt-1" style="color:var(--blue);">{{ new_this_month|default:0 }}</div>
+            </div>
+            <div class="stat-icon" style="background:#eff6ff;color:var(--blue);"><i class="bi bi-person-check"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- FILTER -->
+<div class="filter-bar">
+    <form method="get" style="display:contents;">
+        <input type="text" name="q" value="{{ search|default:'' }}" class="gx-input" placeholder="Search name, phone, email…" style="min-width:220px;">
+        <button type="submit" class="btn-gx btn-gx-dark">Search</button>
+        <a href="/customers/" class="btn-gx btn-gx-ghost">Clear</a>
+    </form>
+</div>
+
+<div class="gx-card">
+    <div style="overflow-x:auto;">
+        <table class="gx-table">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th class="text-center">Purchases</th>
+                    <th class="text-end">Total Spend</th>
+                    <th class="text-center">Loyalty Pts</th>
+                    <th>Joined</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers %}
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#9b6bff);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0;">
+                                {{ customer.name|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <div style="font-weight:600;font-size:13px;">{{ customer.name }}</div>
+                                {% if customer.notes %}<div style="font-size:11px;color:#aaa;">{{ customer.notes|truncatechars:30 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-family:var(--mono);font-size:12px;">{{ customer.phone|default:"—" }}</td>
+                    <td style="font-size:12px;color:#888;">{{ customer.email|default:"—" }}</td>
+                    <td class="text-center"><span class="gx-badge gx-badge-neutral">{{ customer.purchase_count|default:0 }}</span></td>
+                    <td class="text-end fw-bold">${{ customer.total_spend|default:0|floatformat:2 }}</td>
+                    <td class="text-center">
+                        <span class="gx-badge {% if customer.loyalty_points > 0 %}gx-badge-success{% else %}gx-badge-neutral{% endif %}">
+                            <i class="bi bi-star-fill" style="font-size:9px;"></i> {{ customer.loyalty_points|default:0 }}
+                        </span>
+                    </td>
+                    <td style="color:#aaa;font-size:12px;">{{ customer.created_at|date:"d M Y" }}</td>
+                    <td>
+                        <div style="display:flex;gap:5px;">
+                            <a href="/customers/{{ customer.pk }}/" class="btn-gx btn-gx-ghost btn-gx-xs">View</a>
+                            {% if user.is_manager_role %}
+                            <a href="/customers/{{ customer.pk }}/edit/" class="btn-gx btn-gx-ghost btn-gx-xs">Edit</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" style="text-align:center;color:#bbb;padding:48px;">
+                    <i class="bi bi-people" style="font-size:32px;display:block;margin-bottom:10px;"></i>
+                    No customers yet. <a href="/customers/create/" style="color:var(--accent);">Add your first customer.</a>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% block title %}New Purchase Order{% endblock %}
+{% block page_title %}New Purchase Order{% endblock %}
+
+{% block extra_css %}
+<style>
+.po-form-wrap { max-width: 860px; }
+.po-form-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+  overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 16px;
+}
+.po-form-head {
+  background: #0d0d14; padding: 14px 22px;
+  display: flex; align-items: center; gap: 12px;
+}
+.po-form-head-icon { width: 38px; height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+.po-form-head-title { color: rgba(255,255,255,.9); font-weight: 700; font-size: 14px; }
+.po-form-head-sub   { color: rgba(255,255,255,.4); font-size: 11px; margin-top: 1px; }
+.po-form-body { padding: 22px; }
+
+.po-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.po-field-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+.po-field { display: flex; flex-direction: column; gap: 4px; }
+.po-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #6b7280; }
+.po-label span { color: #e94560; }
+.po-input {
+  border: 1px solid #e5e7eb; border-radius: 8px; padding: 9px 12px;
+  font-size: 13px; transition: border-color .15s, box-shadow .15s; outline: none; width: 100%;
+}
+.po-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.po-error { font-size: 11px; color: #dc2626; }
+
+/* ── LINE ITEMS SECTION ── */
+.po-items-head {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #f9fafb; border: 1px solid #e5e7eb;
+  border-radius: 12px 12px 0 0; padding: 12px 16px;
+}
+.po-items-head-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #374151; }
+.po-items-table-wrap { border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; overflow: hidden; margin-bottom: 16px; }
+.po-items-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.po-items-tbl thead th {
+  background: #f9fafb; padding: 8px 10px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px;
+  color: #6b7280; border-bottom: 1px solid #e5e7eb; text-align: left;
+}
+.po-items-tbl tbody tr { border-bottom: 1px solid #f3f4f6; }
+.po-items-tbl tbody tr:last-child { border-bottom: none; }
+.po-items-tbl td { padding: 8px 10px; vertical-align: middle; }
+.remove-row-btn {
+  background: none; border: none; color: #ef4444; cursor: pointer;
+  font-size: 16px; padding: 2px 4px; line-height: 1; border-radius: 4px;
+  transition: background .1s;
+}
+.remove-row-btn:hover { background: #fee2e2; }
+
+.po-actions { display: flex; gap: 10px; margin-top: 20px; }
+.po-btn-submit { padding: 11px 28px; border-radius: 9px; background: #0d0d14; color: #fff; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .12s; }
+.po-btn-submit:hover { opacity: .85; }
+.po-btn-cancel { padding: 11px 22px; border-radius: 9px; background: #f9fafb; color: #374151; border: 1px solid #e5e7eb; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; }
+
+@media (max-width: 600px) {
+  .po-field-row, .po-field-row.triple { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="po-form-wrap">
+
+  <nav style="font-size:12px;color:#9ca3af;margin-bottom:16px;">
+    <a href="{% url 'purchasing:po_list' %}" style="color:#6b7280;text-decoration:none;">Purchase Orders</a>
+    <span style="margin:0 6px;">›</span>
+    <span>New Order</span>
+  </nav>
+
+  <div class="po-form-card">
+    <div class="po-form-head">
+      <div class="po-form-head-icon" style="background:#dbeafe;"><i class="bi bi-file-earmark-plus" style="color:#2563eb;"></i></div>
+      <div>
+        <div class="po-form-head-title">Create Purchase Order</div>
+        <div class="po-form-head-sub">Order stock from a supplier — auto-updates stock when received</div>
+      </div>
+    </div>
+
+    <div class="po-form-body">
+      <form method="post" id="po-form" novalidate>
+        {% csrf_token %}
+
+        {# Supplier + Joint #}
+        <div class="po-field-row">
+          <div class="po-field">
+            <label class="po-label">Supplier <span>*</span></label>
+            <select name="supplier" class="po-input" required>
+              <option value="">— Select Supplier —</option>
+              {% for sup in suppliers %}
+              <option value="{{ sup.pk }}">{{ sup.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="po-field">
+            <label class="po-label">Joint <span>*</span></label>
+            <select name="joint" class="po-input" required id="joint-select">
+              <option value="">— Select Joint —</option>
+              {% for j in joints %}
+              <option value="{{ j.pk }}">{{ j.display_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        {# Dates + Reference #}
+        <div class="po-field-row triple">
+          <div class="po-field">
+            <label class="po-label">Order Date</label>
+            <input type="date" name="order_date" class="po-input" value="{{ today }}">
+          </div>
+          <div class="po-field">
+            <label class="po-label">Expected Delivery</label>
+            <input type="date" name="expected_delivery" class="po-input">
+          </div>
+          <div class="po-field">
+            <label class="po-label">Reference / Invoice #</label>
+            <input type="text" name="reference" class="po-input" placeholder="e.g. SUP-2024-001">
+          </div>
+        </div>
+
+        {# Notes #}
+        <div class="po-field" style="margin-bottom:20px;">
+          <label class="po-label">Notes</label>
+          <textarea name="notes" rows="2" class="po-input" placeholder="Internal notes for this order…"></textarea>
+        </div>
+
+        {# ── LINE ITEMS ── #}
+        <div class="po-items-head">
+          <span class="po-items-head-label"><i class="bi bi-list-ul me-1"></i>Line Items</span>
+          <button type="button" onclick="addLineItem()" class="btn btn-dark btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Add Product
+          </button>
+        </div>
+        <div class="po-items-table-wrap">
+          <table class="po-items-tbl">
+            <thead>
+              <tr>
+                <th style="width:40%;">Product</th>
+                <th style="width:15%;">Qty Ordered</th>
+                <th style="width:15%;">Unit Cost ($)</th>
+                <th style="width:20%;">Line Total</th>
+                <th style="width:10%;"></th>
+              </tr>
+            </thead>
+            <tbody id="line-items-body">
+              <!-- rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+          <div style="text-align:right;">
+            <span style="font-size:12px;color:#6b7280;margin-right:10px;">ORDER TOTAL</span>
+            <span id="po-grand-total" style="font-size:22px;font-weight:900;color:#0d0d14;">$0.00</span>
+          </div>
+        </div>
+
+        <input type="hidden" name="item_count" id="item-count" value="0">
+
+        <div class="po-actions">
+          <button type="submit" name="action" value="draft" class="po-btn-submit" style="background:#374151;">
+            <i class="bi bi-floppy me-1"></i>Save Draft
+          </button>
+          <button type="submit" name="action" value="order" class="po-btn-submit">
+            <i class="bi bi-send me-1"></i>Place Order
+          </button>
+          <a href="{% url 'purchasing:po_list' %}" class="po-btn-cancel">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let itemCount = 0;
+let productsCache = {};
+
+const jointSelect = document.getElementById('joint-select');
+jointSelect.addEventListener('change', () => {
+  const jid = jointSelect.value;
+  if (!jid) return;
+  fetch(`/inventory/api/products/?joint_id=${jid}`)
+    .then(r => r.json())
+    .then(data => {
+      productsCache = {};
+      data.products.forEach(p => { productsCache[p.id] = p; });
+      // Refresh all product dropdowns
+      document.querySelectorAll('.item-product-select').forEach(sel => {
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">— Select Product —</option>';
+        data.products.forEach(p => {
+          const opt = new Option(`${p.name}${p.code ? ' ['+p.code+']' : ''}`, p.id);
+          sel.appendChild(opt);
+        });
+        if (cur) sel.value = cur;
+      });
+    });
+};
+
+function addLineItem() {
+  const idx = itemCount++;
+  document.getElementById('item-count').value = itemCount;
+  const tbody = document.getElementById('line-items-body');
+  const tr = document.createElement('tr');
+  tr.id = `line-row-${idx}`;
+  tr.innerHTML = `
+    <td>
+      <select name="product_${idx}" class="po-input item-product-select" style="padding:7px 10px;" onchange="onProductChange(${idx})">
+        <option value="">— Select Product —</option>
+        ${Object.values(productsCache).map(p => `<option value="${p.id}">${p.name}${p.code ? ' ['+p.code+']' : ''}</option>`).join('')}
+      </select>
+    </td>
+    <td>
+      <input type="number" name="qty_${idx}" class="po-input item-qty" style="width:80px;"
+             min="1" value="1" oninput="updateLineTotal(${idx})">
+    </td>
+    <td>
+      <input type="number" name="cost_${idx}" class="po-input item-cost" style="width:90px;"
+             min="0" step="0.01" value="0.00" oninput="updateLineTotal(${idx})">
+    </td>
+    <td>
+      <span id="line-total-${idx}" style="font-weight:700;">$0.00</span>
+    </td>
+    <td>
+      <button type="button" class="remove-row-btn" onclick="removeRow(${idx})">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </td>`;
+  tbody.appendChild(tr);
+}
+
+function onProductChange(idx) {
+  const sel  = document.querySelector(`[name="product_${idx}"]`);
+  const prod = productsCache[sel.value];
+  if (prod && prod.cost_price) {
+    document.querySelector(`[name="cost_${idx}"]`).value = parseFloat(prod.cost_price).toFixed(2);
+  }
+  updateLineTotal(idx);
+}
+
+function updateLineTotal(idx) {
+  const qty  = parseFloat(document.querySelector(`[name="qty_${idx}"]`)?.value)  || 0;
+  const cost = parseFloat(document.querySelector(`[name="cost_${idx}"]`)?.value) || 0;
+  const total = qty * cost;
+  const el = document.getElementById(`line-total-${idx}`);
+  if (el) el.textContent = '$' + total.toFixed(2);
+  updateGrandTotal();
+}
+
+function updateGrandTotal() {
+  let grand = 0;
+  document.querySelectorAll('[id^="line-total-"]').forEach(el => {
+    grand += parseFloat(el.textContent.replace('$', '')) || 0;
+  });
+  document.getElementById('po-grand-total').textContent = '$' + grand.toFixed(2);
+}
+
+function removeRow(idx) {
+  const row = document.getElementById(`line-row-${idx}`);
+  if (row) { row.remove(); updateGrandTotal(); }
+}
+
+// Seed one row
+addLineItem();
+</script>
+{% endblock %}
