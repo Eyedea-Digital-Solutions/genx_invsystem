@@ -1,60 +1,64 @@
 {% extends "admin/base_site.html" %}
-{% load i18n %}
+{% load static %}
 
 {% block title %}Change History: {{ object }} | GenX POS{% endblock %}
 
 {% block content %}
 
-<h1 style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-    <span style="width:32px;height:32px;background:#dbeafe;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;">
-        <i class="bi bi-clock-history" style="color:#2563eb;font-size:15px;"></i>
-    </span>
-    Change history: <em style="font-style:normal;color:#2563eb;">{{ object }}</em>
+<h1>
+  <span style="width:34px;height:34px;background:#dbeafe;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+    <i class="bi bi-clock-history" style="color:#2563eb;font-size:15px;"></i>
+  </span>
+  History: <em style="font-style:normal;color:#2563eb;margin-left:4px;">{{ object }}</em>
 </h1>
 
-<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
-    <div style="background:var(--ink);padding:8px 16px;">
-        <span style="font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.5);">Audit Trail</span>
-    </div>
+<div style="background:var(--surf);border:1px solid var(--surf-bdr);border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);">
 
+  <div style="background:var(--ink);padding:9px 16px;display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.5);">Audit Trail</span>
     {% if action_list %}
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead>
-            <tr>
-                <th style="background:#f8fafc;padding:8px 14px;text-align:left;font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--surf-muted);border-bottom:1px solid #e5e7eb;">Date / Time</th>
-                <th style="background:#f8fafc;padding:8px 14px;text-align:left;font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--surf-muted);border-bottom:1px solid #e5e7eb;">User</th>
-                <th style="background:#f8fafc;padding:8px 14px;text-align:left;font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--surf-muted);border-bottom:1px solid #e5e7eb;">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for entry in action_list %}
-            <tr style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:9px 14px;color:#94a3b8;white-space:nowrap;font-family:var(--mono);font-size:11px;">
-                    {{ entry.action_time|date:"d M Y  H:i" }}
-                </td>
-                <td style="padding:9px 14px;font-weight:600;font-size:12px;">
-                    {{ entry.user.get_full_name|default:entry.user.username }}
-                </td>
-                <td style="padding:9px 14px;">
-                    {% if entry.is_addition %}
-                        <span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.3px;margin-right:8px;">ADDED</span>
-                    {% elif entry.is_change %}
-                        <span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.3px;margin-right:8px;">CHANGED</span>
-                    {% elif entry.is_deletion %}
-                        <span style="background:#fee2e2;color:#7f1d1d;padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.3px;margin-right:8px;">DELETED</span>
-                    {% endif %}
-                    <span style="color:#374151;font-size:12px;">{{ entry.get_change_message }}</span>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div style="padding:48px;text-align:center;color:#94a3b8;">
-        <i class="bi bi-journal-x" style="font-size:28px;display:block;margin-bottom:10px;"></i>
-        <span style="font-size:13px;">No history recorded for this object.</span>
-    </div>
+    <span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.3);">{{ action_list|length }} record{{ action_list|length|pluralize }}</span>
     {% endif %}
-</div>
+  </div>
 
+  {% if action_list %}
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead>
+      <tr>
+        <th style="background:var(--surf-hov);padding:9px 16px;text-align:left;font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.9px;color:var(--surf-sub);border-bottom:1px solid var(--surf-bdr);">Date / Time</th>
+        <th style="background:var(--surf-hov);padding:9px 16px;text-align:left;font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.9px;color:var(--surf-sub);border-bottom:1px solid var(--surf-bdr);">User</th>
+        <th style="background:var(--surf-hov);padding:9px 16px;text-align:left;font-family:var(--mono);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.9px;color:var(--surf-sub);border-bottom:1px solid var(--surf-bdr);">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for entry in action_list %}
+      <tr style="border-bottom:1px solid #f3f2f0;">
+        <td style="padding:10px 16px;color:var(--surf-muted);white-space:nowrap;font-family:var(--mono);font-size:11px;">
+          {{ entry.action_time|date:"d M Y  H:i" }}
+        </td>
+        <td style="padding:10px 16px;font-weight:600;font-size:12px;">
+          {{ entry.user.get_full_name|default:entry.user.username }}
+        </td>
+        <td style="padding:10px 16px;">
+          {% if entry.is_addition %}
+            <span style="background:#d1fae5;color:#065f46;padding:2px 9px;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.3px;margin-right:8px;">ADDED</span>
+          {% elif entry.is_change %}
+            <span style="background:#dbeafe;color:#1e40af;padding:2px 9px;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.3px;margin-right:8px;">CHANGED</span>
+          {% elif entry.is_deletion %}
+            <span style="background:#fee2e2;color:#7f1d1d;padding:2px 9px;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.3px;margin-right:8px;">DELETED</span>
+          {% endif %}
+          <span style="color:var(--surf-txt);font-size:12px;">{{ entry.get_change_message }}</span>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:56px;text-align:center;color:var(--surf-muted);">
+    <i class="bi bi-journal-x" style="font-size:32px;display:block;margin-bottom:12px;opacity:.5;"></i>
+    <span style="font-family:var(--mono);font-size:12px;">No history recorded for this object.</span>
+  </div>
+  {% endif %}
+
+</div>
 {% endblock %}

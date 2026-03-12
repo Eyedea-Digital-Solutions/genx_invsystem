@@ -1,17 +1,17 @@
 {% extends "admin/base_site.html" %}
-{% load i18n %}
+{% load static %}
 
 {% block title %}Done | GenX POS{% endblock %}
 
 {% block content %}
 <div style="text-align:center;padding:72px 20px;">
-    <div style="width:56px;height:56px;background:#d1fae5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;">
-        <i class="bi bi-check-lg" style="font-size:24px;color:#16a34a;"></i>
-    </div>
-    <h2 style="font-size:16px;font-weight:600;color:var(--surf-text);margin-bottom:6px;">Done</h2>
-    <p style="font-family:var(--mono);font-size:11px;color:var(--surf-muted);">This window can be closed.</p>
+  <div style="width:60px;height:60px;background:#d1fae5;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+    <i class="bi bi-check-lg" style="font-size:26px;color:#16a34a;"></i>
+  </div>
+  <h2 style="font-size:16px;font-weight:600;color:var(--surf-txt);margin-bottom:6px;justify-content:center;">Done</h2>
+  <p style="font-family:var(--mono);font-size:11px;color:var(--surf-sub);">This window will close automatically.</p>
 </div>
 <script>
-if (window.opener) { setTimeout(() => window.close(), 1500); }
+if (window.opener) { setTimeout(() => window.close(), 1400); }
 </script>
 {% endblock %}
