@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Return #{{ return.id }}{% endblock %}
+{% block breadcrumb %}
+<a href="/returns/list/">Returns</a>
+<span class="sep">/</span><span class="current">Return #{{ return.id }}</span>
+{% endblock %}
+{% block page_title %}Return #{{ return.id }}{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div class="ph-left">
+    <h1>Return <span class="mono" style="font-weight:400;color:var(--ink-2);">#{{ return.id }}</span></h1>
+    <p>{{ return.created_at|date:"d F Y · H:i" }} · {{ return.processed_by.get_full_name|default:return.processed_by.username }}</p>
+  </div>
+  <div class="ph-right">
+    <button onclick="window.print()" class="gx-btn gx-btn-ghost gx-btn-sm no-print"><i class="bi bi-printer"></i> Print</button>
+    <a href="/returns/list/" class="gx-btn gx-btn-ghost gx-btn-sm no-print"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 260px;gap:20px;align-items:start;">
+
+  <div>
+    <div class="gx-card" style="margin-bottom:16px;">
+      <div class="gx-card-head">
+        <div class="gx-card-title"><i class="bi bi-box-seam"></i> Returned Items</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="gx-table">
+          <thead><tr>
+            <th>Product</th>
+            <th class="text-center">Qty</th>
+            <th class="text-end">Unit</th>
+            <th class="text-end">Refund</th>
+          </tr></thead>
+          <tbody>
+            {% for item in return.items.all %}
+            <tr>
+              <td>
+                <div style="font-weight:600;">{{ item.product.name }}</div>
+                {% if item.product.sku %}<div class="mono" style="font-size:10px;color:var(--ink-4);">{{ item.product.sku }}</div>{% endif %}
+              </td>
+              <td class="text-center mono">{{ item.quantity }}</td>
+              <td class="text-end mono" style="font-size:12px;">${{ item.unit_price|floatformat:2 }}</td>
+              <td class="text-end mono" style="font-weight:700;color:var(--red);">${{ item.subtotal|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="text-end" style="font-weight:700;">Total Refunded</td>
+              <td class="text-end mono" style="font-weight:800;font-size:15px;color:var(--red);">${{ return.refund_amount|floatformat:2 }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    {% if return.notes %}
+    <div class="gx-card">
+      <div class="gx-card-head"><div class="gx-card-title"><i class="bi bi-card-text"></i> Notes</div></div>
+      <div class="gx-card-body" style="font-size:13px;color:var(--ink-2);line-height:1.7;">{{ return.notes }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Right column -->
+  <div>
+    <div class="gx-card" style="margin-bottom:14px;">
+      <div class="gx-card-head"><div class="gx-card-title"><i class="bi bi-info-circle"></i> Summary</div></div>
+      <div style="padding:14px 18px;display:flex;flex-direction:column;gap:11px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+          <span style="color:var(--ink-3);">Reason</span>
+          <span class="gx-badge {% if return.reason == 'defective' %}gx-badge-danger{% elif return.reason == 'changed_mind' %}gx-badge-warning{% else %}gx-badge-info{% endif %}">
+            {{ return.get_reason_display|default:return.reason }}
+          </span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+          <span style="color:var(--ink-3);">Refund Method</span>
+          <span class="gx-badge {% if return.refund_method == 'cash' %}gx-badge-success{% elif return.refund_method == 'ecocash' %}gx-badge-info{% elif return.refund_method == 'store_credit' %}gx-badge-purple{% else %}gx-badge-neutral{% endif %}">
+            {{ return.get_refund_method_display|default:return.refund_method }}
+          </span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--ink-3);">Processed By</span>
+          <span style="font-weight:600;">{{ return.processed_by.get_full_name|default:return.processed_by.username }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--ink-3);">Date</span>
+          <span>{{ return.created_at|date:"d M Y, H:i" }}</span>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:11px;display:flex;justify-content:space-between;">
+          <span style="font-weight:700;">Refunded</span>
+          <span class="mono" style="font-weight:800;font-size:18px;color:var(--red);">${{ return.refund_amount|floatformat:2 }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="gx-card">
+      <div class="gx-card-head"><div class="gx-card-title"><i class="bi bi-receipt"></i> Original Sale</div></div>
+      <div style="padding:14px 18px;">
+        <div class="mono" style="font-size:20px;font-weight:800;color:var(--blue);">{{ return.sale.receipt_number|default:return.sale.id }}</div>
+        <div style="font-size:12px;color:var(--ink-3);margin:4px 0 14px;">{{ return.sale.created_at|date:"d M Y" }} · ${{ return.sale.total|floatformat:2 }}</div>
+        <a href="/sales/{{ return.sale.id }}/" class="gx-btn gx-btn-ghost gx-btn-sm" style="width:100%;justify-content:center;">
+          <i class="bi bi-receipt"></i> View Sale
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

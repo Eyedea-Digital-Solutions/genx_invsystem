@@ -1,148 +1,55 @@
 {% extends 'base.html' %}
-{% block title %}{% if form.instance.pk %}Edit Expense{% else %}Record Expense{% endif %}{% endblock %}
-{% block page_title %}{% if form.instance.pk %}Edit Expense{% else %}Record Expense{% endif %}{% endblock %}
+{% block title %}{% if expense %}Edit Expense{% else %}Record Expense{% endif %}{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'expense:expense_list' %}">Expenses</a>
+<span class="sep">/</span>
+<span class="current">{% if expense %}Edit{% else %}New{% endif %}</span>
+{% endblock %}
+{% block page_title %}{% if expense %}Edit Expense{% else %}Record Expense{% endif %}{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6">
+<div class="ph">
+  <div class="ph-left">
+    <h1>{% if expense %}Edit Expense{% else %}Record Expense{% endif %}</h1>
+    {% if expense %}<p>Last updated {{ expense.updated_at|date:"d M Y" }}</p>{% endif %}
+  </div>
+  <a href="{% url 'expense:expense_list' %}" class="gx-btn gx-btn-ghost"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
 
-        {# ── BREADCRUMB ── #}
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb" style="font-size:13px;">
-                <li class="breadcrumb-item"><a href="{% url 'expense:expense_list' %}">Expenses</a></li>
-                <li class="breadcrumb-item active">
-                    {% if form.instance.pk %}Edit #{{ form.instance.pk }}{% else %}New Expense{% endif %}
-                </li>
-            </ol>
-        </nav>
-
-        <div class="card border-0 shadow-sm" style="border-radius:16px;">
-            <div class="card-body p-4">
-
-                {# ── HEADER ── #}
-                <div class="d-flex align-items-center gap-3 mb-4">
-                    <div style="width:44px;height:44px;background:#fee2e2;border-radius:12px;display:flex;align-items:center;justify-content:center;">
-                        <i class="bi bi-receipt-cutoff" style="font-size:20px;color:#dc2626;"></i>
-                    </div>
-                    <div>
-                        <div style="font-weight:700;font-size:16px;">
-                            {% if form.instance.pk %}Edit Expense{% else %}Record New Expense{% endif %}
-                        </div>
-                        {% if form.instance.pk %}
-                        <div class="text-muted" style="font-size:12px;">
-                            Editing expense #{{ form.instance.pk }} — {{ form.instance.expense_date }}
-                        </div>
-                        {% else %}
-                        <div class="text-muted" style="font-size:12px;">Fill in the details below to record an expense</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <form method="post" novalidate>
-                    {% csrf_token %}
-
-                    {% if form.non_field_errors %}
-                    <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:13px;border-radius:10px;">
-                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-                    </div>
-                    {% endif %}
-
-                    {# ── ROW: Joint + Category ── #}
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label" style="font-size:12px;font-weight:600;color:#374151;">
-                                Joint <span class="text-danger">*</span>
-                            </label>
-                            {{ form.joint }}
-                            {% if form.joint.errors %}
-                            <div class="invalid-feedback d-block" style="font-size:11px;">{{ form.joint.errors|join:", " }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" style="font-size:12px;font-weight:600;color:#374151;">
-                                Category <span class="text-danger">*</span>
-                            </label>
-                            {{ form.category }}
-                            {% if form.category.errors %}
-                            <div class="invalid-feedback d-block" style="font-size:11px;">{{ form.category.errors|join:", " }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    {# ── Description ── #}
-                    <div class="mb-3">
-                        <label class="form-label" style="font-size:12px;font-weight:600;color:#374151;">
-                            Description <span class="text-danger">*</span>
-                        </label>
-                        {{ form.description }}
-                        {% if form.description.errors %}
-                        <div class="invalid-feedback d-block" style="font-size:11px;">{{ form.description.errors|join:", " }}</div>
-                        {% endif %}
-                    </div>
-
-                    {# ── ROW: Amount + Payment Method ── #}
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label" style="font-size:12px;font-weight:600;color:#374151;">
-                                Amount (USD) <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text" style="font-weight:700;background:#f3f4f6;border-color:#e5e7eb;">$</span>
-                                {{ form.amount }}
-                            </div>
-                            {% if form.amount.errors %}
-                            <div class="invalid-feedback d-block" style="font-size:11px;">{{ form.amount.errors|join:", " }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" style="font-size:12px;font-weight:600;color:#374151;">
-                                Payment Method <span class="text-danger">*</span>
-                            </label>
-                            {{ form.payment_method }}
-                            {% if form.payment_method.errors %}
-                            <div class="invalid-feedback d-block" style="font-size:11px;">{{ form.payment_method.errors|join:", " }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    {# ── ROW: Date + Reference ── #}
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label" style="font-size:12px;font-weight:600;color:#374151;">
-                                Expense Date <span class="text-danger">*</span>
-                            </label>
-                            {{ form.expense_date }}
-                            {% if form.expense_date.errors %}
-                            <div class="invalid-feedback d-block" style="font-size:11px;">{{ form.expense_date.errors|join:", " }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label" style="font-size:12px;font-weight:600;color:#374151;">Reference</label>
-                            {{ form.reference }}
-                        </div>
-                    </div>
-
-                    {# ── Notes ── #}
-                    <div class="mb-4">
-                        <label class="form-label" style="font-size:12px;font-weight:600;color:#374151;">Notes</label>
-                        {{ form.notes }}
-                    </div>
-
-                    {# ── ACTIONS ── #}
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-danger btn-sm px-4" style="border-radius:8px;font-weight:600;">
-                            <i class="bi bi-check-lg me-1"></i>
-                            {% if form.instance.pk %}Save Changes{% else %}Record Expense{% endif %}
-                        </button>
-                        <a href="{% url 'expense:expense_list' %}" class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;">
-                            Cancel
-                        </a>
-                    </div>
-
-                </form>
-            </div>
+<div style="max-width:560px;">
+  <div class="gx-card">
+    <div class="gx-card-head">
+      <div class="gx-card-title">
+        <i class="bi bi-wallet2"></i>
+        {% if expense %}Update expense details{% else %}Enter expense details{% endif %}
+      </div>
+    </div>
+    <div class="gx-card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          {% for field in form %}
+          <div {% if field.field.widget.attrs.class == 'full' or field.name == 'description' or field.name == 'notes' %}style="grid-column:1/-1;"{% endif %}>
+            <label class="gx-label">{{ field.label }}{% if field.field.required %} <span style="color:var(--red);">*</span>{% endif %}</label>
+            {{ field }}
+            {% if field.errors %}<div style="color:var(--red);font-size:11px;margin-top:3px;">{{ field.errors.0 }}</div>{% endif %}
+            {% if field.help_text %}<div style="font-size:11px;color:var(--ink-3);margin-top:3px;">{{ field.help_text }}</div>{% endif %}
+          </div>
+          {% endfor %}
         </div>
 
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" style="margin-top:16px;">{{ form.non_field_errors.0 }}</div>
+        {% endif %}
+
+        <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+          <button type="submit" class="gx-btn gx-btn-primary">
+            <i class="bi bi-check2"></i> {% if expense %}Save Changes{% else %}Record Expense{% endif %}
+          </button>
+          <a href="{% url 'expense:expense_list' %}" class="gx-btn gx-btn-ghost">Cancel</a>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 {% endblock %}

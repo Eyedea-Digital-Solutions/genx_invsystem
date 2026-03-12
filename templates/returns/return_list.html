@@ -1,218 +1,134 @@
 {% extends 'base.html' %}
-{% block title %}Returns{% endblock %}
-{% block page_title %}Returns & Refunds{% endblock %}
 
-{% block extra_css %}
-<style>
-/* ── STAT STRIP ── */
-.ret-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
-  margin-bottom: 22px;
-}
-.ret-stat {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  padding: 16px 18px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.05);
-}
-.ret-stat-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; margin-bottom: 10px;
-}
-.ret-stat-val { font-size: 20px; font-weight: 800; line-height: 1.1; }
-.ret-stat-lbl { font-size: 10px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
-
-/* ── FILTER BAR ── */
-.ret-filter {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px 16px;
-  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
-  margin-bottom: 18px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.04);
-}
-
-/* ── TABLE CARD ── */
-.ret-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,.05);
-}
-.ret-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.ret-table thead th {
-  background: #f9fafb;
-  padding: 10px 14px;
-  font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .8px;
-  color: #6b7280;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left; white-space: nowrap;
-}
-.ret-table tbody tr { border-bottom: 1px solid #f3f4f6; transition: background .08s; }
-.ret-table tbody tr:last-child { border-bottom: none; }
-.ret-table tbody tr:hover { background: #fafafa; }
-.ret-table td { padding: 11px 14px; vertical-align: middle; }
-
-/* ── REFUND TYPE BADGES ── */
-.badge-cash    { background: #dcfce7; color: #166534; }
-.badge-credit  { background: #ede9fe; color: #5b21b6; }
-.badge-reversal{ background: #dbeafe; color: #1e40af; }
-.ret-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 9px; border-radius: 20px;
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
-}
-
-/* ── REASON CHIP ── */
-.reason-chip {
-  background: #f3f4f6; color: #6b7280;
-  padding: 2px 8px; border-radius: 5px;
-  font-size: 11px; font-style: italic;
-}
-
-.ret-action-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 10px; border-radius: 6px;
-  font-size: 11px; font-weight: 600;
-  border: 1px solid #e5e7eb; background: #f9fafb;
-  color: #374151; text-decoration: none;
-  transition: all .1s;
-}
-.ret-action-btn:hover { background: #f3f4f6; color: #111; }
-
-.empty-state { text-align: center; padding: 64px 20px; color: #9ca3af; }
-.empty-state i { font-size: 42px; display: block; margin-bottom: 12px; }
-</style>
-{% endblock %}
+{% block title %}Returns History{% endblock %}
+{% block page_title %}Returns{% endblock %}
 
 {% block content %}
-
-{# ── STATS ── #}
-<div class="ret-stats">
-  <div class="ret-stat">
-    <div class="ret-stat-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-arrow-return-left"></i></div>
-    <div class="ret-stat-val">{{ total_returns|default:0 }}</div>
-    <div class="ret-stat-lbl">Total Returns</div>
-  </div>
-  <div class="ret-stat">
-    <div class="ret-stat-icon" style="background:#fef3c7;color:#d97706;"><i class="bi bi-currency-dollar"></i></div>
-    <div class="ret-stat-val">${{ total_refunded|default:0|floatformat:2 }}</div>
-    <div class="ret-stat-lbl">Total Refunded</div>
-  </div>
-  <div class="ret-stat">
-    <div class="ret-stat-icon" style="background:#dcfce7;color:#16a34a;"><i class="bi bi-cash"></i></div>
-    <div class="ret-stat-val">{{ cash_returns|default:0 }}</div>
-    <div class="ret-stat-lbl">Cash Refunds</div>
-  </div>
-  <div class="ret-stat">
-    <div class="ret-stat-icon" style="background:#ede9fe;color:#7c3aed;"><i class="bi bi-award"></i></div>
-    <div class="ret-stat-val">{{ credit_returns|default:0 }}</div>
-    <div class="ret-stat-lbl">Store Credit</div>
-  </div>
+<div class="gx-breadcrumb">
+    <a href="/">Home</a>
+    <span class="sep">/</span>
+    <span>Returns</span>
 </div>
 
-{# ── FILTER BAR ── #}
-<div class="ret-filter">
-  <form method="get" style="display:contents;">
-    <input type="text" name="q" value="{{ search|default:'' }}"
-           class="form-control form-control-sm" style="width:200px;"
-           placeholder="Search receipt #…">
-    <select name="refund_type" class="form-select form-select-sm" style="width:160px;">
-      <option value="">All Types</option>
-      <option value="cash"     {% if refund_filter == 'cash'     %}selected{% endif %}>Cash Refund</option>
-      <option value="credit"   {% if refund_filter == 'credit'   %}selected{% endif %}>Store Credit</option>
-      <option value="reversal" {% if refund_filter == 'reversal' %}selected{% endif %}>Reversal</option>
-    </select>
-    <input type="date" name="date_from" value="{{ date_from|default:'' }}"
-           class="form-control form-control-sm" style="width:145px;" placeholder="From">
-    <input type="date" name="date_to" value="{{ date_to|default:'' }}"
-           class="form-control form-control-sm" style="width:145px;" placeholder="To">
-    <button type="submit" class="btn btn-dark btn-sm">Filter</button>
-    <a href="{% url 'returns:return_list' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
-  </form>
-  <div style="margin-left:auto;">
-    <a href="{% url 'returns:return_create' %}" class="btn btn-sm" style="background:#e94560;color:#fff;font-weight:600;">
-      <i class="bi bi-plus-lg me-1"></i>Process Return
+<div class="page-header">
+    <div class="page-header-left">
+        <h1><i class="bi bi-arrow-return-left" style="color:var(--accent2);margin-right:8px;"></i>Returns History</h1>
+        <p>All processed returns and refunds</p>
+    </div>
+    <a href="/returns/" class="btn-gx btn-gx-danger">
+        <i class="bi bi-plus-lg"></i> New Return
     </a>
-  </div>
 </div>
 
-{# ── TABLE ── #}
-<div class="ret-card">
-  <table class="ret-table">
-    <thead>
-      <tr>
-        <th>Return #</th>
-        <th>Original Receipt</th>
-        <th class="d-none d-md-table-cell">Joint</th>
-        <th>Refund Type</th>
-        <th class="d-none d-lg-table-cell">Reason</th>
-        <th class="d-none d-md-table-cell">Processed By</th>
-        <th class="text-end">Amount</th>
-        <th class="d-none d-sm-table-cell">Date</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for ret in returns %}
-      <tr>
-        <td style="font-weight:700;font-family:monospace;">{{ ret.return_number }}</td>
-        <td>
-          <a href="{% url 'sales:sale_detail' ret.original_sale.pk %}" style="color:#2563eb;font-weight:600;text-decoration:none;">
-            {{ ret.original_sale.receipt_number }}
-          </a>
-        </td>
-        <td class="d-none d-md-table-cell" style="color:#6b7280;">{{ ret.original_sale.joint.display_name }}</td>
-        <td>
-          {% if ret.refund_type == 'cash' %}
-            <span class="ret-badge badge-cash"><i class="bi bi-cash"></i> Cash</span>
-          {% elif ret.refund_type == 'credit' %}
-            <span class="ret-badge badge-credit"><i class="bi bi-award"></i> Credit</span>
-          {% else %}
-            <span class="ret-badge badge-reversal"><i class="bi bi-arrow-counterclockwise"></i> Reversal</span>
-          {% endif %}
-        </td>
-        <td class="d-none d-lg-table-cell">
-          <span class="reason-chip">{{ ret.reason|default:"—" }}</span>
-        </td>
-        <td class="d-none d-md-table-cell" style="color:#6b7280;font-size:12px;">
-          {{ ret.processed_by.get_full_name|default:ret.processed_by.username }}
-        </td>
-        <td class="text-end" style="font-weight:700;color:#dc2626;">
-          ${{ ret.refund_amount|floatformat:2 }}
-        </td>
-        <td class="d-none d-sm-table-cell" style="color:#6b7280;font-size:12px;white-space:nowrap;">
-          {{ ret.created_at|date:"d M Y, H:i" }}
-        </td>
-        <td>
-          <a href="{% url 'returns:return_detail' ret.pk %}" class="ret-action-btn">
-            <i class="bi bi-eye"></i> View
-          </a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="9">
-          <div class="empty-state">
-            <i class="bi bi-arrow-return-left"></i>
-            <div style="font-size:15px;font-weight:600;color:#374151;margin-bottom:6px;">No returns yet</div>
-            <div style="font-size:13px;margin-bottom:16px;">Process a return by searching for a receipt number</div>
-            <a href="{% url 'returns:return_create' %}" class="btn btn-sm" style="background:#e94560;color:#fff;font-weight:600;">
-              <i class="bi bi-plus-lg me-1"></i>Process Return
-            </a>
-          </div>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<!-- FILTER BAR -->
+<div class="filter-bar">
+    <form method="get" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;width:100%;">
+        <div>
+            <label class="gx-form-label">Date From</label>
+            <input type="date" name="date_from" class="gx-input" value="{{ request.GET.date_from }}">
+        </div>
+        <div>
+            <label class="gx-form-label">Date To</label>
+            <input type="date" name="date_to" class="gx-input" value="{{ request.GET.date_to }}">
+        </div>
+        <div>
+            <label class="gx-form-label">Reason</label>
+            <select name="reason" class="gx-select">
+                <option value="">All Reasons</option>
+                <option value="defective" {% if request.GET.reason == 'defective' %}selected{% endif %}>Defective</option>
+                <option value="wrong_item" {% if request.GET.reason == 'wrong_item' %}selected{% endif %}>Wrong Item</option>
+                <option value="changed_mind" {% if request.GET.reason == 'changed_mind' %}selected{% endif %}>Changed Mind</option>
+                <option value="size_exchange" {% if request.GET.reason == 'size_exchange' %}selected{% endif %}>Size Exchange</option>
+                <option value="other" {% if request.GET.reason == 'other' %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+        <div>
+            <label class="gx-form-label">Joint</label>
+            <select name="joint" class="gx-select">
+                <option value="">All Joints</option>
+                {% for joint in joints %}
+                <option value="{{ joint.id }}" {% if request.GET.joint == joint.id|stringformat:"s" %}selected{% endif %}>{{ joint.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+            <button type="submit" class="btn-gx btn-gx-primary btn-gx-sm">
+                <i class="bi bi-funnel"></i> Filter
+            </button>
+            <a href="/returns/list/" class="btn-gx btn-gx-ghost btn-gx-sm">Clear</a>
+        </div>
+    </form>
 </div>
 
+<!-- RETURNS TABLE -->
+<div class="gx-card">
+    <div class="gx-card-head">
+        <div class="gx-card-title"><i class="bi bi-list-ul"></i> Returns</div>
+        <span style="font-size:12px;color:#888;">{{ returns|length }} record{{ returns|length|pluralize }}</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="gx-table">
+            <thead>
+                <tr>
+                    <th>Return #</th>
+                    <th>Original Sale</th>
+                    <th>Date</th>
+                    <th>Cashier</th>
+                    <th>Joint</th>
+                    <th>Reason</th>
+                    <th>Refund Method</th>
+                    <th class="text-end">Refund Amount</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ret in returns %}
+                <tr>
+                    <td>
+                        <span style="font-family:var(--mono);font-weight:600;font-size:12px;">
+                            #{{ ret.id }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="/sales/{{ ret.sale.id }}/"
+                           style="color:var(--accent);font-weight:600;text-decoration:none;font-size:12px;font-family:var(--mono);">
+                            {{ ret.sale.receipt_number|default:ret.sale.id }}
+                        </a>
+                    </td>
+                    <td style="font-size:12px;">{{ ret.created_at|date:"d M Y, H:i" }}</td>
+                    <td style="font-size:12px;">{{ ret.processed_by.get_full_name|default:ret.processed_by.username }}</td>
+                    <td>
+                        <span class="gx-badge gx-badge-neutral">{{ ret.sale.joint.display_name|default:ret.sale.joint }}</span>
+                    </td>
+                    <td>
+                        <span class="gx-badge {% if ret.reason == 'defective' %}gx-badge-danger{% elif ret.reason == 'changed_mind' %}gx-badge-warning{% else %}gx-badge-info{% endif %}">
+                            {{ ret.get_reason_display|default:ret.reason }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="gx-badge {% if ret.refund_method == 'cash' %}gx-badge-success{% elif ret.refund_method == 'ecocash' %}gx-badge-info{% elif ret.refund_method == 'store_credit' %}gx-badge-purple{% else %}gx-badge-neutral{% endif %}">
+                            {{ ret.get_refund_method_display|default:ret.refund_method }}
+                        </span>
+                    </td>
+                    <td class="text-end" style="font-weight:700;color:var(--accent2);">
+                        ${{ ret.refund_amount|floatformat:2 }}
+                    </td>
+                    <td>
+                        <a href="/returns/{{ ret.id }}/" class="btn-gx btn-gx-ghost btn-gx-xs">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" style="text-align:center;padding:40px;color:#aaa;">
+                        <i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:0.4;"></i>
+                        No returns found
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

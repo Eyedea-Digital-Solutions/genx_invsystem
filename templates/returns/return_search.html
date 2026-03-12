@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Returns{% endblock %}
+{% block page_title %}Returns{% endblock %}
+
+{% block content %}
+<div class="gx-breadcrumb">
+    <a href="/">Home</a>
+    <span class="sep">/</span>
+    <span>Returns</span>
+</div>
+
+<div class="page-header">
+    <div class="page-header-left">
+        <h1><i class="bi bi-arrow-return-left" style="color:var(--accent2);margin-right:8px;"></i>Process Return</h1>
+        <p>Search for the original sale by receipt number or sale ID</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+
+        <!-- SEARCH FORM -->
+        <div class="gx-card mb-4">
+            <div class="gx-card-head">
+                <div class="gx-card-title">
+                    <i class="bi bi-search"></i> Find Sale
+                </div>
+            </div>
+            <div class="gx-card-body">
+                <form method="get" action="">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="gx-form-label">Receipt / Sale Number</label>
+                        {% if form.receipt_number %}
+                            {{ form.receipt_number }}
+                        {% else %}
+                            <input type="text"
+                                   name="receipt_number"
+                                   class="gx-input"
+                                   placeholder="e.g. RCP-00123 or sale ID"
+                                   value="{{ request.GET.receipt_number|default:'' }}"
+                                   autofocus>
+                        {% endif %}
+                        <div style="font-size:11px;color:#999;margin-top:5px;">
+                            Enter the receipt number printed on the customer's receipt.
+                        </div>
+                    </div>
+
+                    {% for field in form %}
+                        {% if field.name != 'receipt_number' %}
+                        <div class="mb-3">
+                            <label class="gx-form-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div style="color:var(--accent2);font-size:11px;margin-top:4px;">{{ field.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if error %}
+                    <div class="gx-alert gx-alert-danger mb-3">
+                        <i class="bi bi-exclamation-circle"></i>
+                        {{ error }}
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn-gx btn-gx-primary w-100">
+                        <i class="bi bi-search"></i> Search Sale
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- SALE FOUND — SHOW DETAILS -->
+        {% if sale %}
+        <div class="gx-card" style="border-color: var(--accent); border-width: 2px;">
+            <div class="gx-card-head" style="background: #f5f3ff;">
+                <div class="gx-card-title">
+                    <i class="bi bi-receipt" style="color:var(--accent);"></i>
+                    Sale #{{ sale.receipt_number|default:sale.id }}
+                </div>
+                <span class="gx-badge gx-badge-success">Found</span>
+            </div>
+            <div class="gx-card-body">
+
+                <!-- Sale Meta -->
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <div style="font-family:var(--mono);font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Date</div>
+                        <div style="font-weight:600;font-size:13px;">{{ sale.created_at|date:"d M Y, H:i" }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div style="font-family:var(--mono);font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Cashier</div>
+                        <div style="font-weight:600;font-size:13px;">{{ sale.cashier.get_full_name|default:sale.cashier.username }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div style="font-family:var(--mono);font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Joint</div>
+                        <div style="font-weight:600;font-size:13px;">{{ sale.joint.display_name|default:sale.joint }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div style="font-family:var(--mono);font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Total</div>
+                        <div style="font-weight:800;font-size:16px;color:var(--accent);">${{ sale.total|floatformat:2 }}</div>
+                    </div>
+                    {% if sale.customer %}
+                    <div class="col-12">
+                        <div style="font-family:var(--mono);font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">Customer</div>
+                        <div style="font-weight:600;font-size:13px;">
+                            <i class="bi bi-person" style="color:var(--accent);"></i>
+                            {{ sale.customer.get_full_name|default:sale.customer }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Sale Items -->
+                <div style="font-family:var(--mono);font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Items</div>
+                <table class="gx-table mb-4">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in sale.items.all %}
+                        <tr>
+                            <td>
+                                <div style="font-weight:600;">{{ item.product.name }}</div>
+                                {% if item.product.sku %}
+                                <div style="font-family:var(--mono);font-size:10px;color:#aaa;">{{ item.product.sku }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">{{ item.quantity }}</td>
+                            <td class="text-end">${{ item.unit_price|floatformat:2 }}</td>
+                            <td class="text-end" style="font-weight:600;">${{ item.subtotal|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center" style="color:#aaa;padding:20px;">No items found</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" style="font-weight:700;">Total</td>
+                            <td class="text-end" style="font-weight:800;color:var(--accent);">${{ sale.total|floatformat:2 }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <!-- Existing Returns Warning -->
+                {% if sale.returns.exists %}
+                <div class="gx-alert gx-alert-warning mb-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    This sale already has {{ sale.returns.count }} return(s) processed against it.
+                </div>
+                {% endif %}
+
+                <!-- Action -->
+                <a href="{% url 'returns:return_create' sale.id %}" class="btn-gx btn-gx-danger w-100">
+                    <i class="bi bi-arrow-return-left"></i> Process Return for This Sale
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

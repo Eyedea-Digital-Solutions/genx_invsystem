@@ -1,51 +1,46 @@
-{% extends "base.html" %}
-{% block title %}Open Cash-Up{% endblock %}
+{% extends 'base.html' %}
+{% block title %}New Cash-Up{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'cashup:dashboard' %}">Cash-Up</a>
+<span class="sep">/</span><span class="current">New</span>
+{% endblock %}
+{% block page_title %}New Cash-Up{% endblock %}
 
 {% block content %}
-<div class="container py-4" style="max-width:560px;">
-  <div class="d-flex align-items-center mb-4">
-    <a href="{% url 'cashup:dashboard' %}" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
-    <h5 class="fw-bold mb-0"><i class="bi bi-cash-stack me-2 text-success"></i>Open New Cash-Up</h5>
+<div class="ph">
+  <div class="ph-left">
+    <h1>Open Cash-Up</h1>
+    <p>Record your opening float before starting your shift</p>
   </div>
+  <a href="{% url 'cashup:dashboard' %}" class="gx-btn gx-btn-ghost"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
 
-  <div class="card shadow-sm">
-    <div class="card-body p-4">
+<div style="max-width:520px;">
+  <div class="gx-card">
+    <div class="gx-card-head">
+      <div class="gx-card-title"><i class="bi bi-plus-circle"></i> Shift Details</div>
+    </div>
+    <div class="gx-card-body">
       <form method="post">
         {% csrf_token %}
-
-        <div class="mb-3">
-          <label class="form-label fw-semibold">Joint</label>
-          {{ form.joint }}
-          {% if form.joint.errors %}<div class="text-danger small mt-1">{{ form.joint.errors }}</div>{% endif %}
-        </div>
-
-        <div class="row g-3 mb-3">
-          <div class="col">
-            <label class="form-label fw-semibold">Shift</label>
-            {{ form.shift }}
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          {% for field in form %}
+          <div>
+            <label class="gx-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div style="color:var(--red);font-size:11px;margin-top:4px;">{{ field.errors.0 }}</div>{% endif %}
+            {% if field.help_text %}<div style="font-size:11px;color:var(--ink-3);margin-top:3px;">{{ field.help_text }}</div>{% endif %}
           </div>
-          <div class="col">
-            <label class="form-label fw-semibold">Date</label>
-            {{ form.shift_date }}
-          </div>
+          {% endfor %}
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors.0 }}</div>
+          {% endif %}
+
+          <button type="submit" class="gx-btn gx-btn-success" style="margin-top:4px;">
+            <i class="bi bi-check2"></i> Open Cash-Up
+          </button>
         </div>
-
-        <div class="mb-4">
-          <label class="form-label fw-semibold">Opening Float</label>
-          <div class="input-group">
-            <span class="input-group-text">$</span>
-            {{ form.opening_float }}
-          </div>
-          <div class="form-text">Cash in the till before any sales. Usually your closing float from yesterday.</div>
-        </div>
-
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger small">{{ form.non_field_errors }}</div>
-        {% endif %}
-
-        <button type="submit" class="btn btn-success w-100 fw-semibold">
-          <i class="bi bi-play-circle me-2"></i>Open & Start Counting
-        </button>
       </form>
     </div>
   </div>
