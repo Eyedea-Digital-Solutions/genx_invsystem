@@ -3,7 +3,10 @@ from django.utils.html import format_html
 from django.utils import timezone
 
 from inventory_system.admin_site import genx_admin_site
-from .models import Promotion, SpendThresholdPromo, FreeGiftPromo, BundlePromo
+from .models import (
+    Promotion, SpendThresholdPromo, FreeGiftPromo, BundlePromo,
+    CategoryTierFreeRule, CategoryTierFreeItem, Bundle, BundleItem,
+)
 
 
 # ─── SUB-RULE INLINES ────────────────────────────────────────────────────────
@@ -19,7 +22,7 @@ class FreeGiftInline(admin.StackedInline):
     fields  = ['gift_product', 'quantity']
 
 
-class BundleInline(admin.StackedInline):
+class BundlePromoInline(admin.StackedInline):
     model   = BundlePromo
     extra   = 0
     fields  = ['required_products', 'bundle_price', 'discount_percent']
@@ -33,7 +36,7 @@ class PromotionAdmin(admin.ModelAdmin):
     search_fields   = ['name', 'description']
     list_editable   = ['is_active']
     ordering        = ['-start_date']
-    inlines         = [SpendThresholdInline, FreeGiftInline, BundleInline]
+    inlines         = [SpendThresholdInline, FreeGiftInline, BundlePromoInline]
 
     fieldsets = (
         ('Details', {'fields': ('joint', 'name', 'description', 'promo_type', 'is_active')}),
@@ -89,13 +92,85 @@ class PromotionAdmin(admin.ModelAdmin):
         self.message_user(request, f'{n} promotion(s) deactivated.')
 
 
+# ── Category Tier Free Rules ──────────────────────────────────────────────────
+
+class CategoryTierFreeItemInline(admin.TabularInline):
+    model      = CategoryTierFreeItem
+    extra      = 1
+    fields     = ('product', 'quantity')
+    # Use raw_id_fields instead of autocomplete_fields — no need to register
+    # Product admin with search_fields just to satisfy Django's autocomplete check.
+    raw_id_fields = ('product',)
+
+
+@admin.register(CategoryTierFreeRule)
+class CategoryTierFreeRuleAdmin(admin.ModelAdmin):
+    list_display  = ('name', 'category', 'joint_display', 'price_range', 'label', 'is_active')
+    list_filter   = ('is_active', 'category', 'joint')
+    list_editable = ('is_active',)
+    inlines       = [CategoryTierFreeItemInline]
+    fieldsets = (
+        (None, {'fields': ('name', 'is_active', 'label')}),
+        ('Trigger', {'fields': ('category', 'joint')}),
+        ('Price range', {
+            'description': (
+                'Rule fires when product unit price ≥ min_price and < max_price. '
+                'Leave max_price blank for "and above" tiers.'
+            ),
+            'fields': ('min_price', 'max_price'),
+        }),
+    )
+
+    @admin.display(description='Branch')
+    def joint_display(self, obj):
+        return obj.joint or '— all branches —'
+
+    @admin.display(description='Price range')
+    def price_range(self, obj):
+        upper = f'–${obj.max_price}' if obj.max_price is not None else '+'
+        return f'${obj.min_price}{upper}'
+
+
+# ── Bundles ───────────────────────────────────────────────────────────────────
+
+class BundleItemInline(admin.TabularInline):
+    model         = BundleItem
+    extra         = 1
+    fields        = ('product', 'quantity', 'is_free')
+    raw_id_fields = ('product',)
+
+
+@admin.register(Bundle)
+class BundleAdmin(admin.ModelAdmin):
+    list_display      = ('name', 'sku', 'price', 'branch_display', 'is_active', 'created_at')
+    list_filter       = ('is_active', 'joints')
+    list_editable     = ('is_active',)
+    search_fields     = ('name', 'sku')
+    filter_horizontal = ('joints',)
+    inlines           = [BundleItemInline]
+    fieldsets = (
+        (None, {'fields': ('name', 'sku', 'description', 'price', 'image', 'is_active')}),
+        ('Branch availability', {
+            'description': 'Select one or more branches. Leave empty to make available everywhere.',
+            'fields': ('joints',),
+        }),
+    )
+
+    @admin.display(description='Branches')
+    def branch_display(self, obj):
+        joints = list(obj.joints.all())
+        if not joints:
+            return '— all branches —'
+        return ', '.join(j.display_name for j in joints)
+
+
+# ─── Register on custom admin site too ───────────────────────────────────────
 genx_admin_site.register(Promotion, PromotionAdmin)
 
 
-# ─── SUB-RULE STANDALONE ADMINS ──────────────────────────────────────────────
 class SpendThresholdAdmin(admin.ModelAdmin):
-    list_display = ['promotion', '__str__']
-    list_filter  = ['promotion__joint']
+    list_display  = ['promotion', '__str__']
+    list_filter   = ['promotion__joint']
     search_fields = ['promotion__name']
 
 genx_admin_site.register(SpendThresholdPromo, SpendThresholdAdmin)
@@ -109,9 +184,9 @@ class FreeGiftAdmin(admin.ModelAdmin):
 genx_admin_site.register(FreeGiftPromo, FreeGiftAdmin)
 
 
-class BundleAdmin(admin.ModelAdmin):
+class BundlePromoAdmin(admin.ModelAdmin):
     list_display  = ['promotion', '__str__']
     list_filter   = ['promotion__joint']
     search_fields = ['promotion__name']
 
-genx_admin_site.register(BundlePromo, BundleAdmin)
+genx_admin_site.register(BundlePromo, BundlePromoAdmin)
