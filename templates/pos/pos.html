@@ -278,6 +278,72 @@
         }
         .customer-input:focus { outline: none; border-color: var(--accent); }
         .customer-input::placeholder { color: var(--muted); }
+
+        /* ─── CUSTOMER LOOKUP DROPDOWN ─── */
+        #customer-results {
+            display: none;
+            position: absolute;
+            left: 0; right: 0; top: 100%;
+            z-index: 200;
+            background: #1e1e28;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 6px;
+            max-height: 180px;
+            overflow-y: auto;
+            margin-top: 2px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .cx-result-row {
+            padding: 8px 10px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 12px;
+            transition: background 0.1s;
+        }
+        .cx-result-row:last-child { border-bottom: none; }
+        .cx-result-row:hover { background: rgba(255,255,255,0.07); }
+        .cx-result-name { font-weight: 700; color: #fff; }
+        .cx-result-meta { color: var(--muted); margin-top: 1px; }
+
+        /* ─── LOYALTY BADGE ─── */
+        #loyalty-badge {
+            display: none;
+            margin-top: 6px;
+            padding: 7px 10px;
+            border-radius: 6px;
+            background: rgba(255,170,0,0.1);
+            border: 1px solid rgba(255,170,0,0.25);
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+        #loyalty-badge .pts { color: #ffaa00; font-weight: 700; }
+        #loyalty-badge .cx-name { font-weight: 700; color: #fff; }
+        #loyalty-clear-btn {
+            margin-left: auto;
+            background: none; border: none;
+            color: var(--muted); cursor: pointer;
+            font-size: 17px; line-height: 1; padding: 0;
+        }
+        #loyalty-clear-btn:hover { color: #fff; }
+
+        /* ─── LOYALTY EARNED TOAST ─── */
+        #loyalty-toast {
+            display: none;
+            position: fixed;
+            bottom: 70px; right: 16px;
+            background: rgba(255,170,0,0.15);
+            border: 1px solid rgba(255,170,0,0.4);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffcc44;
+            z-index: 9999;
+            animation: toastIn 0.3s ease;
+        }
+        @keyframes toastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
         .totals-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
         .totals-row.grand { font-size: 20px; font-weight: 900; color: #fff; padding: 8px 0; border-top: 1px solid var(--border); margin-top: 2px; }
         .totals-row .lbl { color: var(--muted); }
@@ -495,8 +561,35 @@
             <!-- Customer -->
             <div style="margin-bottom:10px;">
                 <div class="section-label">Customer</div>
-                <input type="text" class="customer-input" id="customer-name" placeholder="Name (optional)">
-                <input type="tel"  class="customer-input" id="customer-phone" placeholder="Phone (optional)" style="margin-bottom:0;">
+
+                <!-- Hidden customer ID sent with sale -->
+                <input type="hidden" id="customer-id" value="">
+
+                <!-- Phone lookup -->
+                <div style="position:relative;">
+                    <input type="tel" class="customer-input" id="customer-phone"
+                           placeholder="Phone — type to find customer…"
+                           autocomplete="off"
+                           oninput="customerSearch(this.value)"
+                           style="margin-bottom:0;">
+                    <div id="customer-results"></div>
+                </div>
+
+                <!-- Name field (below phone) -->
+                <input type="text" class="customer-input" id="customer-name"
+                       placeholder="Name (optional)"
+                       style="margin-top:5px;margin-bottom:0;">
+
+                <!-- Loyalty badge — visible when a loyalty customer is linked -->
+                <div id="loyalty-badge">
+                    <span style="font-size:15px;">⭐</span>
+                    <div>
+                        <span class="cx-name" id="loyalty-customer-name"></span>
+                        <span class="pts" id="loyalty-points"></span>
+                        <span style="color:var(--muted);"> pts</span>
+                    </div>
+                    <button id="loyalty-clear-btn" onclick="clearCustomer()" title="Remove customer">×</button>
+                </div>
             </div>
 
             <!-- Totals -->
@@ -548,6 +641,9 @@
     </div>
 </div>
 
+<!-- Loyalty points earned toast -->
+<div id="loyalty-toast"></div>
+
 <!-- ═══ HELD SALES MODAL ═══ -->
 <div class="modal fade" id="heldModal" tabindex="-1">
     <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -596,6 +692,12 @@
                     </div>
                 </div>
 
+                <!-- Loyalty earned display -->
+                <div id="modal-loyalty" style="display:none;background:rgba(255,170,0,0.08);border:1px solid rgba(255,170,0,0.25);border-radius:8px;padding:8px 10px;margin-bottom:12px;font-size:12px;text-align:left;">
+                    <span style="color:#ffaa00;font-weight:700;">⭐ </span>
+                    <span id="modal-loyalty-text" style="color:#ffcc44;font-weight:700;"></span>
+                </div>
+
                 <div style="color:var(--muted);font-size:12px;margin-bottom:14px;" id="modal-subtitle">Transaction completed</div>
                 <a id="receipt-link" href="#" target="_blank" class="btn btn-sm btn-outline-light w-100 mb-2">
                     <i class="bi bi-printer me-2"></i>Print Receipt
@@ -612,13 +714,14 @@
 <script>
 const CSRF = '{{ csrf_token }}';
 const URLS = {
-    scan:       '{% url "sales:pos_scan" %}',
-    search:     '{% url "sales:pos_search" %}',
-    categories: '{% url "sales:pos_categories" %}',
-    updateCart: '{% url "sales:pos_update_cart" %}',
-    complete:   '{% url "sales:pos_complete" %}',
-    hold:       '{% url "sales:pos_hold" %}',
-    recall:     id => `/sales/pos/recall/${id}/`,
+    scan:          '{% url "sales:pos_scan" %}',
+    search:        '{% url "sales:pos_search" %}',
+    categories:    '{% url "sales:pos_categories" %}',
+    updateCart:    '{% url "sales:pos_update_cart" %}',
+    complete:      '{% url "sales:pos_complete" %}',
+    hold:          '{% url "sales:pos_hold" %}',
+    recall:        id => `/sales/pos/recall/${id}/`,
+    customerLookup: '/customers/api/lookup/',
 };
 
 let cart = [];
@@ -649,6 +752,77 @@ function switchPanel(idx) {
 
 function isMobile() { return window.innerWidth <= 768; }
 
+/* ════════════════════════════════════════════════
+   CUSTOMER LOOKUP
+════════════════════════════════════════════════ */
+let customerSearchTimer = null;
+
+function customerSearch(q) {
+    clearTimeout(customerSearchTimer);
+    const res = $('customer-results');
+    // Only clear the linked customer; keep the typed text so user can keep typing
+    $('customer-id').value = '';
+    $('loyalty-badge').style.display = 'none';
+
+    if (q.length < 3) { res.style.display = 'none'; return; }
+
+    customerSearchTimer = setTimeout(async () => {
+        try {
+            const data = await (await fetch(
+                `${URLS.customerLookup}?q=${encodeURIComponent(q)}`
+            )).json();
+
+            if (!data.customers || !data.customers.length) {
+                res.style.display = 'none';
+                return;
+            }
+
+            res.innerHTML = data.customers.map(c => `
+                <div class="cx-result-row"
+                     onclick="selectCustomer(${c.id}, ${JSON.stringify(c.name)}, ${JSON.stringify(c.phone)}, ${c.loyalty_points})">
+                    <div class="cx-result-name">${c.name}</div>
+                    <div class="cx-result-meta">${c.phone || '—'} &nbsp;·&nbsp; ⭐ ${c.loyalty_points} pts · ${c.customer_type}</div>
+                </div>
+            `).join('');
+            res.style.display = 'block';
+        } catch (e) {
+            res.style.display = 'none';
+        }
+    }, 280);
+}
+
+function selectCustomer(id, name, phone, points) {
+    $('customer-id').value    = id;
+    $('customer-phone').value = phone;
+    $('customer-name').value  = name;
+    $('customer-results').style.display = 'none';
+
+    // Show loyalty badge
+    $('loyalty-customer-name').textContent = name;
+    $('loyalty-points').textContent        = points;
+    $('loyalty-badge').style.display       = 'flex';
+}
+
+function clearCustomer(clearInputsToo = true) {
+    $('customer-id').value = '';
+    if (clearInputsToo) {
+        $('customer-phone').value = '';
+        $('customer-name').value  = '';
+    }
+    $('loyalty-badge').style.display       = 'none';
+    $('customer-results').style.display    = 'none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+    if (!e.target.closest('#customer-phone') && !e.target.closest('#customer-results')) {
+        $('customer-results').style.display = 'none';
+    }
+});
+
+/* ════════════════════════════════════════════════
+   CHANGE CALCULATOR
+════════════════════════════════════════════════ */
 function calcChange() {
     const tendered = parseFloat($('cash-tendered').value) || 0;
     const change = tendered - currentTotal;
@@ -699,6 +873,9 @@ function resetChangeCalc() {
     if (r) r.style.display = 'none';
 }
 
+/* ════════════════════════════════════════════════
+   BARCODE / SEARCH
+════════════════════════════════════════════════ */
 const barcodeEl = $('barcode-input');
 
 barcodeEl.addEventListener('keydown', e => {
@@ -799,7 +976,6 @@ function renderProductGrid(products) {
                       p.promotion_label ? '<span class="prod-badge pb-sale">SALE</span>' : '';
         const orig  = p.original_price !== p.price ? `<span class="orig">$${p.original_price}</span>` : '';
 
-        // Image or placeholder
         const imgHtml = p.image_url
             ? `<div class="prod-img-wrap"><img class="prod-img" src="${p.image_url}" alt="${p.name}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'prod-img-placeholder\\'><i class=\\'bi bi-image\\'></i></div>'"></div>`
             : `<div class="prod-img-wrap"><div class="prod-img-placeholder"><i class="bi bi-image"></i></div></div>`;
@@ -827,13 +1003,13 @@ function addToCart(product) {
         existing.qty++;
     } else {
         cart.push({
-            product_id: product.id,
-            name: product.name,
-            qty: 1,
-            unit_price: product.price,
+            product_id:   product.id,
+            name:         product.name,
+            qty:          1,
+            unit_price:   product.price,
             is_free_gift: false,
-            promo_label: '',
-            image_url: product.image_url || null,
+            promo_label:  '',
+            image_url:    product.image_url || null,
         });
     }
     updateCart();
@@ -857,17 +1033,16 @@ async function updateCart() {
     });
     const data = await res.json();
 
-    // Preserve image_url from our local cart since the server may not return it
     const imageMap = {};
     cart.forEach(i => { if (i.image_url) imageMap[i.product_id] = i.image_url; });
 
-    cart             = data.items.map(i => ({
+    cart              = data.items.map(i => ({
         ...i,
         image_url: imageMap[i.product_id] || null,
     }));
-    cartDiscount     = parseFloat(data.cart_discount);
+    cartDiscount      = parseFloat(data.cart_discount);
     cartDiscountLabel = data.cart_discount_label;
-    currentTotal     = parseFloat(data.total);
+    currentTotal      = parseFloat(data.total);
     renderCart(data);
     showAccessoryWarnings(data.free_accessory_warnings);
     buildQuickCashBtns();
@@ -875,11 +1050,11 @@ async function updateCart() {
 }
 
 function renderCart(data) {
-    const body  = $('cart-body');
-    const empty = $('cart-empty');
-    const table = $('cart-table');
+    const body   = $('cart-body');
+    const empty  = $('cart-empty');
+    const table  = $('cart-table');
     const banner = $('promo-banner');
-    const real  = cart.filter(i => !i.is_free_gift);
+    const real   = cart.filter(i => !i.is_free_gift);
 
     const badge = $('cart-tab-badge');
     if (badge) {
@@ -908,7 +1083,6 @@ function renderCart(data) {
     }
 
     body.innerHTML = cart.map((item, idx) => {
-        // Thumbnail for cart row
         const thumbHtml = item.image_url
             ? `<img class="cart-thumb" src="${item.image_url}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'cart-thumb-placeholder\\'><i class=\\'bi bi-image\\'></i></div>'">`
             : `<div class="cart-thumb-placeholder"><i class="bi bi-image"></i></div>`;
@@ -1009,13 +1183,17 @@ function clearCart() {
     }
 }
 
+/* ════════════════════════════════════════════════
+   COMPLETE SALE
+════════════════════════════════════════════════ */
 async function completeSale(method) {
     const jid = getJointId();
     if (!jid)  { alert('Select a joint first.'); return; }
     if (!cart.filter(i => !i.is_free_gift).length) { alert('Cart is empty.'); return; }
 
-    const tendered = parseFloat($('cash-tendered').value) || 0;
-    const change   = tendered > 0 ? tendered - currentTotal : 0;
+    const tendered   = parseFloat($('cash-tendered').value) || 0;
+    const change     = tendered > 0 ? tendered - currentTotal : 0;
+    const customerId = parseInt($('customer-id').value) || null;
 
     const res  = await fetch(URLS.complete, {
         method:  'POST',
@@ -1023,6 +1201,7 @@ async function completeSale(method) {
         body: JSON.stringify({
             joint_id:            jid,
             payment_method:      method,
+            customer_id:         customerId,
             customer_name:       $('customer-name').value.trim(),
             customer_phone:      $('customer-phone').value.trim(),
             items:               cart,
@@ -1039,6 +1218,7 @@ async function completeSale(method) {
     $('receipt-number').textContent = data.receipt_number;
     $('receipt-link').href          = data.receipt_url;
 
+    // Change
     const changeDisplay = $('modal-change-display');
     if ((method === 'cash' || method === 'mixed') && tendered > 0) {
         changeDisplay.style.display  = 'block';
@@ -1053,6 +1233,17 @@ async function completeSale(method) {
         $('modal-subtitle').textContent = 'Transaction completed';
     }
 
+    // Loyalty points earned
+    const loyaltyEl = $('modal-loyalty');
+    if (data.loyalty_points_earned > 0) {
+        $('modal-loyalty-text').textContent =
+            `+${data.loyalty_points_earned} pts earned for ${data.customer_name}`;
+        loyaltyEl.style.display = 'block';
+        showLoyaltyToast(`⭐ +${data.loyalty_points_earned} pts — ${data.customer_name}`);
+    } else {
+        loyaltyEl.style.display = 'none';
+    }
+
     new bootstrap.Modal($('receiptModal')).show();
     cart = []; cartDiscount = 0; cartDiscountLabel = ''; currentTotal = 0;
     renderCart(); resetChangeCalc();
@@ -1064,6 +1255,16 @@ async function completeSale(method) {
     }, delay);
 }
 
+function showLoyaltyToast(msg) {
+    const toast = $('loyalty-toast');
+    toast.textContent  = msg;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 4000);
+}
+
+/* ════════════════════════════════════════════════
+   HOLD / RECALL
+════════════════════════════════════════════════ */
 async function holdTransaction() {
     const jid = getJointId();
     if (!jid || !cart.filter(i => !i.is_free_gift).length) return;
@@ -1084,13 +1285,13 @@ async function recallSale(pk) {
     const data = await (await fetch(URLS.recall(pk))).json();
     if (data.success) {
         cart = data.items.map(i => ({
-            product_id:  i.product_id,
-            name:        i.name,
-            qty:         i.qty,
-            unit_price:  i.unit_price,
+            product_id:   i.product_id,
+            name:         i.name,
+            qty:          i.qty,
+            unit_price:   i.unit_price,
             is_free_gift: i.is_free_gift,
-            promo_label: i.promo_label,
-            image_url:   i.image_url || null,
+            promo_label:  i.promo_label,
+            image_url:    i.image_url || null,
         }));
         if (data.customer_name)  $('customer-name').value  = data.customer_name;
         if (data.customer_phone) $('customer-phone').value = data.customer_phone;
@@ -1099,9 +1300,11 @@ async function recallSale(pk) {
     }
 }
 
+/* ════════════════════════════════════════════════
+   NEW SALE / UTILITIES
+════════════════════════════════════════════════ */
 function newSale() {
-    $('customer-name').value  = '';
-    $('customer-phone').value = '';
+    clearCustomer();
     resetChangeCalc();
     if (isMobile()) switchPanel(0); else focusBarcode();
 }

@@ -160,6 +160,7 @@ def pos_categories(request):
     cats = Category.objects.filter(joint_id=joint_id).values('id', 'name', 'icon', 'color')
     return JsonResponse({'categories': list(cats)})
 
+
 @login_required
 @require_POST
 def pos_update_cart(request):
@@ -203,7 +204,6 @@ def pos_update_cart(request):
         if not i.get('is_free_gift')
     ]
 
-    # Load all active accessory rules for these triggers in one query.
     accessory_rules = (
         ProductFreeAccessory.objects
         .select_related('accessory_product__stock')
@@ -211,7 +211,7 @@ def pos_update_cart(request):
     )
 
     trigger_qty_map = {i['product_id']: i['qty'] for i in result['items'] if not i.get('is_free_gift')}
-    accessory_map   = {}   # accessory_product_id → dict
+    accessory_map   = {}
     for rule in accessory_rules:
         aid = rule.accessory_product_id
         trigger_qty = trigger_qty_map.get(rule.trigger_product_id, 1)
@@ -226,7 +226,6 @@ def pos_update_cart(request):
                 'rule_id':    rule.pk,
             }
 
-    # Build warning list for out-of-stock accessories.
     free_accessory_warnings = []
     for aid, acc in accessory_map.items():
         available = acc['product'].current_stock
@@ -242,7 +241,6 @@ def pos_update_cart(request):
                 f"sale will proceed with {available} unit(s)."
             )
 
-    # Add free accessories to the items list (skip fully OOS ones).
     for aid, acc in accessory_map.items():
         available = acc['product'].current_stock
         actual_qty = min(acc['qty'], available)
@@ -257,7 +255,6 @@ def pos_update_cart(request):
             'promo_label':  acc['label'],
         })
 
-    # ── Totals ───────────────────────────────────────────────────────────────
     subtotal = sum(
         i['unit_price'] * i['qty']
         for i in result['items']
@@ -281,7 +278,7 @@ def pos_update_cart(request):
         'cart_discount':          str(result['cart_discount'].quantize(Decimal('0.01'))),
         'cart_discount_label':    result['cart_discount_label'],
         'total':                  str(total.quantize(Decimal('0.01'))),
-        'free_accessory_warnings': free_accessory_warnings,   # ← NEW field
+        'free_accessory_warnings': free_accessory_warnings,
     })
 
 
@@ -292,6 +289,7 @@ def pos_complete(request):
     joint_id            = body.get('joint_id')
     items_data          = body.get('items', [])
     payment_method      = body.get('payment_method', 'cash')
+    customer_id         = body.get('customer_id')
     customer_name       = body.get('customer_name', '')
     customer_phone      = body.get('customer_phone', '')
     cart_discount       = Decimal(str(body.get('cart_discount', '0')))
@@ -319,7 +317,7 @@ def pos_complete(request):
                 'error': f"Insufficient stock for '{p.name}'. Available: {p.current_stock}."
             })
 
-    # ── Free accessory stock check (warn-only, clamp quantity) ───────────────
+    # ── Free accessory stock check ────────────────────────────────────────────
     free_items   = [i for i in items_data if i.get('is_free_gift')]
     free_pids    = [i['product_id'] for i in free_items]
     free_products = {
@@ -327,7 +325,6 @@ def pos_complete(request):
         for p in Product.objects.select_related('stock').filter(pk__in=free_pids)
     }
 
-    # Clamp free quantities to available stock; collect warnings.
     sale_warnings = []
     clamped_free  = []
     for item in free_items:
@@ -341,7 +338,7 @@ def pos_complete(request):
             sale_warnings.append(
                 f"Free accessory '{p.name}' was out of stock and not included."
             )
-            continue   # skip entirely
+            continue
         if actual < needed:
             sale_warnings.append(
                 f"Only {actual} of {needed} free '{p.name}' included (limited stock)."
@@ -388,7 +385,7 @@ def pos_complete(request):
                 'is_free_gift': False,
             })
 
-        # Free accessory items (clamped to available stock)
+        # Free accessory items
         for item in clamped_free:
             p   = item['_product']
             qty = item['qty']
@@ -410,16 +407,52 @@ def pos_complete(request):
                 'is_free_gift': True,
             })
 
+        # ── Link Customer & award loyalty points ──────────────────────────────
+        loyalty_points_earned = 0
+        linked_customer = None
+
+        if customer_id:
+            from customers.models import Customer as CustomerModel
+            try:
+                linked_customer = CustomerModel.objects.get(pk=customer_id, is_active=True)
+            except CustomerModel.DoesNotExist:
+                pass
+
+        # Fall back to phone lookup if no explicit customer_id was matched
+        if not linked_customer and customer_phone:
+            from customers.models import Customer as CustomerModel
+            linked_customer = CustomerModel.objects.filter(
+                phone=customer_phone, is_active=True
+            ).first()
+
+        if linked_customer:
+            sale.customer       = linked_customer
+            sale.customer_name  = sale.customer_name or linked_customer.name
+            sale.customer_phone = sale.customer_phone or linked_customer.phone
+            sale.save(update_fields=['customer', 'customer_name', 'customer_phone'])
+
+            # 1 point per $1 spent (integer part of total)
+            loyalty_points_earned = int(sale.total_amount)
+            if loyalty_points_earned > 0:
+                linked_customer.add_loyalty_points(
+                    points       = loyalty_points_earned,
+                    reason       = f'POS purchase — {sale.receipt_number}',
+                    sale         = sale,
+                    performed_by = request.user,
+                )
+
         SaleAuditLog.objects.create(
             sale         = sale,
             action       = 'created',
             performed_by = request.user,
             details={
-                'source':            'pos',
-                'total':             str(sale.total_amount),
-                'payment_method':    payment_method,
-                'items':             snapshot,
-                'accessory_warnings': sale_warnings,
+                'source':                'pos',
+                'total':                 str(sale.total_amount),
+                'payment_method':        payment_method,
+                'items':                 snapshot,
+                'accessory_warnings':    sale_warnings,
+                'customer_id':           linked_customer.pk if linked_customer else None,
+                'loyalty_points_earned': loyalty_points_earned,
             }
         )
 
@@ -432,7 +465,9 @@ def pos_complete(request):
         'receipt_url':             f'/sales/{sale.pk}/receipt/thermal/',
         'receipt_number':          sale.receipt_number,
         'sale_id':                 sale.pk,
-        'free_accessory_warnings': sale_warnings,   # surfaced to POS UI
+        'free_accessory_warnings': sale_warnings,
+        'loyalty_points_earned':   loyalty_points_earned,
+        'customer_name':           linked_customer.name if linked_customer else '',
     })
 
 
