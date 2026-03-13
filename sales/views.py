@@ -453,6 +453,18 @@ def pos_complete(request):
     if not joint_id or not items_data:
         return JsonResponse({'success': False, 'error': 'Joint and items are required.'})
 
+    # Normalize items: if a client marked an item as 'is_custom' but also
+    # provided a `product_id`, treat it as a regular product so stock will
+    # be deducted. Some POS flows add linked products via the Custom Item
+    # modal and may send them as custom — normalize here to keep server
+    # authoritative about stock changes.
+    for itm in items_data:
+        try:
+            if itm.get('product_id') and itm.get('is_custom'):
+                itm['is_custom'] = False
+        except Exception:
+            pass
+
     # ── Separate item types ───────────────────────────────────────────────────
     regular_items = [i for i in items_data if not i.get('bundle_id') and not i.get('is_free_gift') and not i.get('is_custom')]
     free_items    = [i for i in items_data if i.get('is_free_gift') and not i.get('bundle_id') and not i.get('is_custom')]
@@ -1103,8 +1115,6 @@ def reports(request):
         'month_count': Sale.objects.filter(sale_date__date__gte=month_start, is_held=False).count(),
     })
 
-
-# ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _product_to_dict(product):
     return {

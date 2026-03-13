@@ -391,7 +391,10 @@
                     <input type="text" class="ci-input" id="ci-name" placeholder="e.g. Frame Adjustment, Delivery Fee…" autocomplete="off">
                     <input type="hidden" id="ci-linked-product-id" value="">
                     <div style="margin-top:6px;">
-                        <input type="text" class="ci-input" id="ci-search" placeholder="Search existing products to link… (optional)" autocomplete="off" style="margin-top:6px;font-size:12px;">
+                        <div style="display:flex;gap:6px;margin-top:6px;">
+                            <input type="text" class="ci-input" id="ci-search" placeholder="Search existing products to link… (optional)" autocomplete="off" style="flex:1;font-size:12px;">
+                            <button id="ci-search-btn" type="button" class="shortcut-btn" style="padding:6px 8px;min-width:40px;">🔍</button>
+                        </div>
                         <div id="ci-search-results" style="display:none;background:#111;padding:6px;border-radius:6px;margin-top:6px;max-height:160px;overflow:auto;border:1px solid rgba(255,255,255,0.04);"></div>
                     </div>
                 </div>
@@ -829,6 +832,9 @@ function openCustomItemModal(editCustomId = null) {
     $('ci-price').value = editing ? editing.unit_price  : '';
     $('ci-qty').value   = editing ? editing.qty         : 1;
     $('ci-note').value  = editing ? (editing.item_note || '') : '';
+    // Clear any previously linked product so new custom items remain ad-hoc
+    const ciLinked = $('ci-linked-product-id');
+    if (ciLinked) ciLinked.value = '';
     updateCIPreview();
 
     customModal.show();
@@ -872,7 +878,10 @@ function confirmCustomItem() {
     const editId = $('ci-editing-id').value;
     const linkedProductId = $('ci-linked-product-id').value || null;
 
-    if (!name) { $('ci-name').focus(); $('ci-name').style.borderColor = '#e94560'; return; }
+    // If name is empty, use a sensible default so quick FREE adds still work
+    if (!name) {
+        name = 'Custom Item';
+    }
     $('ci-name').style.borderColor = '';
 
     const priceVal = isNaN(price) ? 0 : Math.max(0, price);
@@ -889,16 +898,13 @@ function confirmCustomItem() {
             item.item_note    = note;
         }
     } else {
-        // If the user linked an existing product in the modal, add it as a
-        // normal product item so the server will deduct stock. Otherwise
-        // add as a custom/ad-hoc item.
         if (linkedProductId) {
             cart.push({
                 product_id:   parseInt(linkedProductId),
                 name:         name,
                 qty:          qty,
                 unit_price:   priceVal.toFixed(2),
-                is_free_gift: isFree,
+                is_free_gift: false,
                 promo_label:  isFree ? 'FREE' : '',
                 item_note:    note,
             });
@@ -927,41 +933,62 @@ function confirmCustomItem() {
 let ciSearchTimer = null;
 const ciSearchEl = $('ci-search');
 const ciResultsEl = $('ci-search-results');
-if (ciSearchEl) {
+    if (ciSearchEl) {
+    // perform a CI search and render results (used by input debounce, Enter key, and button)
+    const performCISearch = async q => {
+        $('ci-linked-product-id').value = '';
+        const jid = getJointId();
+        if (!jid || q.length < 2) { ciResultsEl.style.display='none'; return; }
+        try {
+            const data = await (await fetch(`${URLS.search}?q=${encodeURIComponent(q)}&joint_id=${jid}&filter=all&category_id=`)).json();
+            const items = data.products || [];
+            if (!items.length) { ciResultsEl.innerHTML = '<div style="color:var(--muted);padding:6px;">No products</div>'; ciResultsEl.style.display='block'; return; }
+            ciResultsEl.innerHTML = items.slice(0,8).map(p => {
+                const out = (p.stock <= 0);
+                return `
+                    <div class="ci-result-row" style="padding:6px;cursor:${out? 'not-allowed':'pointer'};border-bottom:1px solid rgba(255,255,255,0.02);opacity:${out?0.55:1};" data-id="${p.id}" data-price="${p.price}" data-name="${p.name}" data-stock="${p.stock}">
+                        <div style="font-weight:700">${p.name}${out? ' <span style="font-weight:600;color:#f87171;">(out of stock)</span>':''}</div>
+                        <div style="font-size:12px;color:var(--muted);">$${p.price} · ${out? 'Out of stock': (p.stock + ' in stock')}</div>
+                    </div>
+                `;
+            }).join('');
+            ciResultsEl.style.display = 'block';
+            Array.from(ciResultsEl.querySelectorAll('.ci-result-row')).forEach(el => {
+                el.addEventListener('click', () => {
+                    const stock = parseInt(el.dataset.stock || '0');
+                    if (stock <= 0) {
+                        // prevent linking an out-of-stock product — instruct user
+                        alert('Selected product is out of stock. Either choose a different product or add as a custom item.');
+                        return;
+                    }
+                    const id = el.dataset.id;
+                    const price = el.dataset.price;
+                    const name = el.dataset.name;
+                    $('ci-linked-product-id').value = id;
+                    $('ci-name').value = name;
+                    $('ci-price').value = price;
+                    updateCIPreview();
+                    ciResultsEl.style.display = 'none';
+                });
+            });
+        } catch(e) { ciResultsEl.style.display='none'; }
+    };
+
     ciSearchEl.addEventListener('input', () => {
         clearTimeout(ciSearchTimer);
         const q = ciSearchEl.value.trim();
-        $('ci-linked-product-id').value = '';
         if (q.length < 2) { ciResultsEl.style.display='none'; return; }
-        ciSearchTimer = setTimeout(async () => {
-            const jid = getJointId();
-            if (!jid) return;
-            try {
-                const data = await (await fetch(`${URLS.search}?q=${encodeURIComponent(q)}&joint_id=${jid}&filter=all&category_id=`)).json();
-                const items = data.products || [];
-                if (!items.length) { ciResultsEl.style.display='none'; return; }
-                ciResultsEl.innerHTML = items.slice(0,8).map(p => `
-                    <div class="ci-result-row" style="padding:6px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.02);" data-id="${p.id}" data-price="${p.price}" data-name="${p.name}">
-                        <div style="font-weight:700">${p.name}</div>
-                        <div style="font-size:12px;color:var(--muted);">$${p.price} · ${p.stock} in stock</div>
-                    </div>
-                `).join('');
-                ciResultsEl.style.display = 'block';
-                Array.from(ciResultsEl.querySelectorAll('.ci-result-row')).forEach(el => {
-                    el.addEventListener('click', () => {
-                        const id = el.dataset.id;
-                        const price = el.dataset.price;
-                        const name = el.dataset.name;
-                        $('ci-linked-product-id').value = id;
-                        $('ci-name').value = name;
-                        $('ci-price').value = price;
-                        updateCIPreview();
-                        ciResultsEl.style.display = 'none';
-                    });
-                });
-            } catch(e) { ciResultsEl.style.display='none'; }
-        }, 240);
+        ciSearchTimer = setTimeout(() => performCISearch(q), 240);
     });
+
+    // Enter key triggers immediate search
+    ciSearchEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); performCISearch(ciSearchEl.value.trim()); }
+    });
+
+    // Button triggers search immediately
+    const ciBtn = $('ci-search-btn');
+    if (ciBtn) ciBtn.addEventListener('click', () => performCISearch(ciSearchEl.value.trim()));
 
     // hide results when clicking outside
     document.addEventListener('click', e => {
@@ -972,14 +999,8 @@ if (ciSearchEl) {
 }
 
 async function updateCart() {
-    if (!cart.filter(i => !i.is_free_gift).length && !cart.filter(i => i.is_custom && i.is_free_gift).length) {
-        // allow free custom items to persist, but if truly nothing left...
-        const realItems = cart.filter(i => !i.is_free_gift || i.is_custom);
-        if (!realItems.length) {
-            cart = []; cartDiscount=0; cartDiscountLabel=''; currentTotal=0;
-            renderCart(); resetChangeCalc(); return;
-        }
-    }
+    // (Removed previous auto-clear logic) keep items even if they are free so
+    // user-added free items remain visible in the cart.
 
     // If only custom items, skip the promotions engine and compute locally
     const hasProducts = cart.some(i => !i.is_custom && !i.bundle_id);
@@ -989,7 +1010,8 @@ async function updateCart() {
         // Pure custom-items cart — compute totals client-side
         let subtotal = cart.reduce((s, i) => {
             if (i.is_free_gift) return s;
-            return s + (parseFloat(i.unit_price) * i.qty);
+            const price = (i.unit_price === 'free') ? 0 : (parseFloat(i.unit_price) || 0);
+            return s + (price * i.qty);
         }, 0);
         currentTotal = subtotal;
         cartDiscount = 0;
@@ -1007,9 +1029,9 @@ async function updateCart() {
         body: JSON.stringify({
             joint_id: jid,
             items: cart.map(i => {
-                if (i.is_custom)  return { is_custom: true, custom_id: i.custom_id, name: i.name, qty: i.qty, unit_price: i.unit_price, is_free_gift: i.is_free_gift, item_note: i.item_note || '' };
-                if (i.bundle_id)  return { bundle_id: i.bundle_id, qty: i.qty, unit_price: i.unit_price };
-                return { product_id: i.product_id, qty: i.qty, unit_price: i.unit_price, is_free_gift: i.is_free_gift };
+                if (i.is_custom)  return { is_custom: true, custom_id: i.custom_id, name: i.name, qty: i.qty, unit_price: (i.unit_price === 'free' ? '0.00' : i.unit_price), is_free_gift: i.is_free_gift, item_note: i.item_note || '' };
+                if (i.bundle_id)  return { bundle_id: i.bundle_id, qty: i.qty, unit_price: (i.unit_price === 'free' ? '0.00' : i.unit_price) };
+                return { product_id: i.product_id, qty: i.qty, unit_price: (i.unit_price === 'free' ? '0.00' : i.unit_price), is_free_gift: i.is_free_gift };
             })
         })
     });
@@ -1049,7 +1071,11 @@ async function updateCart() {
 // Client-side render when cart has only custom items
 function renderCartLocal() {
     const data = {
-        subtotal: cart.reduce((s,i) => s + (i.is_free_gift ? 0 : parseFloat(i.unit_price)*i.qty), 0).toFixed(2),
+        subtotal: cart.reduce((s,i) => {
+            if (i.is_free_gift) return s;
+            const price = (i.unit_price === 'free') ? 0 : (parseFloat(i.unit_price) || 0);
+            return s + (price * i.qty);
+        }, 0).toFixed(2),
         cart_discount: '0.00',
         cart_discount_label: '',
         total: currentTotal.toFixed(2),
@@ -1093,12 +1119,13 @@ function renderCart(data) {
             ? `<div class="item-note-tag" title="${item.item_note}">📝 ${item.item_note}</div>` : '';
 
         if (item.is_custom) {
-            const isFree    = parseFloat(item.unit_price) === 0;
-            const lineTotal = isFree ? '$0' : `$${(item.qty * parseFloat(item.unit_price)).toFixed(2)}`;
+            const isFreeVal = (item.unit_price === 'free') || (parseFloat(item.unit_price) === 0);
+            const unitNumeric = (item.unit_price === 'free') ? 0 : (parseFloat(item.unit_price) || 0);
+            const lineTotal = isFreeVal ? '$0' : `$${(item.qty * unitNumeric).toFixed(2)}`;
             return `<tr class="custom-row">
                 <td><div class="cart-item-cell">${thumbHtml}<div>
                     <div class="cart-item-name">${item.name}</div>
-                    <span class="prod-badge pb-custom" style="font-size:8px;">${isFree ? 'FREE' : 'CUSTOM'}</span>
+                    <span class="prod-badge pb-custom" style="font-size:8px;">${isFreeVal ? 'FREE' : 'CUSTOM'}</span>
                     ${noteHtml}
                 </div></div></td>
                 <td><div class="qty-ctrl">
@@ -1106,7 +1133,9 @@ function renderCart(data) {
                     <span class="qty-val">${item.qty}</span>
                     <button class="qty-btn" onclick="changeCustomQty('${item.custom_id}',1)">+</button>
                 </div></td>
-                <td style="text-align:right;font-weight:700;font-size:12px;color:${isFree ? '#4ade80' : '#67e8f9'};">${lineTotal}</td>
+                <td style="text-align:right;font-weight:700;font-size:12px;color:${isFreeVal ? '#4ade80' : '#67e8f9'};">
+                    <button class="edit-custom-btn" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;margin:0;" onclick="editCustomPrice('${item.custom_id}')" title="Edit price">${lineTotal}</button>
+                </td>
                 <td>
                     <button class="edit-custom-btn" onclick="openCustomItemModal('${item.custom_id}')" title="Edit"><i class="bi bi-pencil"></i></button>
                     <button class="remove-btn" onclick="removeCustomItem('${item.custom_id}')"><i class="bi bi-x"></i></button>
@@ -1124,7 +1153,8 @@ function renderCart(data) {
         }
 
         if (item.bundle_id) {
-            const lineTotal = (item.qty * parseFloat(item.unit_price)).toFixed(2);
+            const bundleUnit = (item.unit_price === 'free') ? 0 : (parseFloat(item.unit_price) || 0);
+            const lineTotal = (item.qty * bundleUnit).toFixed(2);
             return `<tr class="bundle-row">
                 <td><div class="cart-item-cell">${thumbHtml}<div><div class="cart-item-name">${item.name}</div><span style="font-size:9px;background:#6d28d9;color:#ede9fe;padding:1px 4px;border-radius:3px;">BUNDLE</span>${noteHtml}</div></div></td>
                 <td><div class="qty-ctrl">
@@ -1132,12 +1162,14 @@ function renderCart(data) {
                     <span class="qty-val">${item.qty}</span>
                     <button class="qty-btn" onclick="changeBundleQty(${idx},1)">+</button>
                 </div></td>
-                <td style="text-align:right;font-weight:700;font-size:12px;color:#c4b5fd;">$${lineTotal}</td>
+                <td style="text-align:right;font-weight:700;font-size:12px;color:#c4b5fd;">
+                    <button class="edit-custom-btn" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;margin:0;" onclick="editItemPrice(${idx})" title="Edit price">$${lineTotal}</button>
+                </td>
                 <td><button class="remove-btn" onclick="removeItem(${idx})"><i class="bi bi-x"></i></button></td>
             </tr>`;
         }
-
-        const lineTotal = (item.qty * parseFloat(item.unit_price)).toFixed(2);
+        const unitVal = (item.unit_price === 'free') ? 0 : (parseFloat(item.unit_price) || 0);
+        const lineTotal = (item.qty * unitVal).toFixed(2);
         return `<tr>
             <td><div class="cart-item-cell">${thumbHtml}<div><div class="cart-item-name">${item.name}</div>${item.promo_label ? `<div style="font-size:9px;color:#fbbf24;">${item.promo_label}</div>` : ''}${noteHtml}</div></div></td>
             <td><div class="qty-ctrl">
@@ -1145,7 +1177,9 @@ function renderCart(data) {
                 <span class="qty-val">${item.qty}</span>
                 <button class="qty-btn" onclick="changeQty(${idx},1)">+</button>
             </div></td>
-            <td style="text-align:right;font-weight:700;font-size:12px;">$${lineTotal}</td>
+            <td style="text-align:right;font-weight:700;font-size:12px;">
+                <button class="edit-custom-btn" style="background:none;border:none;color:inherit;cursor:pointer;padding:0;margin:0;" onclick="editItemPrice(${idx})" title="Edit price">$${lineTotal}</button>
+            </td>
             <td><button class="remove-btn" onclick="removeItem(${idx})"><i class="bi bi-x"></i></button></td>
         </tr>`;
     }).join('');
@@ -1201,6 +1235,40 @@ function changeCustomQty(customId, delta) {
     updateCart();
 }
 
+function editCustomPrice(customId) {
+    const item = cart.find(i => i.is_custom && i.custom_id === customId);
+    if (!item) return;
+    const cur = item.unit_price === 'free' ? 'free' : (parseFloat(item.unit_price) || 0).toFixed(2);
+    const input = prompt('Enter new price for this custom item (or type "free"):', cur);
+    if (input === null) return;
+    const cleaned = input.replace(/,/g, '.').trim().toLowerCase();
+    if (cleaned === 'free') {
+        item.unit_price = 'free';
+    } else {
+        const val = parseFloat(cleaned);
+        if (isNaN(val) || val < 0) { alert('Please enter a valid non-negative number or "free"'); return; }
+        item.unit_price = val.toFixed(2);
+    }
+    updateCart();
+}
+
+function editItemPrice(idx) {
+    const item = cart[idx];
+    if (!item) return;
+    const cur = item.unit_price === 'free' ? 'free' : (parseFloat(item.unit_price) || 0).toFixed(2);
+    const input = prompt('Enter new price for this item (or type "free"):', cur);
+    if (input === null) return;
+    const cleaned = input.replace(/,/g, '.').trim().toLowerCase();
+    if (cleaned === 'free') {
+        item.unit_price = 'free';
+    } else {
+        const val = parseFloat(cleaned);
+        if (isNaN(val) || val < 0) { alert('Please enter a valid non-negative number or "free"'); return; }
+        item.unit_price = val.toFixed(2);
+    }
+    updateCart();
+}
+
 function removeItem(idx) {
     const allReal = cart.filter(i => !i.is_free_gift);
     const item    = allReal[idx];
@@ -1241,16 +1309,16 @@ async function completeSale(method) {
             custom_id:    i.custom_id,
             name:         i.name,
             qty:          i.qty,
-            unit_price:   i.unit_price,
+            unit_price:   (i.unit_price === 'free' ? '0.00' : i.unit_price),
             is_free_gift: i.is_free_gift,
             promo_label:  i.promo_label || '',
             item_note:    i.item_note || '',
         };
-        if (i.bundle_id) return { bundle_id: i.bundle_id, qty: i.qty, unit_price: i.unit_price };
+        if (i.bundle_id) return { bundle_id: i.bundle_id, qty: i.qty, unit_price: (i.unit_price === 'free' ? '0.00' : i.unit_price) };
         return {
             product_id:   i.product_id,
             qty:          i.qty,
-            unit_price:   i.unit_price,
+            unit_price:   (i.unit_price === 'free' ? '0.00' : i.unit_price),
             is_free_gift: i.is_free_gift,
             promo_label:  i.promo_label || '',
             item_note:    i.item_note || '',
