@@ -261,7 +261,7 @@
         {% for item in sale.items.all %}
         <tr>
             <td style="padding: 2px 0; font-size: 12px; word-break: break-word;">
-                {{ item.display_name }}
+                {% if item.custom_item_name %}{{ item.custom_item_name }}{% elif item.product %}{{ item.product.name }}{% else %}(deleted product){% endif %}
                 {% if item.is_free_gift %}
                     <span style="font-size: 10px; background: #dcfce7; color: #166534;
                                 padding: 1px 4px; border-radius: 3px; margin-left: 4px;">FREE</span>
@@ -376,7 +376,7 @@
         <tr>
             <td class="col-qty" style="text-align:center;">{{ item.quantity }}</td>
             <td class="col-desc">
-                {{ item.product.name }}
+                {% if item.custom_item_name %}{{ item.custom_item_name }}{% elif item.product %}{{ item.product.name }}{% else %}(deleted product){% endif %}
                 {% if item.is_free_gift %}<br><span class="badge">FREE</span>{% endif %}
             </td>
             <td class="col-price">{% if item.is_free_gift %}—{% else %}${{ item.unit_price }}{% endif %}</td>

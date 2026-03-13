@@ -41,9 +41,16 @@ class Customer(models.Model):
     # ── aggregated purchase stats ──────────────────────────────────────────
     @property
     def total_spend(self):
-        from django.db.models import Sum
-        result = self.sales.filter(is_held=False).aggregate(t=Sum('total_amount'))['t']
-        return result or Decimal('0')
+        # `Sale.total_amount` is a Python property (computed), not a DB field,
+        # so we can't aggregate it via the ORM. Compute in Python instead.
+        total = Decimal('0')
+        for s in self.sales.filter(is_held=False):
+            try:
+                total += Decimal(s.total_amount)
+            except Exception:
+                # fallback: skip malformed entries
+                continue
+        return total
 
     @property
     def purchase_count(self):

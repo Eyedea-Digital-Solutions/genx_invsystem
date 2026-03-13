@@ -389,6 +389,11 @@
                 <div class="mb-3">
                     <div class="ci-label">Item Name *</div>
                     <input type="text" class="ci-input" id="ci-name" placeholder="e.g. Frame Adjustment, Delivery Fee…" autocomplete="off">
+                    <input type="hidden" id="ci-linked-product-id" value="">
+                    <div style="margin-top:6px;">
+                        <input type="text" class="ci-input" id="ci-search" placeholder="Search existing products to link… (optional)" autocomplete="off" style="margin-top:6px;font-size:12px;">
+                        <div id="ci-search-results" style="display:none;background:#111;padding:6px;border-radius:6px;margin-top:6px;max-height:160px;overflow:auto;border:1px solid rgba(255,255,255,0.04);"></div>
+                    </div>
                 </div>
 
                 <!-- Price -->
@@ -508,6 +513,7 @@ const URLS = {
 let cart = [];
 let currentFilter = 'all';
 let currentCategory = '';
+let lastAutoAddedCategory = null;
 let cartDiscount = 0;
 let cartDiscountLabel = '';
 let currentTotal = 0;
@@ -656,6 +662,22 @@ async function loadProducts() {
     if (!jid) return;
     const data = await (await fetch(`${URLS.search}?joint_id=${jid}&filter=${currentFilter}&category_id=${currentCategory}`)).json();
     renderProductGrid(data.products || [], data.bundles || []);
+    // Auto-add the first visible bundle or product when switching to a category
+    // (only once per category selection) to speed up accessory/bundle flows.
+    if (currentCategory) {
+        if (lastAutoAddedCategory !== currentCategory) {
+            const bundles = Object.values(window._bundleCache || {});
+            const products = Object.values(window._productCache || {});
+            if (bundles.length && bundles[0].stock > 0) {
+                addBundleById(bundles[0].id);
+            } else if (products.length && products[0].stock > 0) {
+                addToCartById(products[0].id);
+            }
+            lastAutoAddedCategory = currentCategory;
+        }
+    } else {
+        lastAutoAddedCategory = null;
+    }
 }
 
 async function loadCategories() {
@@ -848,6 +870,7 @@ function confirmCustomItem() {
     const qty   = parseInt($('ci-qty').value) || 1;
     const note  = $('ci-note').value.trim();
     const editId = $('ci-editing-id').value;
+    const linkedProductId = $('ci-linked-product-id').value || null;
 
     if (!name) { $('ci-name').focus(); $('ci-name').style.borderColor = '#e94560'; return; }
     $('ci-name').style.borderColor = '';
@@ -866,23 +889,86 @@ function confirmCustomItem() {
             item.item_note    = note;
         }
     } else {
-        // Add new
-        customItemCounter++;
-        cart.push({
-            is_custom:    true,
-            custom_id:    `custom_${customItemCounter}`,
-            name:         name,
-            qty:          qty,
-            unit_price:   priceVal.toFixed(2),
-            is_free_gift: isFree,
-            promo_label:  isFree ? 'FREE' : '',
-            item_note:    note,
-        });
+        // If the user linked an existing product in the modal, add it as a
+        // normal product item so the server will deduct stock. Otherwise
+        // add as a custom/ad-hoc item.
+        if (linkedProductId) {
+            cart.push({
+                product_id:   parseInt(linkedProductId),
+                name:         name,
+                qty:          qty,
+                unit_price:   priceVal.toFixed(2),
+                is_free_gift: isFree,
+                promo_label:  isFree ? 'FREE' : '',
+                item_note:    note,
+            });
+        } else {
+            // Add new ad-hoc custom item
+            customItemCounter++;
+            cart.push({
+                is_custom:    true,
+                custom_id:    `custom_${customItemCounter}`,
+                name:         name,
+                qty:          qty,
+                unit_price:   priceVal.toFixed(2),
+                is_free_gift: isFree,
+                promo_label:  isFree ? 'FREE' : '',
+                item_note:    note,
+            });
+        }
     }
 
     bootstrap.Modal.getInstance($('customItemModal'))?.hide();
     updateCart();
     if (isMobile()) switchPanel(1);
+}
+
+// ===== Custom Item modal: search existing products and link one =====
+let ciSearchTimer = null;
+const ciSearchEl = $('ci-search');
+const ciResultsEl = $('ci-search-results');
+if (ciSearchEl) {
+    ciSearchEl.addEventListener('input', () => {
+        clearTimeout(ciSearchTimer);
+        const q = ciSearchEl.value.trim();
+        $('ci-linked-product-id').value = '';
+        if (q.length < 2) { ciResultsEl.style.display='none'; return; }
+        ciSearchTimer = setTimeout(async () => {
+            const jid = getJointId();
+            if (!jid) return;
+            try {
+                const data = await (await fetch(`${URLS.search}?q=${encodeURIComponent(q)}&joint_id=${jid}&filter=all&category_id=`)).json();
+                const items = data.products || [];
+                if (!items.length) { ciResultsEl.style.display='none'; return; }
+                ciResultsEl.innerHTML = items.slice(0,8).map(p => `
+                    <div class="ci-result-row" style="padding:6px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.02);" data-id="${p.id}" data-price="${p.price}" data-name="${p.name}">
+                        <div style="font-weight:700">${p.name}</div>
+                        <div style="font-size:12px;color:var(--muted);">$${p.price} · ${p.stock} in stock</div>
+                    </div>
+                `).join('');
+                ciResultsEl.style.display = 'block';
+                Array.from(ciResultsEl.querySelectorAll('.ci-result-row')).forEach(el => {
+                    el.addEventListener('click', () => {
+                        const id = el.dataset.id;
+                        const price = el.dataset.price;
+                        const name = el.dataset.name;
+                        $('ci-linked-product-id').value = id;
+                        $('ci-name').value = name;
+                        $('ci-price').value = price;
+                        updateCIPreview();
+                        ciResultsEl.style.display = 'none';
+                    });
+                });
+            } catch(e) { ciResultsEl.style.display='none'; }
+        }, 240);
+    });
+
+    // hide results when clicking outside
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#ci-search') && !e.target.closest('#ci-search-results')) {
+            ciResultsEl.style.display = 'none';
+        }
+    });
 }
 
 async function updateCart() {

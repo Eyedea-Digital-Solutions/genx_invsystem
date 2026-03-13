@@ -131,10 +131,14 @@ class SaleItem(models.Model):
         null=True, blank=True,
         related_name='sale_items',
     )
+    # For custom ad-hoc items (services etc.) we store a custom name here.
+    custom_item_name = models.CharField(max_length=200, blank=True)
     quantity       = models.PositiveIntegerField()
     unit_price     = models.DecimalField(max_digits=10, decimal_places=2)
     is_free_gift   = models.BooleanField(default=False)
     promotion_label = models.CharField(max_length=200, blank=True)
+    # Optional free-form note attached to the sale item (e.g., size, color)
+    item_note = models.TextField(blank=True)
 
     @property
     def line_total(self):
@@ -143,7 +147,12 @@ class SaleItem(models.Model):
         return self.quantity * self.unit_price
 
     def __str__(self):
-        name = self.product.name if self.product else '(deleted product)'
+        if self.product:
+            name = self.product.name
+        elif self.custom_item_name:
+            name = self.custom_item_name
+        else:
+            name = '(deleted product)'
         return f"{self.quantity}× {name} @ ${self.unit_price}"
 
 

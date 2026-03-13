@@ -13,21 +13,33 @@ from .forms import CustomerForm, CustomerSearchForm, LoyaltyAdjustForm
 
 @login_required
 def customer_list(request):
-    form = CustomerSearchForm(request.GET or None)
-    qs   = Customer.objects.filter(is_active=True)
+    form  = CustomerSearchForm(request.GET or None)
+    qs    = Customer.objects.filter(is_active=True)
 
     if form.is_valid():
-        q    = form.cleaned_data.get('q', '')
+        q     = form.cleaned_data.get('q', '')
         ctype = form.cleaned_data.get('customer_type', '')
         if q:
             qs = qs.filter(Q(name__icontains=q) | Q(phone__icontains=q) | Q(email__icontains=q))
         if ctype:
             qs = qs.filter(customer_type=ctype)
 
+    # ── stats ────────────────────────────────────────────────────────────────
+    total_loyalty   = Customer.objects.filter(is_active=True).aggregate(
+        t=Sum('loyalty_points'))['t'] or 0
+    month_start     = timezone.now().date().replace(day=1)
+    new_this_month  = Customer.objects.filter(
+        is_active=True,
+        created_at__date__gte=month_start,
+    ).count()
+
     return render(request, 'customers/customer_list.html', {
-        'customers': qs.order_by('name'),
-        'form': form,
-        'total_customers': qs.count(),
+        'customers':      qs.order_by('name'),
+        'form':           form,
+        'search':         request.GET.get('q', ''),
+        'total_customers': Customer.objects.filter(is_active=True).count(),
+        'total_loyalty':  total_loyalty,
+        'new_this_month': new_this_month,
     })
 
 
@@ -64,26 +76,35 @@ def customer_edit(request, pk):
 def customer_detail(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
 
-    sales = customer.sales.filter(is_held=False).prefetch_related('items__product').order_by('-sale_date')
+    sales = (
+        customer.sales
+        .filter(is_held=False)
+        .prefetch_related('items__product')
+        .order_by('-sale_date')
+    )
 
-    # Summary stats
-    total_spend   = sum(s.total_amount for s in sales)
-    today         = timezone.localdate()
-    month_start   = today.replace(day=1)
-    month_spend   = sum(
+    total_spend  = sum(s.total_amount for s in sales)
+    today        = timezone.localdate()
+    month_start  = today.replace(day=1)
+    month_spend  = sum(
         s.total_amount for s in sales
         if s.sale_date.date() >= month_start
     )
+    sale_count   = sales.count()
+    avg_order    = (total_spend / sale_count) if sale_count else 0
 
     loyalty_log = customer.loyalty_transactions.select_related('sale', 'performed_by')[:30]
 
     return render(request, 'customers/customer_detail.html', {
-        'customer':     customer,
-        'sales':        sales,
-        'total_spend':  total_spend,
-        'month_spend':  month_spend,
-        'sale_count':   sales.count(),
-        'loyalty_log':  loyalty_log,
+        'customer':    customer,
+        'sales':       sales,
+        'total_spend': total_spend,
+        'month_spend': month_spend,
+        'sale_count':  sale_count,
+        'avg_order':   avg_order,
+        'loyalty_log': loyalty_log,
+        # template uses loyalty_transactions in the loyalty card
+        'loyalty_transactions': loyalty_log,
     })
 
 
@@ -104,7 +125,11 @@ def loyalty_adjust(request, pk):
         try:
             customer.adjust_loyalty_points(points, reason, performed_by=request.user)
             direction = 'added to' if points >= 0 else 'deducted from'
-            messages.success(request, f"{abs(points)} points {direction} {customer.name}. New balance: {customer.loyalty_points}.")
+            messages.success(
+                request,
+                f"{abs(points)} points {direction} {customer.name}. "
+                f"New balance: {customer.loyalty_points}.",
+            )
         except ValueError as e:
             messages.error(request, str(e))
         return redirect('customers:customer_detail', pk=pk)
@@ -128,15 +153,15 @@ def customer_lookup_api(request):
 
     qs = Customer.objects.filter(
         Q(phone__icontains=q) | Q(name__icontains=q),
-        is_active=True
+        is_active=True,
     )[:10]
 
     data = [{
-        'id':              c.pk,
-        'name':            c.name,
-        'phone':           c.phone,
-        'customer_type':   c.get_customer_type_display(),
-        'loyalty_points':  c.loyalty_points,
+        'id':             c.pk,
+        'name':           c.name,
+        'phone':          c.phone,
+        'customer_type':  c.get_customer_type_display(),
+        'loyalty_points': c.loyalty_points,
     } for c in qs]
 
     return JsonResponse({'customers': data})
