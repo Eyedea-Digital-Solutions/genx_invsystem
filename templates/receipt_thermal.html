@@ -260,14 +260,40 @@
     <tbody>
         {% for item in sale.items.all %}
         <tr>
-            <td class="col-desc">
-                {{ item.product.name }}
-                {% if item.is_free_gift %}<br><span class="badge">FREE</span>{% endif %}
-                {% if item.product.is_clearance and not item.is_free_gift %}<br><span class="badge">CLR</span>{% endif %}
+            <td style="padding: 2px 0; font-size: 12px; word-break: break-word;">
+                {{ item.display_name }}
+                {% if item.is_free_gift %}
+                    <span style="font-size: 10px; background: #dcfce7; color: #166534;
+                                padding: 1px 4px; border-radius: 3px; margin-left: 4px;">FREE</span>
+                {% endif %}
+                {% if item.item_note %}
+                <div style="font-size: 10px; color: #6b7280; font-style: italic; margin-top: 1px;">
+                    ✎ {{ item.item_note }}
+                </div>
+                {% endif %}
+                {% if item.promo_label and not item.is_free_gift %}
+                <div style="font-size: 10px; color: #d97706; margin-top: 1px;">
+                    ★ {{ item.promo_label }}
+                </div>
+                {% endif %}
             </td>
-            <td class="col-price">{% if item.is_free_gift %}—{% else %}${{ item.unit_price }}{% endif %}</td>
-            <td class="col-qty" style="text-align:center;">{{ item.quantity }}</td>
-            <td class="col-total">{% if item.is_free_gift %}FREE{% else %}${{ item.line_total }}{% endif %}</td>
+            <td style="padding: 2px 0; font-size: 12px; text-align: center; white-space: nowrap;">
+                {{ item.quantity }}
+            </td>
+            <td style="padding: 2px 0; font-size: 12px; text-align: right; white-space: nowrap;">
+                {% if item.is_free_gift %}
+                    <span style="color: #16a34a; font-weight: 700;">$0.00</span>
+                {% else %}
+                    ${{ item.unit_price }}
+                {% endif %}
+            </td>
+            <td style="padding: 2px 0; font-size: 12px; text-align: right; white-space: nowrap; font-weight: 600;">
+                {% if item.is_free_gift %}
+                    <span style="color: #16a34a;">FREE</span>
+                {% else %}
+                    ${{ item.line_total }}
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

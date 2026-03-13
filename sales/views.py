@@ -16,6 +16,42 @@ from .forms import SaleForm, ManualSaleForm, SaleFilterForm
 from inventory.models import Joint, Product, ProductFreeAccessory
 
 
+# ── Helper: auto-create or fetch customer from name+phone ────────────────────
+
+def _get_or_create_customer(customer_id, customer_name, customer_phone, performed_by=None):
+    """
+    Returns a Customer instance (or None).
+    Priority:
+      1. Explicit customer_id
+      2. Lookup by phone
+      3. Auto-create if name + phone provided
+    """
+    from customers.models import Customer as CustomerModel
+
+    if customer_id:
+        try:
+            return CustomerModel.objects.get(pk=customer_id, is_active=True)
+        except CustomerModel.DoesNotExist:
+            pass
+
+    if customer_phone:
+        existing = CustomerModel.objects.filter(phone=customer_phone, is_active=True).first()
+        if existing:
+            return existing
+
+    # Auto-create when we have at least a name or phone
+    if customer_name or customer_phone:
+        customer = CustomerModel.objects.create(
+            name=customer_name or customer_phone,
+            phone=customer_phone or '',
+            customer_type=CustomerModel.TYPE_REGULAR,
+            is_active=True,
+        )
+        return customer
+
+    return None
+
+
 @login_required
 def dashboard(request):
     today = timezone.now().date()
@@ -191,9 +227,10 @@ def pos_update_cart(request):
             'total': '0.00', 'free_accessory_warnings': [],
         })
 
-    # Separate regular products from bundles (free gifts are always product-based)
-    raw_products = [i for i in raw_items if not i.get('bundle_id') and not i.get('is_free_gift')]
+    # Separate regular products from bundles and custom items
+    raw_products = [i for i in raw_items if not i.get('bundle_id') and not i.get('is_free_gift') and not i.get('is_custom')]
     raw_bundles  = [i for i in raw_items if i.get('bundle_id')]
+    raw_customs  = [i for i in raw_items if i.get('is_custom')]
 
     pids     = [i['product_id'] for i in raw_products]
     products = {p.pk: p for p in Product.objects.filter(pk__in=pids)}
@@ -338,6 +375,25 @@ def pos_update_cart(request):
             'stock':        stock,
         })
 
+    # ── Custom items (pass-through unchanged) ────────────────────────────────
+    custom_response_items = []
+    for raw in raw_customs:
+        price     = Decimal(str(raw.get('unit_price', '0')))
+        qty       = int(raw.get('qty', 1))
+        is_free   = price == Decimal('0')
+        line_tot  = Decimal('0') if is_free else (price * qty).quantize(Decimal('0.01'))
+        custom_response_items.append({
+            'is_custom':    True,
+            'custom_id':    raw.get('custom_id'),
+            'name':         raw.get('name', 'Custom Item'),
+            'qty':          qty,
+            'unit_price':   str(price),
+            'line_total':   str(line_tot),
+            'is_free_gift': is_free,
+            'promo_label':  raw.get('promo_label', ''),
+            'item_note':    raw.get('item_note', ''),
+        })
+
     # ── Totals ───────────────────────────────────────────────────────────────
     product_subtotal = sum(
         i['unit_price'] * i['qty']
@@ -351,7 +407,13 @@ def pos_update_cart(request):
         if b:
             bundle_subtotal += b.price * int(raw.get('qty', 1))
 
-    subtotal = product_subtotal + bundle_subtotal
+    custom_subtotal = Decimal('0')
+    for raw in raw_customs:
+        price = Decimal(str(raw.get('unit_price', '0')))
+        if price > 0:
+            custom_subtotal += price * int(raw.get('qty', 1))
+
+    subtotal = product_subtotal + bundle_subtotal + custom_subtotal
     total    = max(Decimal('0'), subtotal - result['cart_discount'])
 
     return JsonResponse({
@@ -365,7 +427,8 @@ def pos_update_cart(request):
             ),
             'is_free_gift': i.get('is_free_gift', False),
             'promo_label':  i.get('promo_label', ''),
-        } for i in result['items']] + bundle_response_items,
+            'item_note':    i.get('item_note', ''),
+        } for i in result['items']] + bundle_response_items + custom_response_items,
         'subtotal':               str(subtotal.quantize(Decimal('0.01'))),
         'cart_discount':          str(result['cart_discount'].quantize(Decimal('0.01'))),
         'cart_discount_label':    result['cart_discount_label'],
@@ -382,8 +445,8 @@ def pos_complete(request):
     items_data          = body.get('items', [])
     payment_method      = body.get('payment_method', 'cash')
     customer_id         = body.get('customer_id')
-    customer_name       = body.get('customer_name', '')
-    customer_phone      = body.get('customer_phone', '')
+    customer_name       = body.get('customer_name', '').strip()
+    customer_phone      = body.get('customer_phone', '').strip()
     cart_discount       = Decimal(str(body.get('cart_discount', '0')))
     cart_discount_label = body.get('cart_discount_label', '')
 
@@ -391,9 +454,10 @@ def pos_complete(request):
         return JsonResponse({'success': False, 'error': 'Joint and items are required.'})
 
     # ── Separate item types ───────────────────────────────────────────────────
-    regular_items = [i for i in items_data if not i.get('bundle_id') and not i.get('is_free_gift')]
-    free_items    = [i for i in items_data if i.get('is_free_gift') and not i.get('bundle_id')]
+    regular_items = [i for i in items_data if not i.get('bundle_id') and not i.get('is_free_gift') and not i.get('is_custom')]
+    free_items    = [i for i in items_data if i.get('is_free_gift') and not i.get('bundle_id') and not i.get('is_custom')]
     bundle_items  = [i for i in items_data if i.get('bundle_id')]
+    custom_items  = [i for i in items_data if i.get('is_custom')]
 
     # ── Stock validation — regular paid items ─────────────────────────────────
     pids     = [i['product_id'] for i in regular_items]
@@ -528,6 +592,7 @@ def pos_complete(request):
                 sale=sale, product=p, quantity=qty,
                 unit_price=unit_price, is_free_gift=False,
                 promotion_label=item.get('promo_label', ''),
+                item_note=item.get('item_note', ''),
             )
             p.stock.deduct(qty)
             snapshot.append({'product_id': p.pk, 'product_name': p.name, 'quantity': qty,
@@ -541,10 +606,34 @@ def pos_complete(request):
                 sale=sale, product=p, quantity=qty,
                 unit_price=Decimal('0'), is_free_gift=True,
                 promotion_label=item.get('promo_label', ''),
+                item_note=item.get('item_note', ''),
             )
             p.stock.deduct(qty)
             snapshot.append({'product_id': p.pk, 'product_name': p.name, 'quantity': qty,
                               'unit_price': '0.00', 'is_free_gift': True})
+
+        # Custom items (no stock deduction — these are ad-hoc services/items)
+        for item in custom_items:
+            price    = Decimal(str(item.get('unit_price', '0')))
+            qty      = int(item.get('qty', 1))
+            is_free  = price == Decimal('0')
+            SaleItem.objects.create(
+                sale=sale,
+                product=None,
+                custom_item_name=item.get('name', 'Custom Item'),
+                quantity=qty,
+                unit_price=price,
+                is_free_gift=is_free,
+                promotion_label=item.get('promo_label', ''),
+                item_note=item.get('item_note', ''),
+            )
+            snapshot.append({
+                'custom_item_name': item.get('name', 'Custom Item'),
+                'quantity':         qty,
+                'unit_price':       str(price),
+                'is_free_gift':     is_free,
+                'item_note':        item.get('item_note', ''),
+            })
 
         # Bundles — expand to individual SaleItems
         for bi in bundle_items:
@@ -587,20 +676,9 @@ def pos_complete(request):
 
         # ── Link Customer & award loyalty points ──────────────────────────────
         loyalty_points_earned = 0
-        linked_customer       = None
-
-        if customer_id:
-            from customers.models import Customer as CustomerModel
-            try:
-                linked_customer = CustomerModel.objects.get(pk=customer_id, is_active=True)
-            except CustomerModel.DoesNotExist:
-                pass
-
-        if not linked_customer and customer_phone:
-            from customers.models import Customer as CustomerModel
-            linked_customer = CustomerModel.objects.filter(
-                phone=customer_phone, is_active=True
-            ).first()
+        linked_customer = _get_or_create_customer(
+            customer_id, customer_name, customer_phone, performed_by=request.user
+        )
 
         if linked_customer:
             sale.customer       = linked_customer
@@ -628,6 +706,7 @@ def pos_complete(request):
                 'customer_id':           linked_customer.pk if linked_customer else None,
                 'loyalty_points_earned': loyalty_points_earned,
                 'bundles':               [bi['bundle_id'] for bi in bundle_items],
+                'custom_items_count':    len(custom_items),
             }
         )
 
@@ -643,6 +722,7 @@ def pos_complete(request):
         'free_accessory_warnings': sale_warnings,
         'loyalty_points_earned':   loyalty_points_earned,
         'customer_name':           linked_customer.name if linked_customer else '',
+        'customer_created':        bool(linked_customer and not customer_id),
     })
 
 
@@ -657,7 +737,7 @@ def pos_hold(request):
     if not joint_id or not items_data:
         return JsonResponse({'success': False, 'error': 'Nothing to hold.'})
 
-    pids     = [i['product_id'] for i in items_data if not i.get('bundle_id')]
+    pids     = [i['product_id'] for i in items_data if not i.get('bundle_id') and not i.get('is_custom')]
     products = {p.pk: p for p in Product.objects.filter(pk__in=pids)}
 
     with transaction.atomic():
@@ -682,6 +762,19 @@ def pos_hold(request):
                         )
                 except Exception:
                     pass
+            elif item.get('is_custom'):
+                # Encode custom item for recall
+                price = Decimal(str(item.get('unit_price', '0')))
+                SaleItem.objects.create(
+                    sale=sale,
+                    product=None,
+                    custom_item_name=item.get('name', 'Custom Item'),
+                    quantity=int(item.get('qty', 1)),
+                    unit_price=price,
+                    is_free_gift=price == Decimal('0'),
+                    promotion_label=f'__custom__{item.get("custom_id", "")}',
+                    item_note=item.get('item_note', ''),
+                )
             else:
                 p = products.get(item['product_id'])
                 if p:
@@ -691,6 +784,7 @@ def pos_hold(request):
                         unit_price=Decimal(str(item['unit_price'])),
                         is_free_gift=item.get('is_free_gift', False),
                         promotion_label=item.get('promo_label', ''),
+                        item_note=item.get('item_note', ''),
                     )
 
     return JsonResponse({'success': True, 'held_id': sale.pk})
@@ -718,17 +812,29 @@ def pos_recall(request, pk):
                 'image_url':    '',
                 'stock':        99,
             })
+        elif label.startswith('__custom__') or item.custom_item_name:
+            items.append({
+                'is_custom':   True,
+                'custom_id':   f'recalled_{item.pk}',
+                'name':        item.custom_item_name or 'Custom Item',
+                'qty':         item.quantity,
+                'unit_price':  str(item.unit_price),
+                'is_free_gift': item.is_free_gift,
+                'promo_label':  '',
+                'item_note':    item.item_note or '',
+            })
         else:
             items.append({
                 'product_id':   item.product_id,
-                'name':         item.product.name,
+                'name':         item.product.name if item.product else '(deleted)',
                 'qty':          item.quantity,
                 'unit_price':   str(item.unit_price),
                 'is_free_gift': item.is_free_gift,
                 'promo_label':  label,
-                'stock':        item.product.current_stock,
-                'image_url':    item.product.image.url if item.product.image else '',
-                'promotion_label_badge': item.product.promotion_label or '',
+                'item_note':    item.item_note or '',
+                'stock':        item.product.current_stock if item.product else 0,
+                'image_url':    item.product.image.url if item.product and item.product.image else '',
+                'promotion_label_badge': item.product.promotion_label if item.product else '',
             })
 
     sale.delete()
@@ -796,6 +902,15 @@ def make_sale(request):
                     item_data['product'].stock.deduct(item_data['quantity'])
                     snapshot.append({'product_id': item_data['product'].pk, 'product_name': item_data['product'].name,
                                      'quantity': item_data['quantity'], 'unit_price': str(item_data['unit_price'])})
+
+                # Auto-create/link customer
+                c_name  = getattr(sale, 'customer_name', '').strip()
+                c_phone = getattr(sale, 'customer_phone', '').strip()
+                linked_customer = _get_or_create_customer(None, c_name, c_phone, performed_by=request.user)
+                if linked_customer and not sale.customer:
+                    sale.customer = linked_customer
+                    sale.save(update_fields=['customer'])
+
                 SaleAuditLog.objects.create(
                     sale=sale, action='created', performed_by=request.user,
                     details={'items': snapshot, 'total': str(sale.total_amount),
@@ -841,6 +956,15 @@ def manual_sale(request):
                         except ValueError:
                             messages.warning(request, "Invalid quantity or price.")
                     i += 1
+
+                # Auto-create/link customer
+                c_name  = getattr(sale, 'customer_name', '').strip()
+                c_phone = getattr(sale, 'customer_phone', '').strip()
+                linked_customer = _get_or_create_customer(None, c_name, c_phone, performed_by=request.user)
+                if linked_customer and not sale.customer:
+                    sale.customer = linked_customer
+                    sale.save(update_fields=['customer'])
+
                 SaleAuditLog.objects.create(
                     sale=sale, action='manual_sale_recorded', performed_by=request.user,
                     details={'receipt_image': sale.manual_receipt_image.name if sale.manual_receipt_image else None,
