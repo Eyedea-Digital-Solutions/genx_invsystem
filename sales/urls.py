@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import analytics_views
+from .receipt_api import receipt_data_api
 
 app_name = 'sales'
 
@@ -19,12 +20,23 @@ urlpatterns = [
     path('list/',                   views.sale_list,             name='sale_list'),
     path('<int:pk>/',               views.sale_detail,           name='sale_detail'),
     path('<int:pk>/receipt/',       views.sale_receipt,          name='sale_receipt'),
-    path('<int:pk>/receipt/thermal/', views.sale_receipt_thermal, name='sale_receipt_thermal'),
+    path('<int:pk>/receipt/thermal/',  views.sale_receipt_thermal,  name='sale_receipt_thermal'),
+    path('<int:pk>/receipt/data/',     receipt_data_api,            name='receipt_data_api'),
     path('reports/',                views.reports,               name='reports'),
 
-    path('analytics/',                        analytics_views.analytics_dashboard,          name='analytics_dashboard'),
-    path('analytics/api/revenue/',            analytics_views.analytics_api_revenue,        name='analytics_api_revenue'),
-    path('analytics/api/top-products/',       analytics_views.analytics_api_top_products,   name='analytics_api_top_products'),
-    path('analytics/api/payment-breakdown/',  analytics_views.analytics_api_payment_breakdown, name='analytics_api_payment_breakdown'),
-    path('analytics/export/',                 analytics_views.analytics_export_csv,         name='analytics_export_csv'),
+    path('analytics/',
+         analytics_views.analytics_dashboard,
+         name='analytics_dashboard'),
+    path('analytics/api/revenue/',
+         analytics_views.analytics_api_revenue,
+         name='analytics_api_revenue'),
+    path('analytics/api/top-products/',
+         analytics_views.analytics_api_top_products,
+         name='analytics_api_top_products'),
+    path('analytics/api/payment-breakdown/',
+         analytics_views.analytics_api_payment_breakdown,
+         name='analytics_api_payment_breakdown'),
+    path('analytics/export/',
+         analytics_views.analytics_export_csv,
+         name='analytics_export_csv'),
 ]

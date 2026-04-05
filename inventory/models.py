@@ -1,7 +1,7 @@
+from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-
 
 class Joint(models.Model):
     JOINT_CHOICES = [
@@ -274,3 +274,116 @@ class ProductFreeAccessory(models.Model):
                 name='unique_trigger_accessory_pair',
             )
         ]
+class ProductTag(models.Model):
+    name  = models.CharField(max_length=60, unique=True)
+    color = models.CharField(max_length=20, blank=True, default='#7c3aed')
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Product Tag'
+
+    def __str__(self):
+        return self.name
+
+
+class StockMovement(models.Model):
+    TYPE_SALE          = 'sale'
+    TYPE_RETURN        = 'return'
+    TYPE_ADJUSTMENT    = 'adjustment'
+    TYPE_TRANSFER_IN   = 'transfer_in'
+    TYPE_TRANSFER_OUT  = 'transfer_out'
+    TYPE_STOCK_TAKE    = 'stock_take'
+    TYPE_PURCHASE      = 'purchase_receipt'
+    TYPE_DAMAGE        = 'damage_write_off'
+
+    MOVEMENT_CHOICES = [
+        (TYPE_SALE,         'Sale'),
+        (TYPE_RETURN,       'Return / Restock'),
+        (TYPE_ADJUSTMENT,   'Manual Adjustment'),
+        (TYPE_TRANSFER_IN,  'Transfer In'),
+        (TYPE_TRANSFER_OUT, 'Transfer Out'),
+        (TYPE_STOCK_TAKE,   'Stock Take'),
+        (TYPE_PURCHASE,     'Purchase Receipt'),
+        (TYPE_DAMAGE,       'Damage / Write-Off'),
+    ]
+
+    product       = models.ForeignKey('inventory.Product', on_delete=models.CASCADE, related_name='stock_movements')
+    joint         = models.ForeignKey('inventory.Joint', on_delete=models.CASCADE, related_name='stock_movements')
+    movement_type = models.CharField(max_length=25, choices=MOVEMENT_CHOICES)
+    quantity      = models.IntegerField(help_text='Positive = in, Negative = out')
+    reference_id  = models.CharField(max_length=100, blank=True, help_text='Receipt #, GRN #, etc.')
+    performed_by  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='stock_movements')
+    timestamp     = models.DateTimeField(auto_now_add=True)
+    notes         = models.TextField(blank=True)
+    stock_before  = models.IntegerField()
+    stock_after   = models.IntegerField()
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = 'Stock Movement'
+        verbose_name_plural = 'Stock Movements'
+
+    def __str__(self):
+        direction = '+' if self.quantity >= 0 else ''
+        return f"{self.product.name} {direction}{self.quantity} [{self.get_movement_type_display()}] @ {self.joint.display_name}"
+
+
+class StockAlert(models.Model):
+    ALERT_LOW_STOCK  = 'low_stock'
+    ALERT_OUT        = 'out_of_stock'
+    ALERT_EXPIRING   = 'expiring'
+    ALERT_OVERSTOCK  = 'overstock'
+
+    ALERT_CHOICES = [
+        (ALERT_LOW_STOCK, 'Low Stock'),
+        (ALERT_OUT,       'Out of Stock'),
+        (ALERT_EXPIRING,  'Expiring Soon'),
+        (ALERT_OVERSTOCK, 'Overstock'),
+    ]
+
+    product     = models.ForeignKey('inventory.Product', on_delete=models.CASCADE, related_name='stock_alerts')
+    joint       = models.ForeignKey('inventory.Joint', on_delete=models.CASCADE, related_name='stock_alerts')
+    alert_type  = models.CharField(max_length=20, choices=ALERT_CHOICES)
+    is_resolved = models.BooleanField(default=False)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Stock Alert'
+
+    def __str__(self):
+        return f"{self.get_alert_type_display()} — {self.product.name} @ {self.joint.display_name}"
+
+    def resolve(self):
+        self.is_resolved = True
+        self.resolved_at = timezone.now()
+        self.save()
+
+
+class ProductSerialNumber(models.Model):
+    STATUS_AVAILABLE = 'available'
+    STATUS_SOLD      = 'sold'
+    STATUS_RETURNED  = 'returned'
+    STATUS_DEFECTIVE = 'defective'
+
+    STATUS_CHOICES = [
+        (STATUS_AVAILABLE, 'Available'),
+        (STATUS_SOLD,      'Sold'),
+        (STATUS_RETURNED,  'Returned'),
+        (STATUS_DEFECTIVE, 'Defective'),
+    ]
+
+    product       = models.ForeignKey('inventory.Product', on_delete=models.CASCADE, related_name='serial_numbers')
+    serial_number = models.CharField(max_length=100, unique=True)
+    status        = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
+    sold_in_sale  = models.ForeignKey('sales.SaleItem', on_delete=models.SET_NULL, null=True, blank=True, related_name='serial_numbers')
+    notes         = models.TextField(blank=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['serial_number']
+        verbose_name = 'Product Serial Number'
+
+    def __str__(self):
+        return f"{self.serial_number} — {self.product.name} ({self.get_status_display()})"
