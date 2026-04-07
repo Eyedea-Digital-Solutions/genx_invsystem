@@ -1,14 +1,20 @@
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+import dj_database_url
+
+load_dotenv()  # loads .env when running locally; ignored on Render
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+SECRET_KEY = os.environ['SECRET_KEY']
+... # Must be set in Render env vars
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 _allowed = os.environ.get('ALLOWED_HOSTS', '')
-ALLOWED_HOSTS = _allowed.split(',') if _allowed else ['*']
+ALLOWED_HOSTS = _allowed.split(',') if _allowed else []
 
+# --- Installed Apps ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -28,6 +34,7 @@ INSTALLED_APPS = [
     'purchasing',
 ]
 
+# --- Middleware ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -52,7 +59,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'sales.context_processors.admin_stats',  # ← our custom processor
+                'sales.context_processors.admin_stats',
             ],
         },
     },
@@ -60,17 +67,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'inventory_system.wsgi.application'
 
+# --- Database (Supabase via connection pooler) ---
+# Set DATABASE_URL in Render env vars using Supabase's
+# "Transaction" pooler string (port 6543), e.g.:
+# postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'genx_pos_db'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'admin123'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-    }
+    'default': dj_database_url.config(
+        env='DATABASE_URL',
+        conn_max_age=60,
+        conn_health_checks=True,
+        ssl_require=True,
+    )
 }
 
+# --- Auth ---
 AUTH_USER_MODEL = 'users.User'
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -80,15 +90,16 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# --- Localisation ---
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Harare'
 USE_I18N = True
 USE_TZ = True
 
+# --- Static files (WhiteNoise on Render) ---
 STATIC_URL = '/static/'
 _STATIC_SRC = BASE_DIR / 'static'
 STATICFILES_DIRS = [_STATIC_SRC] if _STATIC_SRC.exists() else []
-
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 os.makedirs(STATIC_ROOT, exist_ok=True)
 
@@ -101,16 +112,19 @@ STORAGES = {
     },
 }
 
+# --- Media ---
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 os.makedirs(MEDIA_ROOT, exist_ok=True)
 
+# --- Misc ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/users/login/'
 LOGIN_REDIRECT_URL = '/sales/pos/'
 LOGOUT_REDIRECT_URL = '/users/login/'
 
+# --- Business logic ---
 LOW_STOCK_THRESHOLD = int(os.environ.get('LOW_STOCK_THRESHOLD', '3'))
 EXPIRY_WARNING_DAYS = int(os.environ.get('EXPIRY_WARNING_DAYS', '30'))
 
@@ -147,4 +161,6 @@ STORE_INFO = {
     },
 }
 
-CSRF_TRUSTED_ORIGINS = ['http://192.168.1.100', 'http://192.168.1.100:8080']
+# --- CSRF (add your Render service URL here) ---
+_render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '')
+CSRF_TRUSTED_ORIGINS = [f'https://{_render_host}'] if _render_host else []
