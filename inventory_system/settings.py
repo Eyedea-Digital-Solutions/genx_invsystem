@@ -11,8 +11,11 @@ SECRET_KEY = os.environ['SECRET_KEY']
 ... # Must be set in Render env vars
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-_allowed = os.environ.get('ALLOWED_HOSTS', '')
-ALLOWED_HOSTS = _allowed.split(',') if _allowed else []
+ALLOWED_HOSTS =[
+    'hub.eyedentity.co.zw',
+    'genx-pos-kf0k.onrender.com',
+    '127.0.0.1',
+]
 
 # --- Installed Apps ---
 INSTALLED_APPS = [
