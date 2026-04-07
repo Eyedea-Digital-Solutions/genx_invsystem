@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% block title %}Employees{% endblock %}
+{% block breadcrumb %}<span class="bc-current">Employees</span>{% endblock %}
+{% block page_title %}Employees{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── leaderboard podium colours ── */
+.lb-rank-1 { color:var(--amber);border-color:rgba(255,170,0,.3); }
+.lb-rank-2 { color:var(--txt-2);border-color:var(--bdr-2); }
+.lb-rank-3 { color:#cd7f32;border-color:rgba(205,127,50,.3); }
+
+/* ── shift pill ── */
+.shift-pill {
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:6px;
+  font-size:11px;font-weight:600;font-family:var(--mono);
+  border:1px solid var(--bdr-2);background:rgba(255,255,255,.04);
+  color:var(--txt-2);white-space:nowrap;
+}
+.shift-pill.confirmed { background:rgba(0,214,143,.08);border-color:rgba(0,214,143,.2);color:var(--green); }
+
+/* ── today grid ── */
+.today-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px; }
+.today-card {
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;display:flex;align-items:center;gap:12px;
+  transition:border-color .15s;
+}
+.today-card:hover { border-color:var(--bdr-2); }
+.today-avatar {
+  width:38px;height:38px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--violet),var(--acc-l));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:13px;font-weight:700;color:#fff;
+}
+.today-name { font-weight:700;font-size:13px;color:var(--txt); }
+.today-meta { font-size:11px;color:var(--txt-3);margin-top:2px; }
+
+/* ── leave calendar ── */
+.leave-cal-row {
+  display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--bdr);
+}
+.leave-cal-row:last-child { border-bottom:none; }
+.leave-date-pill {
+  font-family:var(--mono);font-size:10px;font-weight:700;
+  padding:3px 8px;border-radius:5px;white-space:nowrap;
+  background:var(--violet-bg);color:var(--violet-l);border:1px solid var(--bdr-accent);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div class="ph-left">
+    <h1>Employee Management</h1>
+    <p>{{ today|date:"l, d F Y" }} &nbsp;·&nbsp; {{ active_emp_count }} active staff</p>
+  </div>
+  <div class="ph-right">
+    {% if user.is_manager_role %}
+    <a href="{% url 'employees:shift_create' %}" class="btn-gx btn-gx-ghost btn-gx-sm"><i class="bi bi-calendar-plus"></i> Add Shift</a>
+    <a href="{% url 'employees:employee_create' %}" class="btn-gx btn-gx-primary btn-gx-sm"><i class="bi bi-person-plus"></i> Add Staff</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ─── KPI row ────────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:22px;">
+  <div class="stat-card" style="border-top:2px solid var(--green);">
+    <div class="stat-label">Active Staff</div>
+    <div class="stat-value text-green" style="font-size:30px;">{{ active_emp_count }}</div>
+  </div>
+  <div class="stat-card" style="border-top:2px solid var(--blue);">
+    <div class="stat-label">Present Today</div>
+    <div class="stat-value" style="font-size:30px;color:var(--blue);">{{ present_count }}</div>
+  </div>
+  <div class="stat-card" style="border-top:2px solid var(--amber);">
+    <div class="stat-label">Late Today</div>
+    <div class="stat-value" style="font-size:30px;color:var(--amber);">{{ late_count }}</div>
+  </div>
+  <div class="stat-card" style="border-top:2px solid var(--red);">
+    <div class="stat-label">Pending Leave</div>
+    <div class="stat-value" style="font-size:30px;color:var(--red);">{{ pending_leaves|length }}</div>
+  </div>
+</div>
+
+<!-- ─── Main grid ──────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start;">
+
+  <!-- LEFT -->
+  <div style="display:flex;flex-direction:column;gap:18px;">
+
+    <!-- Today's schedule -->
+    <div class="gx-card">
+      <div class="gx-card-head">
+        <div class="gx-card-title"><i class="bi bi-calendar-check"></i> Today's Schedule</div>
+        <a href="{% url 'employees:schedule' %}" class="btn-gx btn-gx-ghost btn-gx-xs">Full Schedule</a>
+      </div>
+      <div class="gx-card-body">
+        {% if todays_shifts %}
+        <div class="today-grid">
+          {% for shift in todays_shifts %}
+          <div class="today-card">
+            <div class="today-avatar">{{ shift.employee.first_name|slice:":1"|upper }}</div>
+            <div>
+              <div class="today-name">{{ shift.employee.get_full_name|default:shift.employee.username }}</div>
+              <div class="today-meta">
+                <span class="shift-pill {% if shift.is_confirmed %}confirmed{% endif %}">
+                  {% if shift.is_confirmed %}<i class="bi bi-check2"></i>{% endif %}
+                  {{ shift.start_time|time:"H:i" }}–{{ shift.end_time|time:"H:i" }}
+                </span>
+                &nbsp;{{ shift.joint.display_name }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="gx-empty">
+          <i class="bi bi-calendar-x empty-icon"></i>
+          <div class="empty-title">No shifts scheduled for today</div>
+          {% if user.is_manager_role %}
+          <a href="{% url 'employees:shift_create' %}" class="btn-gx btn-gx-primary btn-gx-sm" style="margin-top:10px;">Add Shift</a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Performance leaderboard -->
+    <div class="gx-card">
+      <div class="gx-card-head">
+        <div class="gx-card-title"><i class="bi bi-trophy"></i> Top Sellers — {{ month }}</div>
+        <a href="{% url 'employees:performance_list' %}" class="btn-gx btn-gx-ghost btn-gx-xs">Reviews</a>
+      </div>
+      <div class="gx-card-body">
+        {% if leaderboard %}
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          {% for entry in leaderboard %}
+          <div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:var(--r);
+                      border:1px solid var(--bdr);background:var(--card-2);">
+            <div style="font-family:var(--mono);font-size:20px;font-weight:900;width:32px;text-align:center;
+                        {% if forloop.counter == 1 %}color:var(--amber);{% elif forloop.counter == 2 %}color:var(--txt-2);{% elif forloop.counter == 3 %}color:#cd7f32;{% else %}color:var(--txt-4);{% endif %}">
+              {{ forloop.counter }}
+            </div>
+            <div class="today-avatar">{{ entry.user.first_name|slice:":1"|upper }}</div>
+            <div style="flex:1;">
+              <div style="font-weight:700;font-size:13px;">{{ entry.user.get_full_name|default:entry.user.username }}</div>
+              <div style="font-size:11px;color:var(--txt-3);">{{ entry.count }} sale{{ entry.count|pluralize }}</div>
+            </div>
+            <div style="font-family:var(--mono);font-size:16px;font-weight:800;color:var(--green);">
+              ${{ entry.revenue|floatformat:2 }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="gx-empty"><i class="bi bi-trophy empty-icon"></i><div class="empty-title">No sales data yet</div></div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div style="display:flex;flex-direction:column;gap:18px;">
+
+    <!-- Quick links -->
+    <div class="gx-card">
+      <div class="gx-card-head"><div class="gx-card-title"><i class="bi bi-grid-3x3-gap"></i> Quick Links</div></div>
+      <div style="padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <a href="{% url 'employees:staff_directory' %}" class="btn-gx btn-gx-dark btn-gx-sm" style="justify-content:center;"><i class="bi bi-people"></i> Directory</a>
+        <a href="{% url 'employees:schedule' %}" class="btn-gx btn-gx-dark btn-gx-sm" style="justify-content:center;"><i class="bi bi-calendar3"></i> Schedule</a>
+        <a href="{% url 'employees:attendance' %}" class="btn-gx btn-gx-dark btn-gx-sm" style="justify-content:center;"><i class="bi bi-clock-history"></i> Attendance</a>
+        <a href="{% url 'employees:leave_list' %}" class="btn-gx btn-gx-dark btn-gx-sm" style="justify-content:center;"><i class="bi bi-calendar-x"></i> Leave</a>
+        <a href="{% url 'employees:performance_list' %}" class="btn-gx btn-gx-dark btn-gx-sm" style="justify-content:center;"><i class="bi bi-star"></i> Reviews</a>
+        <a href="{% url 'employees:clock_in' %}" class="btn-gx btn-gx-success btn-gx-sm" style="justify-content:center;"><i class="bi bi-box-arrow-in-right"></i> Clock In</a>
+      </div>
+    </div>
+
+    <!-- Pending leave requests -->
+    {% if pending_leaves %}
+    <div class="gx-card" style="border-left:3px solid var(--amber);">
+      <div class="gx-card-head" style="background:var(--amber-bg);">
+        <div class="gx-card-title" style="color:#92400e;"><i class="bi bi-hourglass-split" style="color:var(--amber);"></i> Pending Leave ({{ pending_leaves|length }})</div>
+      </div>
+      <div style="padding:0;">
+        {% for leave in pending_leaves %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--bdr);">
+          <div>
+            <div style="font-weight:600;font-size:13px;">{{ leave.employee.get_full_name|default:leave.employee.username }}</div>
+            <div style="font-size:11px;color:var(--txt-3);">{{ leave.get_leave_type_display }} · {{ leave.days_requested }}d · {{ leave.start_date|date:"d M" }}</div>
+          </div>
+          {% if user.is_manager_role %}
+          <a href="{% url 'employees:leave_review' leave.pk %}" class="btn-gx btn-gx-amber btn-gx-xs">Review</a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Upcoming approved leaves -->
+    {% if upcoming_leaves %}
+    <div class="gx-card">
+      <div class="gx-card-head">
+        <div class="gx-card-title"><i class="bi bi-calendar-event"></i> Upcoming Leave</div>
+      </div>
+      <div style="padding:14px 18px;">
+        {% for leave in upcoming_leaves %}
+        <div class="leave-cal-row">
+          <span class="leave-date-pill">{{ leave.start_date|date:"d M" }}</span>
+          <div>
+            <div style="font-weight:600;font-size:12px;">{{ leave.employee.get_full_name|default:leave.employee.username }}</div>
+            <div style="font-size:11px;color:var(--txt-3);">{{ leave.get_leave_type_display }} · {{ leave.days_requested }}d</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

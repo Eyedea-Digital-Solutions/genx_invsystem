@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+{% block title %}{{ profile.full_name }}{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'employees:dashboard' %}">Employees</a>
+<span class="bc-sep">/</span>
+<a href="{% url 'employees:staff_directory' %}">Directory</a>
+<span class="bc-sep">/</span>
+<span class="bc-current">{{ profile.full_name }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-header {
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);
+  overflow:hidden;margin-bottom:20px;
+}
+.profile-header-inner {
+  padding:24px;display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;
+}
+.profile-big-avatar {
+  width:80px;height:80px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--violet),var(--acc-l));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:28px;font-weight:900;color:#fff;
+  box-shadow:0 4px 20px rgba(124,58,237,.4);overflow:hidden;
+}
+.profile-big-avatar img { width:100%;height:100%;object-fit:cover; }
+.profile-name { font-size:22px;font-weight:800;letter-spacing:-.4px;color:var(--txt); }
+.profile-id   { font-family:var(--mono);font-size:11px;color:var(--txt-3);margin:4px 0; }
+.profile-meta-row { display:flex;flex-wrap:wrap;gap:14px;margin-top:8px; }
+.profile-meta-item { display:flex;align-items:center;gap:6px;font-size:13px;color:var(--txt-2); }
+.profile-meta-item i { color:var(--txt-3); }
+.profile-actions { margin-left:auto;display:flex;gap:8px;align-items:flex-start; }
+
+.stat-strip { display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--bdr); }
+.stat-strip-item { padding:14px 20px;border-right:1px solid var(--bdr); }
+.stat-strip-item:last-child { border-right:none; }
+.stat-strip-label { font-family:var(--mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--txt-3);margin-bottom:4px; }
+.stat-strip-val   { font-size:20px;font-weight:800;color:var(--txt);letter-spacing:-.5px; }
+
+.detail-grid { display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start; }
+@media(max-width:900px){ .detail-grid { grid-template-columns:1fr; } }
+@media(max-width:600px){ .stat-strip { grid-template-columns:repeat(2,1fr); } }
+
+/* Score stars */
+.score-stars { display:flex;gap:3px; }
+.star { font-size:14px; }
+.star.filled { color:var(--amber); }
+.star.empty  { color:var(--txt-4); }
+
+.review-card {
+  background:var(--card-2);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;margin-bottom:10px;
+}
+
+/* attendance calendar */
+.att-calendar { display:grid;grid-template-columns:repeat(7,1fr);gap:4px; }
+.att-day { aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10px;font-weight:600; }
+.att-present { background:var(--green-bg);color:var(--green);border:1px solid rgba(0,214,143,.2); }
+.att-late    { background:var(--amber-bg);color:var(--amber);border:1px solid rgba(255,170,0,.2); }
+.att-absent  { background:rgba(255,255,255,.03);color:var(--txt-4);border:1px solid var(--bdr); }
+.att-future  { background:transparent;border:1px dashed var(--bdr); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ─── Profile header ──────────────────────────────────────── -->
+<div class="profile-header">
+  <div class="profile-header-inner">
+    <div class="profile-big-avatar">
+      {% if profile.profile_photo %}
+        <img src="{{ profile.profile_photo.url }}" alt="{{ profile.full_name }}">
+      {% else %}
+        {{ profile.user.first_name|slice:":1"|upper }}{{ profile.user.last_name|slice:":1"|upper }}
+      {% endif %}
+    </div>
+    <div>
+      <div class="profile-name">{{ profile.full_name }}</div>
+      <div class="profile-id">{{ profile.employee_id }} · {{ profile.get_department_display }} · {{ profile.get_employment_type_display }}</div>
+      <div class="profile-meta-row">
+        {% if profile.user.primary_joint %}
+        <div class="profile-meta-item"><i class="bi bi-shop"></i> {{ profile.user.primary_joint.display_name }}</div>
+        {% endif %}
+        {% if profile.user.email %}
+        <div class="profile-meta-item"><i class="bi bi-envelope"></i> {{ profile.user.email }}</div>
+        {% endif %}
+        {% if profile.user.phone %}
+        <div class="profile-meta-item"><i class="bi bi-phone"></i> {{ profile.user.phone }}</div>
+        {% endif %}
+        <div class="profile-meta-item"><i class="bi bi-calendar3"></i> Hired {{ profile.date_hired|date:"d M Y" }}</div>
+        <div class="profile-meta-item"><i class="bi bi-hourglass-split"></i> {{ days_employed }} days</div>
+      </div>
+    </div>
+    {% if user.is_manager_role %}
+    <div class="profile-actions">
+      <a href="{% url 'employees:employee_edit' profile.pk %}" class="btn-gx btn-gx-dark btn-gx-sm"><i class="bi bi-pencil"></i> Edit</a>
+      <a href="{% url 'employees:performance_create' %}" class="btn-gx btn-gx-primary btn-gx-sm"><i class="bi bi-star"></i> Review</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stat-strip">
+    <div class="stat-strip-item">
+      <div class="stat-strip-label">Total Sales</div>
+      <div class="stat-strip-val">{{ all_sales_count }}</div>
+    </div>
+    <div class="stat-strip-item">
+      <div class="stat-strip-label">Total Revenue</div>
+      <div class="stat-strip-val" style="color:var(--green);">${{ total_revenue|floatformat:2 }}</div>
+    </div>
+    <div class="stat-strip-item">
+      <div class="stat-strip-label">Avg Order</div>
+      <div class="stat-strip-val">${{ avg_order|floatformat:2 }}</div>
+    </div>
+    <div class="stat-strip-item">
+      <div class="stat-strip-label">Commission (Month)</div>
+      <div class="stat-strip-val" style="color:var(--amber);">${{ commissions|floatformat:2 }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Detail grid ─────────────────────────────────────────── -->
+<div class="detail-grid">
+
+  <!-- LEFT -->
+  <div style="display:flex;flex-direction:column;gap:18px;">
+
+    <!-- 12-month revenue chart -->
+    <div class="gx-card">
+      <div class="gx-card-head"><div class="gx-card-title"><i class="bi bi-graph-up-arrow"></i> 12-Month Revenue</div></div>
+      <div class="gx-card-body" style="height:200px;">
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Attendance this month -->
+    <div class="gx-card">
+      <div class="gx-card-head">
+        <div class="gx-card-title"><i class="bi bi-clock-history"></i> Attendance — This Month</div>
+      </div>
+      <div class="gx-card-body">
+        {% if monthly_attendance %}
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          {% for record in monthly_attendance %}
+          <div style="display:flex;align-items:center;gap:12px;padding:8px;border-radius:6px;
+                      background:var(--card-2);border:1px solid var(--bdr);">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--txt-3);min-width:55px;">
+              {{ record.clock_in|date:"d M" }}
+            </span>
+            <span style="font-family:var(--mono);font-size:12px;font-weight:600;">
+              {{ record.clock_in|time:"H:i" }}
+              {% if record.clock_out %}→ {{ record.clock_out|time:"H:i" }}{% else %}<span style="color:var(--green);">● In</span>{% endif %}
+            </span>
+            {% if record.is_late %}
+            <span class="gx-badge badge-warning" style="font-size:9px;">LATE</span>
+            {% endif %}
+            {% if record.total_hours %}
+            <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--txt-3);">{{ record.total_hours }}h</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="gx-empty"><i class="bi bi-clock empty-icon"></i><div class="empty-title">No attendance records this month</div></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Leave history -->
+    {% if leaves %}
+    <div class="gx-card">
+      <div class="gx-card-head">
+        <div class="gx-card-title"><i class="bi bi-calendar-x"></i> Leave History</div>
+        <a href="{% url 'employees:leave_create' %}" class="btn-gx btn-gx-ghost btn-gx-xs">Apply</a>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="gx-table">
+          <thead><tr><th>Type</th><th>Dates</th><th>Days</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for leave in leaves %}
+            <tr>
+              <td>{{ leave.get_leave_type_display }}</td>
+              <td style="font-size:12px;font-family:var(--mono);">{{ leave.start_date|date:"d M Y" }} → {{ leave.end_date|date:"d M Y" }}</td>
+              <td class="mono">{{ leave.days_requested }}</td>
+              <td>
+                {% if leave.status == 'approved' %}<span class="gx-badge badge-success">Approved</span>
+                {% elif leave.status == 'rejected' %}<span class="gx-badge badge-danger">Rejected</span>
+                {% else %}<span class="gx-badge badge-warning">Pending</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- RIGHT -->
+  <div style="display:flex;flex-direction:column;gap:18px;">
+
+    <!-- HR details card -->
+    <div class="gx-card">
+      <div class="gx-card-head"><div class="gx-card-title"><i class="bi bi-person-badge"></i> HR Details</div></div>
+      <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;">
+        {% if profile.national_id %}
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--txt-3);">National ID</span><span style="font-weight:600;font-family:var(--mono);">{{ profile.national_id }}</span>
+        </div>
+        {% endif %}
+        {% if profile.emergency_contact_name %}
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--txt-3);">Emergency Contact</span>
+          <div style="text-align:right;">
+            <div style="font-weight:600;">{{ profile.emergency_contact_name }}</div>
+            <div style="font-size:11px;color:var(--txt-3);">{{ profile.emergency_contact_phone }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% if profile.bank_name %}
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--txt-3);">Bank</span>
+          <div style="text-align:right;">
+            <div style="font-weight:600;">{{ profile.bank_name }}</div>
+            <div style="font-size:11px;color:var(--txt-3);font-family:var(--mono);">{{ profile.bank_account }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% if profile.commission_rate_percent > 0 %}
+        <div style="display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--txt-3);">Commission Rate</span>
+          <span class="gx-badge badge-amber">{{ profile.commission_rate_percent }}%</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Performance reviews -->
+    <div class="gx-card">
+      <div class="gx-card-head">
+        <div class="gx-card-title"><i class="bi bi-star"></i> Performance Reviews</div>
+        {% if user.is_manager_role %}
+        <a href="{% url 'employees:performance_create' %}" class="btn-gx btn-gx-ghost btn-gx-xs">+ Add</a>
+        {% endif %}
+      </div>
+      <div class="gx-card-body">
+        {% if reviews %}
+          {% for review in reviews %}
+          <div class="review-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:11px;color:var(--txt-3);font-family:var(--mono);">
+                {{ review.review_period_start|date:"M Y" }} → {{ review.review_period_end|date:"M Y" }}
+              </span>
+              <span class="gx-badge badge-{% if review.score_color == 'green' %}success{% elif review.score_color == 'blue' %}info{% elif review.score_color == 'amber' %}warning{% else %}danger{% endif %}">
+                {{ review.overall_score }}/5
+              </span>
+            </div>
+            <div style="display:flex;gap:12px;margin-bottom:8px;">
+              {% for dim, val in forloop.parentloop.counter|floatformat:0 %}
+              {% endfor %}
+              <div style="flex:1;text-align:center;">
+                <div style="font-size:9px;color:var(--txt-4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Sales</div>
+                <div class="score-stars">{% for i in "12345" %}{% if forloop.counter <= review.sales_score %}<span class="star filled">★</span>{% else %}<span class="star empty">★</span>{% endif %}{% endfor %}</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="font-size:9px;color:var(--txt-4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Attendance</div>
+                <div class="score-stars">{% for i in "12345" %}{% if forloop.counter <= review.attendance_score %}<span class="star filled">★</span>{% else %}<span class="star empty">★</span>{% endif %}{% endfor %}</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="font-size:9px;color:var(--txt-4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Attitude</div>
+                <div class="score-stars">{% for i in "12345" %}{% if forloop.counter <= review.attitude_score %}<span class="star filled">★</span>{% else %}<span class="star empty">★</span>{% endif %}{% endfor %}</div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--txt-3);">{{ review.score_label }} · by {{ review.reviewer.get_full_name|default:review.reviewer.username }}</div>
+            <a href="{% url 'employees:performance_detail' review.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs" style="margin-top:8px;">View</a>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="gx-empty" style="padding:24px 0;">
+          <i class="bi bi-star empty-icon"></i><div class="empty-title">No reviews yet</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+Chart.defaults.color       = 'rgba(255,255,255,0.4)';
+Chart.defaults.font.family = "'JetBrains Mono', monospace";
+Chart.defaults.font.size   = 11;
+
+const months   = {{ twelve_months|safe }};
+const ctx      = document.getElementById('revenueChart').getContext('2d');
+const grad     = ctx.createLinearGradient(0, 0, 0, 200);
+grad.addColorStop(0, 'rgba(0,214,143,.25)');
+grad.addColorStop(1, 'rgba(0,214,143,0)');
+
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: months.map(m => m.month),
+    datasets: [{
+      label: 'Revenue',
+      data:  months.map(m => m.revenue),
+      borderColor: '#00d68f',
+      borderWidth: 2,
+      pointRadius: 3,
+      pointBackgroundColor: '#00d68f',
+      tension: 0.4,
+      fill: true,
+      backgroundColor: grad,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend:{ display:false }, tooltip:{ backgroundColor:'#1a1a2a', padding:10, callbacks:{ label: ctx => ' $'+ctx.parsed.y.toFixed(2) } } },
+    scales: {
+      x: { grid:{ color:'rgba(255,255,255,.04)' } },
+      y: { grid:{ color:'rgba(255,255,255,.04)' }, beginAtZero:true, ticks:{ callback: v => '$'+v } }
+    }
+  }
+});
+</script>
+{% endblock %}

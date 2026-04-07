@@ -185,6 +185,7 @@ class StockTake(models.Model):
         'users.User', on_delete=models.SET_NULL, null=True, related_name='stock_takes_conducted'
     )
     conducted_at = models.DateTimeField(default=timezone.now)
+    status       = models.CharField(max_length=20, default='completed')
     notes = models.TextField(blank=True)
 
     def __str__(self):
@@ -199,7 +200,8 @@ class StockTakeItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     system_count = models.IntegerField()
     actual_count = models.IntegerField()
-
+    variance    = models.IntegerField(default=0)
+    
     @property
     def variance(self):
         return self.actual_count - self.system_count

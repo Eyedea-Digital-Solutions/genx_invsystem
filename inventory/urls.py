@@ -3,6 +3,18 @@ from . import views
 
 app_name = 'inventory'
 
+from inventory.views_v4 import (
+    inventory_dashboard,
+    stock_take_wizard,
+    stock_take_list,
+    api_products_for_count,
+    api_stock_take_submit,
+    api_stock_adjust,
+    api_bulk_action,
+    export_csv,
+    bulk_import,
+)
+
 urlpatterns = [
     path('', views.inventory_dashboard, name='inventory_dashboard'),
     path('products/', views.product_list, name='product_list'),
@@ -18,4 +30,17 @@ urlpatterns = [
     path('suppliers/', views.supplier_list, name='supplier_list'),
     path('suppliers/add/', views.supplier_create, name='supplier_create'),
     path('api/products/', views.get_products_by_joint, name='get_products_by_joint'),
+
+    # --- New API-driven stock take routes ---
+      path('export/',              export_csv,                name='export_csv'),
+    path('import/',              bulk_import,               name='bulk_import'),
+    path('stock-take/',          stock_take_list,           name='stock_take_list'),
+    path('stock-take/new/',      stock_take_wizard,         name='stock_take_wizard'),
+    path('stock-take/new/',      stock_take_wizard,         name='stock_take_create'),  # alias
+ 
+    # ── JSON APIs ────────────────────────────────────────────────────────
+    path('api/products-for-count/', api_products_for_count, name='api_products_for_count'),
+    path('api/stock-take/submit/',  api_stock_take_submit,  name='api_stock_take_submit'),
+    path('api/stock-adjust/',       api_stock_adjust,       name='api_stock_adjust'),
+    path('api/bulk-action/',        api_bulk_action,        name='api_bulk_action'),
 ]

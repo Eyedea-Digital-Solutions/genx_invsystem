@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+{% block title %}Stock Take{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'sales:dashboard' %}">Home</a>
+<span class="bc-sep">/</span>
+<a href="{% url 'inventory:inventory_dashboard' %}">Inventory</a>
+<span class="bc-sep">/</span>
+<span class="bc-current">Stock Take</span>
+{% endblock %}
+{% block page_title %}Stock Take{% endblock %}
+
+{% block extra_css %}
+<style>
+.wizard-steps {
+    display:flex;align-items:center;gap:0;margin-bottom:28px;
+    background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:16px 20px;
+}
+.wiz-step {
+    display:flex;align-items:center;gap:10px;flex:1;
+    font-size:12px;font-weight:600;color:var(--txt-3);
+}
+.wiz-step.active { color:var(--txt); }
+.wiz-step.done   { color:var(--green); }
+.wiz-dot {
+    width:28px;height:28px;border-radius:50%;border:2px solid var(--bdr-2);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-family:var(--font-mono);font-size:11px;font-weight:700;
+    transition:var(--t);
+}
+.wiz-step.active .wiz-dot { border-color:var(--violet);background:var(--violet-bg);color:var(--violet-l); }
+.wiz-step.done .wiz-dot   { border-color:var(--green);background:var(--green-bg);color:var(--green); }
+.wiz-divider { flex:1;height:1px;background:var(--bdr);margin:0 10px;max-width:60px; }
+
+.step-panel { display:none; }
+.step-panel.active { display:block; }
+
+/* Step 1 — setup */
+.setup-card { background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:24px;max-width:580px; }
+
+/* Step 2 — count table */
+.count-toolbar {
+    background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);
+    padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;
+}
+.count-table-wrap { background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);overflow:hidden; }
+.count-table { width:100%;border-collapse:collapse; }
+.count-table thead th {
+    font-family:var(--font-mono);font-size:10px;font-weight:600;text-transform:uppercase;
+    letter-spacing:.8px;color:var(--txt-3);padding:10px 14px;border-bottom:1px solid var(--bdr);
+    background:rgba(255,255,255,.02);
+}
+.count-table tbody tr { border-bottom:1px solid rgba(255,255,255,.04);transition:var(--t-fast); }
+.count-table tbody tr:last-child { border-bottom:none; }
+.count-table tbody tr:hover { background:rgba(255,255,255,.02); }
+.count-table tbody tr.variance-pos { border-left:3px solid var(--green); }
+.count-table tbody tr.variance-neg { border-left:3px solid var(--red); }
+.count-table td { padding:8px 14px;font-size:12px;vertical-align:middle; }
+
+.count-input {
+    width:80px;background:rgba(255,255,255,.06);border:1px solid var(--bdr-2);
+    border-radius:var(--r-sm);padding:5px 8px;font-family:var(--font-mono);
+    font-size:13px;font-weight:700;color:var(--txt);text-align:center;outline:none;
+    transition:var(--t-fast);
+}
+.count-input:focus { border-color:var(--violet);box-shadow:0 0 0 2px var(--violet-bg); }
+.count-input.changed { border-color:var(--amber);background:var(--amber-bg); }
+
+.var-pos { color:var(--green);font-family:var(--font-mono);font-weight:700; }
+.var-neg { color:#f87171;font-family:var(--font-mono);font-weight:700; }
+.var-zero { color:var(--txt-3);font-family:var(--font-mono); }
+
+/* Progress */
+.count-progress-wrap { display:flex;align-items:center;gap:10px;font-size:12px;color:var(--txt-3); }
+.count-progress-bar { flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden; }
+.count-progress-fill { height:100%;background:var(--violet);border-radius:99px;transition:width .3s; }
+
+/* Step 3 — review */
+.review-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px; }
+.review-stat { background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;text-align:center; }
+.review-stat .rv-val { font-family:var(--font-disp);font-size:26px;font-weight:800;line-height:1;margin-top:4px; }
+.review-stat .rv-label { font-family:var(--font-mono);font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--txt-3); }
+
+@media(max-width:600px){ .review-grid{grid-template-columns:1fr;} .wizard-steps{flex-direction:column;gap:10px;} .wiz-divider{display:none;} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+    <div class="ph-left">
+        <h1>Stock Take Wizard</h1>
+        <p>Count physical stock and reconcile against system records</p>
+    </div>
+</div>
+
+<!-- WIZARD STEPS -->
+<div class="wizard-steps">
+    <div class="wiz-step" id="ws1">
+        <div class="wiz-dot">1</div>
+        <span class="d-none d-sm-inline">Setup</span>
+    </div>
+    <div class="wiz-divider"></div>
+    <div class="wiz-step" id="ws2">
+        <div class="wiz-dot">2</div>
+        <span class="d-none d-sm-inline">Count</span>
+    </div>
+    <div class="wiz-divider"></div>
+    <div class="wiz-step" id="ws3">
+        <div class="wiz-dot">3</div>
+        <span class="d-none d-sm-inline">Review & Submit</span>
+    </div>
+</div>
+
+<!-- ── STEP 1: SETUP ──────────────────────────────────────────────── -->
+<div class="step-panel active" id="step1">
+    <div class="setup-card">
+        <h2 style="font-family:var(--font-disp);font-size:17px;font-weight:800;margin:0 0 18px;">Configure Stock Take</h2>
+
+        <div style="margin-bottom:14px;">
+            <label class="gx-label">Joint *</label>
+            <select id="st_joint" class="gx-select" required>
+                <option value="">— Select joint —</option>
+                {% for j in joints %}
+                <option value="{{ j.pk }}">{{ j.display_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-bottom:14px;">
+            <label class="gx-label">Category (optional — leave blank for all)</label>
+            <select id="st_category" class="gx-select">
+                <option value="">All Categories</option>
+                {% for c in categories %}
+                <option value="{{ c.pk }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="margin-bottom:14px;">
+            <label class="gx-label">Notes</label>
+            <input type="text" id="st_notes" class="gx-input" placeholder="e.g. Monthly count, end of quarter…">
+        </div>
+        <div style="display:flex;gap:10px;padding:14px;background:rgba(255,255,255,.03);border-radius:var(--r-sm);margin-bottom:18px;">
+            <i class="bi bi-info-circle" style="color:var(--blue);flex-shrink:0;margin-top:1px;"></i>
+            <div style="font-size:12px;color:var(--txt-2);">
+                During the count, sales can still proceed. When you submit the final count, variances will be logged and stock updated to match your counts.
+            </div>
+        </div>
+        <button class="btn-gx btn-gx-primary" onclick="startCount()">
+            <i class="bi bi-play-fill"></i>Begin Count
+        </button>
+    </div>
+</div>
+
+<!-- ── STEP 2: COUNT ──────────────────────────────────────────────── -->
+<div class="step-panel" id="step2">
+    <div class="count-toolbar">
+        <div class="count-progress-wrap" style="flex:1;">
+            <span id="countedNum" style="font-family:var(--font-mono);font-weight:700;color:var(--violet-l);">0</span>
+            <span style="color:var(--txt-4);">/</span>
+            <span id="totalNum" style="font-family:var(--font-mono);">0</span>
+            <span>counted</span>
+            <div class="count-progress-bar">
+                <div class="count-progress-fill" id="countFill" style="width:0%;"></div>
+            </div>
+        </div>
+        <input type="text" id="stSearch" class="gx-input" placeholder="Search products…"
+               oninput="filterCountTable(this.value)" style="width:200px;">
+        <button class="btn-gx btn-gx-ghost btn-gx-sm" onclick="markAllCounted()">
+            <i class="bi bi-check-all"></i>Mark All
+        </button>
+    </div>
+
+    <div class="count-table-wrap">
+        <table class="count-table" id="countTable">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>System Qty</th>
+                    <th>Counted Qty</th>
+                    <th>Variance</th>
+                    <th>Value Diff</th>
+                </tr>
+            </thead>
+            <tbody id="countBody">
+                <!-- Populated by JS after loadProducts() -->
+                <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--txt-3);font-size:12px;">
+                    <div style="font-size:22px;margin-bottom:8px;opacity:.4;">⏳</div>
+                    Select a joint in Step 1 to load products
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+        <button class="btn-gx btn-gx-ghost" onclick="goStep(1)"><i class="bi bi-chevron-left"></i>Back</button>
+        <button class="btn-gx btn-gx-primary" onclick="goStep(3)">
+            Review Variances <i class="bi bi-chevron-right"></i>
+        </button>
+    </div>
+</div>
+
+<!-- ── STEP 3: REVIEW & SUBMIT ────────────────────────────────────── -->
+<div class="step-panel" id="step3">
+    <!-- Summary stats -->
+    <div class="review-grid">
+        <div class="review-stat">
+            <div class="rv-label">Total Lines</div>
+            <div class="rv-val" id="rv_total">—</div>
+        </div>
+        <div class="review-stat" style="border-color:rgba(229,25,58,.2);">
+            <div class="rv-label">Negative Variance</div>
+            <div class="rv-val" id="rv_neg" style="color:#f87171;">—</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--txt-3);" id="rv_neg_val">$0</div>
+        </div>
+        <div class="review-stat" style="border-color:rgba(0,214,143,.2);">
+            <div class="rv-label">Positive Variance</div>
+            <div class="rv-val" id="rv_pos" style="color:var(--green);">—</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--txt-3);" id="rv_pos_val">$0</div>
+        </div>
+    </div>
+
+    <!-- Variance table (only show lines with differences) -->
+    <div class="count-table-wrap" style="margin-bottom:16px;">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--bdr);font-size:12px;font-weight:700;">
+            Lines with Variance
+        </div>
+        <table class="count-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>System</th>
+                    <th>Counted</th>
+                    <th>Variance</th>
+                    <th>Value Impact</th>
+                </tr>
+            </thead>
+            <tbody id="reviewBody">
+                <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--txt-3);font-size:12px;">No variances</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:16px;margin-bottom:16px;">
+        <label class="gx-label">Manager Notes (required before submit)</label>
+        <textarea id="finalNotes" class="gx-textarea" rows="3" placeholder="Sign off notes, who performed the count, any anomalies…"></textarea>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+        <button class="btn-gx btn-gx-ghost" onclick="goStep(2)"><i class="bi bi-chevron-left"></i>Back to Count</button>
+        <button class="btn-gx btn-gx-ghost btn-gx-sm" onclick="exportCountCSV()">
+            <i class="bi bi-download"></i>Export CSV
+        </button>
+        <button class="btn-gx btn-gx-primary" onclick="submitStockTake()" id="submitBtn">
+            <i class="bi bi-check-circle-fill"></i>Submit & Apply Stock
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   STOCK TAKE WIZARD JS
+══════════════════════════════════════════════════════════════════ */
+const CSRF = '{{ csrf_token }}';
+let _products = [];     // {id, name, sku, price, system_qty}
+let _counts   = {};     // productId → counted qty
+let _stNotes  = '';
+
+/* ── STEP NAVIGATION ───────────────────────────────────────────── */
+function setStep(n) {
+    [1,2,3].forEach(i => {
+        document.getElementById('step'+i)?.classList.toggle('active', i===n);
+        const ws = document.getElementById('ws'+i);
+        if (ws) {
+            ws.classList.remove('active','done');
+            if (i === n) ws.classList.add('active');
+            else if (i < n) ws.classList.add('done');
+        }
+    });
+    // Update step dots text
+    document.querySelectorAll('.wiz-step.done .wiz-dot').forEach(d => d.innerHTML = '<i class="bi bi-check-lg"></i>');
+}
+window.goStep = n => {
+    if (n === 3) buildReview();
+    setStep(n);
+    window.scrollTo({top:0,behavior:'smooth'});
+};
+
+/* ── START COUNT: load products via API ─────────────────────────── */
+async function startCount() {
+    const joint = document.getElementById('st_joint').value;
+    const cat   = document.getElementById('st_category').value;
+    _stNotes    = document.getElementById('st_notes').value;
+
+    if (!joint) { showToast('Please select a joint', 'warning'); return; }
+
+    try {
+        const url = `{% url 'inventory:api_products_for_count' %}?joint=${joint}&category=${cat}`;
+        const r   = await fetch(url);
+        const d   = await r.json();
+        if (!d.products?.length) { showToast('No products found for this selection', 'warning'); return; }
+        _products = d.products;
+        _counts   = {};
+        buildCountTable();
+        setStep(2);
+    } catch(e) { showToast('Failed to load products', 'danger'); }
+}
+
+function buildCountTable() {
+    const tbody = document.getElementById('countBody');
+    document.getElementById('totalNum').textContent = _products.length;
+
+    tbody.innerHTML = _products.map(p => `
+        <tr id="ctr_${p.id}" data-name="${(p.name||'').toLowerCase()}">
+            <td>
+                <div style="font-weight:600;font-size:12px;">${p.name}</div>
+                <div style="font-family:var(--font-mono);font-size:10px;color:var(--txt-3);">${p.sku||''}</div>
+            </td>
+            <td style="font-family:var(--font-mono);font-weight:700;">${p.system_qty}</td>
+            <td>
+                <input type="number" min="0" class="count-input"
+                       id="ci_${p.id}"
+                       value=""
+                       placeholder="${p.system_qty}"
+                       oninput="onCountInput(${p.id}, this)">
+            </td>
+            <td id="var_${p.id}" style="font-family:var(--font-mono);color:var(--txt-3);">—</td>
+            <td id="vval_${p.id}" style="font-family:var(--font-mono);color:var(--txt-3);">—</td>
+        </tr>
+    `).join('');
+    updateProgress();
+}
+
+function onCountInput(productId, input) {
+    const val = input.value === '' ? null : parseInt(input.value);
+    _counts[productId] = val;
+    input.classList.toggle('changed', val !== null);
+
+    // Update variance display
+    const p = _products.find(x => x.id === productId);
+    const varEl  = document.getElementById('var_' + productId);
+    const vvalEl = document.getElementById('vval_' + productId);
+    const row    = document.getElementById('ctr_' + productId);
+
+    if (val === null || !p) { varEl.textContent='—'; vvalEl.textContent='—'; row.className=''; return; }
+    const diff = val - p.system_qty;
+    const vval = diff * parseFloat(p.price||0);
+    varEl.textContent  = (diff > 0 ? '+' : '') + diff;
+    varEl.className    = diff > 0 ? 'var-pos' : (diff < 0 ? 'var-neg' : 'var-zero');
+    vvalEl.textContent = (vval > 0 ? '+' : '') + '$' + Math.abs(vval).toFixed(2);
+    vvalEl.className   = diff > 0 ? 'var-pos' : (diff < 0 ? 'var-neg' : 'var-zero');
+    row.className      = diff > 0 ? 'variance-pos' : (diff < 0 ? 'variance-neg' : '');
+    updateProgress();
+}
+
+function updateProgress() {
+    const counted = Object.values(_counts).filter(v => v !== null).length;
+    const total   = _products.length;
+    document.getElementById('countedNum').textContent = counted;
+    document.getElementById('countFill').style.width  = total ? (counted/total*100)+'%' : '0%';
+}
+
+function filterCountTable(q) {
+    document.querySelectorAll('#countBody tr').forEach(tr => {
+        const name = tr.dataset.name || '';
+        tr.style.display = !q || name.includes(q.toLowerCase()) ? '' : 'none';
+    });
+}
+
+function markAllCounted() {
+    _products.forEach(p => {
+        const inp = document.getElementById('ci_' + p.id);
+        if (inp && inp.value === '') {
+            inp.value = p.system_qty;
+            onCountInput(p.id, inp);
+        }
+    });
+}
+
+/* ── STEP 3: BUILD REVIEW ──────────────────────────────────────── */
+function buildReview() {
+    let negCount=0, posCount=0, negVal=0, posVal=0;
+    const lines = [];
+
+    _products.forEach(p => {
+        const counted = _counts[p.id];
+        if (counted === null || counted === undefined) return;
+        const diff = counted - p.system_qty;
+        if (diff === 0) return;
+        const vval = diff * parseFloat(p.price||0);
+        if (diff < 0) { negCount++; negVal += vval; }
+        else { posCount++; posVal += vval; }
+        lines.push({ name:p.name, system:p.system_qty, counted, diff, vval });
+    });
+
+    document.getElementById('rv_total').textContent = _products.length;
+    document.getElementById('rv_neg').textContent   = negCount;
+    document.getElementById('rv_pos').textContent   = posCount;
+    document.getElementById('rv_neg_val').textContent = '-$'+Math.abs(negVal).toFixed(2);
+    document.getElementById('rv_pos_val').textContent = '+$'+posVal.toFixed(2);
+
+    const tbody = document.getElementById('reviewBody');
+    if (!lines.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--txt-3);font-size:12px;"><i class="bi bi-check-circle" style="color:var(--green);font-size:20px;display:block;margin-bottom:6px;"></i>All counts match system — no variances</td></tr>';
+        return;
+    }
+    tbody.innerHTML = lines.map(l => `
+        <tr class="${l.diff < 0 ? 'variance-neg' : 'variance-pos'}">
+            <td style="font-weight:600;font-size:12px;">${l.name}</td>
+            <td style="font-family:var(--font-mono);">${l.system}</td>
+            <td style="font-family:var(--font-mono);font-weight:700;">${l.counted}</td>
+            <td class="${l.diff < 0 ? 'var-neg' : 'var-pos'}">${l.diff > 0 ? '+' : ''}${l.diff}</td>
+            <td class="${l.diff < 0 ? 'var-neg' : 'var-pos'}">${l.vval > 0 ? '+' : ''}$${Math.abs(l.vval).toFixed(2)}</td>
+        </tr>
+    `).join('');
+}
+
+/* ── SUBMIT ─────────────────────────────────────────────────────── */
+async function submitStockTake() {
+    const notes = document.getElementById('finalNotes').value.trim();
+    if (!notes) { showToast('Please enter manager sign-off notes', 'warning'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Applying…';
+
+    const joint = document.getElementById('st_joint').value;
+    const counts_payload = Object.entries(_counts)
+        .filter(([,v]) => v !== null && v !== undefined)
+        .map(([id,qty]) => ({ product_id: parseInt(id), counted_qty: qty }));
+
+    try {
+        const r = await fetch('{% url "inventory:api_stock_take_submit" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ joint_id: joint, notes, setup_notes: _stNotes, counts: counts_payload })
+        });
+        const d = await r.json();
+        if (d.ok) {
+            showToast('Stock take submitted successfully!', 'success');
+            setTimeout(() => window.location.href = '{% url "inventory:stock_take_list" %}', 1200);
+        } else {
+            showToast(d.error || 'Submission failed', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>Submit & Apply Stock';
+        }
+    } catch(e) {
+        showToast('Network error', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>Submit & Apply Stock';
+    }
+}
+
+/* ── EXPORT CSV ─────────────────────────────────────────────────── */
+function exportCountCSV() {
+    const rows = [['Product','SKU','System Qty','Counted Qty','Variance','Value Diff']];
+    _products.forEach(p => {
+        const counted = _counts[p.id] ?? '';
+        const diff    = counted !== '' ? counted - p.system_qty : '';
+        const vval    = diff !== '' ? (diff * parseFloat(p.price||0)).toFixed(2) : '';
+        rows.push([p.name, p.sku||'', p.system_qty, counted, diff, vval]);
+    });
+    const csv  = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `stock-take-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+}
+
+// Init
+setStep(1);
+</script>
+{% endblock %}

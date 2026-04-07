@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Stock Takes{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'inventory:inventory_dashboard' %}">Inventory</a>
+<span class="bc-sep">/</span>
+<span class="bc-current">Stock Takes</span>
+{% endblock %}
+{% block page_title %}Stock Takes{% endblock %}
+
+{% block content %}
+<div class="ph">
+    <div class="ph-left"><h1>Stock Takes</h1><p>History of all physical counts</p></div>
+    <div class="ph-right">
+        <a href="{% url 'inventory:stock_take_wizard' %}" class="btn-gx btn-gx-primary btn-gx-sm">
+            <i class="bi bi-plus-lg"></i>New Stock Take
+        </a>
+    </div>
+</div>
+
+<div class="stock-table-wrap" style="background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);overflow:hidden;">
+    <table class="gx-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Joint</th>
+                <th>Conducted By</th>
+                <th>Lines</th>
+                <th>Variances</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in takes %}
+            <tr>
+                <td style="font-family:var(--font-mono);font-size:11px;">{{ t.created_at|date:"d M Y H:i" }}</td>
+                <td><span class="gx-badge badge-neutral">{{ t.joint.display_name }}</span></td>
+                <td>{{ t.conducted_by.get_full_name|default:t.conducted_by.username }}</td>
+                <td style="font-family:var(--font-mono);">{{ t.items.count }}</td>
+                <td>
+                    {% with neg=t.items.filter_negative pos=t.items.filter_positive %}
+                    {% if t.items.count %}
+                    <span style="color:#f87171;font-family:var(--font-mono);font-size:11px;">
+                        {{ t.items.filter(variance__lt=0).count }} neg
+                    </span>
+                    <span style="color:var(--txt-4);margin:0 4px;">·</span>
+                    <span style="color:var(--green);font-family:var(--font-mono);font-size:11px;">
+                        {{ t.items.filter(variance__gt=0).count }} pos
+                    </span>
+                    {% endif %}
+                    {% endwith %}
+                </td>
+                <td>
+                    {% if t.status == 'completed' %}
+                    <span class="gx-badge badge-green">Completed</span>
+                    {% else %}
+                    <span class="gx-badge badge-amber">{{ t.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'inventory:stock_take_detail' t.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs">
+                        <i class="bi bi-eye"></i>View
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7">
+                <div class="gx-empty">
+                    <i class="bi bi-clipboard-x empty-icon"></i>
+                    <div class="empty-title">No stock takes yet</div>
+                    <div class="empty-sub"><a href="{% url 'inventory:stock_take_wizard' %}" style="color:var(--violet-l);">Run your first stock take</a></div>
+                </div>
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

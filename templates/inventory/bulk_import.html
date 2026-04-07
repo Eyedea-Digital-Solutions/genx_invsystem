@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Bulk Import{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'inventory:inventory_dashboard' %}">Inventory</a>
+<span class="bc-sep">/</span>
+<span class="bc-current">Bulk Import</span>
+{% endblock %}
+{% block page_title %}Bulk Import{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;">
+<div class="ph"><div class="ph-left"><h1>Bulk Import Products</h1><p>Upload a CSV to create or update products</p></div></div>
+
+<div class="gx-card" style="margin-bottom:16px;">
+    <div class="gx-card-head"><div class="gx-card-title"><i class="bi bi-file-earmark-spreadsheet"></i>CSV Format</div></div>
+    <div class="gx-card-body">
+        <p style="font-size:12px;color:var(--txt-2);margin-bottom:10px;">
+            Required columns marked with *. Download the template to get started.
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+            {% for col in csv_columns %}
+            <span class="gx-badge {% if '*' in col %}badge-violet{% else %}badge-neutral{% endif %}">{{ col }}</span>
+            {% endfor %}
+        </div>
+        <a href="{% url 'inventory:export_csv' %}" class="btn-gx btn-gx-ghost btn-gx-sm">
+            <i class="bi bi-download"></i>Download Existing Inventory as Template
+        </a>
+    </div>
+</div>
+
+<div class="gx-card">
+    <div class="gx-card-head"><div class="gx-card-title"><i class="bi bi-upload"></i>Upload CSV</div></div>
+    <div class="gx-card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div style="margin-bottom:14px;">
+                <label class="gx-label">Joint *</label>
+                <select name="joint" class="gx-select" required>
+                    <option value="">— Select joint —</option>
+                    {% for j in joints %}<option value="{{ j.pk }}">{{ j.display_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label class="gx-label">CSV File *</label>
+                <input type="file" name="csv_file" accept=".csv" required
+                       class="gx-input" style="cursor:pointer;">
+                <div style="font-size:11px;color:var(--txt-3);margin-top:4px;">Max 5MB · UTF-8 encoding · Comma-separated</div>
+            </div>
+            <div style="padding:12px;background:var(--amber-bg);border:1px solid rgba(255,170,0,.2);border-radius:var(--r-sm);font-size:12px;color:var(--amber);margin-bottom:16px;">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                Existing products (matched by code or name) will have their price, category, and brand updated.
+                Stock will be set to the imported qty value.
+            </div>
+            <div style="display:flex;gap:8px;">
+                <a href="{% url 'inventory:inventory_dashboard' %}" class="btn-gx btn-gx-ghost">Cancel</a>
+                <button type="submit" class="btn-gx btn-gx-primary"><i class="bi bi-cloud-upload"></i>Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+{% endblock %}

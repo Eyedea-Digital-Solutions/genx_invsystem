@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}Staff Directory{% endblock %}
+{% block breadcrumb %}<a href="{% url 'employees:dashboard' %}">Employees</a><span class="bc-sep">/</span><span class="bc-current">Directory</span>{% endblock %}
+{% block page_title %}Staff Directory{% endblock %}
+
+{% block extra_css %}
+<style>
+.staff-card {
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);
+  overflow:hidden;transition:border-color .15s,transform .15s,box-shadow .15s;
+  display:flex;flex-direction:column;
+}
+.staff-card:hover { border-color:var(--bdr-2);transform:translateY(-2px);box-shadow:var(--shadow); }
+.staff-card-head { padding:18px 18px 12px;display:flex;align-items:flex-start;gap:14px; }
+.staff-avatar {
+  width:52px;height:52px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--violet),var(--acc-l));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:20px;font-weight:800;color:#fff;
+  box-shadow:0 4px 14px rgba(124,58,237,.35);
+  overflow:hidden;
+}
+.staff-avatar img { width:100%;height:100%;object-fit:cover; }
+.staff-name { font-size:15px;font-weight:800;color:var(--txt);margin-bottom:3px; }
+.staff-id   { font-family:var(--mono);font-size:10px;color:var(--txt-4); }
+.staff-badges { display:flex;gap:5px;flex-wrap:wrap;margin-top:6px; }
+.staff-card-body { padding:0 18px 14px;display:flex;flex-direction:column;gap:6px; }
+.staff-info-row { display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt-2); }
+.staff-info-row i { color:var(--txt-3);width:14px;flex-shrink:0; }
+.staff-card-foot { margin-top:auto;padding:10px 14px;border-top:1px solid var(--bdr);
+  display:flex;gap:6px; }
+
+.dept-badge {
+  display:inline-flex;padding:2px 8px;border-radius:4px;
+  font-size:10px;font-weight:700;font-family:var(--mono);text-transform:uppercase;
+}
+.dept-sales      { background:var(--blue-bg);color:var(--blue);border:1px solid rgba(77,159,255,.2); }
+.dept-management { background:var(--violet-bg);color:var(--violet-l);border:1px solid var(--bdr-accent); }
+.dept-operations { background:var(--green-bg);color:var(--green);border:1px solid rgba(0,214,143,.2); }
+.dept-admin      { background:var(--amber-bg);color:var(--amber);border:1px solid rgba(255,170,0,.2); }
+
+.emp-type-badge {
+  display:inline-flex;padding:2px 7px;border-radius:4px;
+  font-size:10px;font-weight:600;
+  background:rgba(255,255,255,.06);color:var(--txt-3);
+  border:1px solid var(--bdr);
+}
+
+.staff-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div class="ph-left">
+    <h1>Staff Directory</h1>
+    <p>{{ total_count }} employee{{ total_count|pluralize }}</p>
+  </div>
+  <div class="ph-right">
+    <a href="{% url 'employees:export_staff_csv' %}" class="btn-gx btn-gx-ghost btn-gx-sm"><i class="bi bi-download"></i> CSV</a>
+    {% if user.is_manager_role %}
+    <a href="{% url 'employees:employee_create' %}" class="btn-gx btn-gx-primary btn-gx-sm"><i class="bi bi-person-plus"></i> Add</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar" style="margin-bottom:20px;">
+  <form method="get" style="display:contents;">
+    <input type="text" name="q" value="{{ request.GET.q|default:'' }}"
+           class="gx-input" placeholder="Search name, ID…" style="min-width:200px;">
+    {{ filter_form.department }}
+    {{ filter_form.employment_type }}
+    {{ filter_form.joint }}
+    <button type="submit" class="btn-gx btn-gx-dark btn-gx-sm"><i class="bi bi-funnel-fill"></i></button>
+    <a href="{% url 'employees:staff_directory' %}" class="btn-gx btn-gx-ghost btn-gx-sm">Clear</a>
+  </form>
+</div>
+
+<!-- Cards grid -->
+<div class="staff-grid">
+  {% for profile in profiles %}
+  <div class="staff-card">
+    <div class="staff-card-head">
+      <div class="staff-avatar">
+        {% if profile.profile_photo %}
+          <img src="{{ profile.profile_photo.url }}" alt="{{ profile.full_name }}">
+        {% else %}
+          {{ profile.user.first_name|slice:":1"|upper }}{{ profile.user.last_name|slice:":1"|upper }}
+        {% endif %}
+      </div>
+      <div>
+        <div class="staff-name">{{ profile.full_name }}</div>
+        <div class="staff-id">{{ profile.employee_id }}</div>
+        <div class="staff-badges">
+          <span class="dept-badge dept-{{ profile.department }}">{{ profile.get_department_display }}</span>
+          <span class="emp-type-badge">{{ profile.get_employment_type_display }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="staff-card-body">
+      {% if profile.user.primary_joint %}
+      <div class="staff-info-row">
+        <i class="bi bi-shop"></i>
+        {{ profile.user.primary_joint.display_name }}
+      </div>
+      {% endif %}
+      {% if profile.user.phone %}
+      <div class="staff-info-row">
+        <i class="bi bi-phone"></i>
+        {{ profile.user.phone }}
+      </div>
+      {% endif %}
+      {% if profile.user.email %}
+      <div class="staff-info-row">
+        <i class="bi bi-envelope"></i>
+        {{ profile.user.email|truncatechars:28 }}
+      </div>
+      {% endif %}
+      <div class="staff-info-row">
+        <i class="bi bi-calendar3"></i>
+        Hired {{ profile.date_hired|date:"d M Y" }} · {{ profile.days_employed }} days
+      </div>
+    </div>
+
+    <div class="staff-card-foot">
+      <a href="{% url 'employees:employee_detail' profile.pk %}" class="btn-gx btn-gx-dark btn-gx-xs" style="flex:1;justify-content:center;">View Profile</a>
+      {% if user.is_manager_role %}
+      <a href="{% url 'employees:employee_edit' profile.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs"><i class="bi bi-pencil"></i></a>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div style="grid-column:1/-1;" class="gx-empty">
+    <i class="bi bi-people empty-icon"></i>
+    <div class="empty-title">No employees found</div>
+    <div class="empty-sub">Try adjusting your filters</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

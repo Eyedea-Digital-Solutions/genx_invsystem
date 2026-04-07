@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block title %}Schedule{% endblock %}
+{% block breadcrumb %}<a href="{% url 'employees:dashboard' %}">Employees</a><span class="bc-sep">/</span><span class="bc-current">Schedule</span>{% endblock %}
+
+{% block extra_css %}
+<style>
+.schedule-wrap { overflow-x:auto; }
+
+.schedule-grid {
+  display:grid;
+  grid-template-columns: 180px repeat(7, minmax(120px, 1fr));
+  border:1px solid var(--bdr);border-radius:var(--r-lg);
+  overflow:hidden;min-width:900px;
+  background:var(--card);
+}
+
+/* header row */
+.sg-header { grid-column:1/-1;display:contents; }
+.sg-col-head {
+  padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--bdr);
+  font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--txt-3);text-align:center;
+}
+.sg-col-head.today { color:var(--violet-l);border-bottom:2px solid var(--violet); }
+.sg-col-head:first-child { text-align:left;border-right:1px solid var(--bdr); }
+
+/* employee name column */
+.sg-emp-cell {
+  padding:10px 14px;border-bottom:1px solid var(--bdr);border-right:1px solid var(--bdr);
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.015);
+}
+.sg-mini-avatar {
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--violet),var(--acc-l));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;
+}
+.sg-emp-name { font-size:12px;font-weight:600;color:var(--txt); }
+.sg-emp-joint { font-size:10px;color:var(--txt-3); }
+
+/* shift cells */
+.sg-shift-cell {
+  padding:6px;border-bottom:1px solid var(--bdr);border-right:1px solid var(--bdr-2 );
+  position:relative;min-height:70px;vertical-align:top;
+}
+.sg-shift-cell:last-child { border-right:none; }
+.sg-shift-cell.today-col { background:rgba(124,58,237,.04); }
+
+.shift-block {
+  border-radius:6px;padding:6px 8px;font-size:11px;font-weight:600;
+  background:var(--violet-bg);border:1px solid var(--bdr-accent);color:var(--violet-l);
+  cursor:pointer;transition:all .12s;
+}
+.shift-block.confirmed { background:var(--green-bg);border-color:rgba(0,214,143,.2);color:var(--green); }
+.shift-block:hover { filter:brightness(1.15); }
+.shift-time { font-family:var(--mono);font-size:10px;margin-bottom:2px; }
+.shift-joint { font-size:10px;color:inherit;opacity:.7; }
+.shift-actions { display:none;position:absolute;top:4px;right:4px;gap:3px; }
+.sg-shift-cell:hover .shift-actions { display:flex; }
+.shift-act-btn {
+  width:20px;height:20px;border-radius:4px;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:11px;
+  background:rgba(255,255,255,.12);color:var(--txt);transition:.12s;
+}
+.shift-act-btn:hover { background:var(--violet);color:#fff; }
+.shift-act-btn.del:hover { background:var(--red);color:#fff; }
+
+.add-shift-btn {
+  width:100%;border:1px dashed rgba(255,255,255,.1);background:none;
+  border-radius:6px;padding:5px;font-size:11px;color:var(--txt-4);
+  cursor:pointer;transition:.12s;margin-top:4px;
+}
+.add-shift-btn:hover { border-color:var(--violet);color:var(--acc-l);background:var(--violet-bg); }
+
+/* nav header */
+.sched-nav { display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
+.week-range { font-family:var(--mono);font-size:13px;font-weight:700;color:var(--txt); }
+.nav-btn { padding:6px 12px;border-radius:6px;border:1px solid var(--bdr-2);
+  background:rgba(255,255,255,.04);color:var(--txt-2);font-size:12px;
+  text-decoration:none;transition:.12s;display:flex;align-items:center;gap:4px; }
+.nav-btn:hover { border-color:var(--violet);color:var(--acc-l);background:var(--violet-bg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div class="ph-left">
+    <h1>Weekly Schedule</h1>
+    <p>{{ week_start|date:"d M" }} – {{ week_end|date:"d M Y" }}</p>
+  </div>
+  <div class="ph-right">
+    {% if user.is_manager_role %}
+    <a href="{% url 'employees:shift_create' %}" class="btn-gx btn-gx-primary btn-gx-sm"><i class="bi bi-plus"></i> Add Shift</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Navigation + filters -->
+<div class="sched-nav" style="margin-bottom:18px;">
+  <a href="?offset={{ offset|add:"-1" }}{% if joint_id %}&joint={{ joint_id }}{% endif %}" class="nav-btn"><i class="bi bi-chevron-left"></i> Prev</a>
+  <span class="week-range">Week of {{ week_start|date:"d F Y" }}</span>
+  <a href="?offset={{ offset|add:"1" }}{% if joint_id %}&joint={{ joint_id }}{% endif %}" class="nav-btn">Next <i class="bi bi-chevron-right"></i></a>
+  {% if offset != 0 %}
+  <a href="?offset=0{% if joint_id %}&joint={{ joint_id }}{% endif %}" class="nav-btn">Today</a>
+  {% endif %}
+
+  <div style="margin-left:auto;">
+    <form method="get" style="display:flex;gap:6px;align-items:center;">
+      <input type="hidden" name="offset" value="{{ offset }}">
+      <select name="joint" class="form-select form-select-sm" onchange="this.form.submit()" style="background:var(--card);border-color:var(--bdr-2);color:var(--txt);font-size:12px;">
+        <option value="">All Joints</option>
+        {% for j in joints %}
+        <option value="{{ j.pk }}" {% if joint_id == j.pk|stringformat:"s" %}selected{% endif %}>{{ j.display_name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+<!-- Schedule grid -->
+<div class="schedule-wrap">
+  <div class="schedule-grid">
+
+    <!-- Header row -->
+    <div class="sg-col-head" style="text-align:left;">Staff</div>
+    {% for day in week_days %}
+    <div class="sg-col-head {% if day == today %}today{% endif %}">
+      <div>{{ day|date:"D" }}</div>
+      <div style="font-size:14px;font-weight:800;margin-top:1px;">{{ day|date:"d" }}</div>
+      {% if day == today %}<div style="font-size:9px;color:var(--violet-l);margin-top:2px;">TODAY</div>{% endif %}
+    </div>
+    {% endfor %}
+
+    <!-- Employee rows -->
+    {% for employee in employees %}
+    <div class="sg-emp-cell">
+      <div class="sg-mini-avatar">{{ employee.first_name|slice:":1"|upper }}</div>
+      <div>
+        <div class="sg-emp-name">{{ employee.get_full_name|default:employee.username }}</div>
+        {% if employee.primary_joint %}<div class="sg-emp-joint">{{ employee.primary_joint.display_name }}</div>{% endif %}
+      </div>
+    </div>
+
+    {% for day in week_days %}
+    {% with shift=shift_map|get_item:employee.pk|get_item:day %}
+    <div class="sg-shift-cell {% if day == today %}today-col{% endif %}">
+      {% if shift %}
+      <div class="shift-block {% if shift.is_confirmed %}confirmed{% endif %}">
+        <div class="shift-time">{{ shift.start_time|time:"H:i" }}–{{ shift.end_time|time:"H:i" }}</div>
+        <div class="shift-joint">{{ shift.joint.display_name }}</div>
+        {% if shift.is_confirmed %}<div style="font-size:9px;margin-top:2px;">✓ confirmed</div>{% endif %}
+      </div>
+      {% if user.is_manager_role %}
+      <div class="shift-actions">
+        <a href="{% url 'employees:shift_edit' shift.pk %}" class="shift-act-btn" title="Edit"><i class="bi bi-pencil"></i></a>
+        {% if not shift.is_confirmed %}
+        <form action="{% url 'employees:shift_confirm' shift.pk %}" method="post" style="display:inline;">
+          {% csrf_token %}<button type="submit" class="shift-act-btn" title="Confirm">✓</button>
+        </form>
+        {% endif %}
+        <form action="{% url 'employees:shift_delete' shift.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Delete shift?')">
+          {% csrf_token %}<button type="submit" class="shift-act-btn del" title="Delete"><i class="bi bi-x-lg"></i></button>
+        </form>
+      </div>
+      {% endif %}
+      {% elif user.is_manager_role %}
+      <a href="{% url 'employees:shift_create' %}?employee={{ employee.pk }}&date={{ day|date:'Y-m-d' }}"
+         class="add-shift-btn"><i class="bi bi-plus"></i></a>
+      {% endif %}
+    </div>
+    {% endwith %}
+    {% endfor %}
+    {% empty %}
+    <div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-3);">
+      No active employees found.
+    </div>
+    {% endfor %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Simple templatetag replacement for shift_map lookup
+// Since we can't use nested dict lookup in Django templates without a custom tag,
+// the schedule is pre-rendered from the view context.
+// If you add employees.templatetags.employee_tags with a get_item filter, you can use it here.
+// Otherwise the view already renders the shift_map as a Python dict and passes it.
+</script>
+{% endblock %}
