@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'employees:dashboard' %}">Employees</a>
+<span class="bc-sep">/</span>
+<a href="{% url 'employees:leave_list' %}">Leave</a>
+<span class="bc-sep">/</span>
+<span class="bc-current">Apply</span>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:540px;margin:0 auto;">
+  <div class="gx-card">
+    <div class="gx-card-head">
+      <div class="gx-card-title"><i class="bi bi-calendar-plus"></i> {{ title }}</div>
+    </div>
+    <div class="gx-card-body">
+      <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-stack">
+          <div class="form-group">
+            <label class="form-label">Leave Type</label>
+            {{ form.leave_type }}
+            {% if form.leave_type.errors %}<div class="form-error">{{ form.leave_type.errors }}</div>{% endif %}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Start Date</label>
+              {{ form.start_date }}
+            </div>
+            <div class="form-group">
+              <label class="form-label">End Date</label>
+              {{ form.end_date }}
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reason</label>
+            {{ form.reason }}
+            {% if form.reason.errors %}<div class="form-error">{{ form.reason.errors }}</div>{% endif %}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:20px;">
+          <button type="submit" class="btn-gx btn-gx-primary" style="flex:1;justify-content:center;">
+            <i class="bi bi-send"></i> Submit Request
+          </button>
+          <a href="{% url 'employees:leave_list' %}" class="btn-gx btn-gx-ghost">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}Review — {{ review.employee.get_full_name }}{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'employees:dashboard' %}">Employees</a>
+<span class="bc-sep">/</span>
+<a href="{% url 'employees:performance_list' %}">Performance</a>
+<span class="bc-sep">/</span>
+<span class="bc-current">Review</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.review-header {
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);
+  padding:24px;margin-bottom:18px;
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+}
+.big-score {
+  width:80px;height:80px;border-radius:50%;flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:26px;font-weight:900;
+  border:3px solid;
+}
+.score-dims { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px; }
+.dim-card {
+  background:var(--card-2);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:14px;text-align:center;
+}
+.dim-title { font-size:11px;color:var(--txt-3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px; }
+.dim-stars { display:flex;justify-content:center;gap:3px;font-size:18px; }
+.star-on  { color:var(--amber); }
+.star-off { color:rgba(255,255,255,.1); }
+
+.narrative-section {
+  background:var(--card-2);border:1px solid var(--bdr);border-left:3px solid;
+  border-radius:var(--r);padding:16px;margin-bottom:12px;
+}
+.narrative-section h4 { font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px; }
+.narrative-section p  { font-size:13px;color:var(--txt-2);line-height:1.7;margin:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="review-header">
+  <div class="big-score {% if review.score_color == 'green' %}ring-green{% elif review.score_color == 'blue' %}ring-blue{% elif review.score_color == 'amber' %}ring-amber{% else %}ring-red{% endif %}"
+       style="border-color:{% if review.score_color == 'green' %}var(--green){% elif review.score_color == 'blue' %}var(--blue){% elif review.score_color == 'amber' %}var(--amber){% else %}#f87171{% endif %};
+              color:{% if review.score_color == 'green' %}var(--green){% elif review.score_color == 'blue' %}var(--blue){% elif review.score_color == 'amber' %}var(--amber){% else %}#f87171{% endif %};
+              background:{% if review.score_color == 'green' %}var(--green-bg){% elif review.score_color == 'blue' %}var(--blue-bg){% elif review.score_color == 'amber' %}var(--amber-bg){% else %}var(--red-bg){% endif %};">
+    {{ review.overall_score }}<span style="font-size:12px;font-weight:400;opacity:.6;">/5</span>
+  </div>
+  <div>
+    <div style="font-size:20px;font-weight:800;">{{ review.employee.get_full_name|default:review.employee.username }}</div>
+    <div style="font-size:12px;color:var(--txt-3);margin-top:4px;">
+      {{ review.review_period_start|date:"d M Y" }} → {{ review.review_period_end|date:"d M Y" }}
+    </div>
+    <div style="font-size:12px;color:var(--txt-3);">
+      Reviewed by {{ review.reviewer.get_full_name|default:review.reviewer.username }}
+      on {{ review.created_at|date:"d M Y" }}
+    </div>
+    <div style="margin-top:8px;">
+      <span class="gx-badge badge-{% if review.score_color == 'green' %}success{% elif review.score_color == 'blue' %}info{% elif review.score_color == 'amber' %}warning{% else %}danger{% endif %}">
+        {{ review.score_label }}
+      </span>
+      {% if review.is_shared %}
+      <span class="gx-badge badge-neutral" style="margin-left:6px;"><i class="bi bi-eye"></i> Shared with employee</span>
+      {% endif %}
+    </div>
+  </div>
+  {% if user.is_manager_role %}
+  <div style="margin-left:auto;display:flex;gap:8px;">
+    {% if not review.is_shared %}
+    <form action="{% url 'employees:performance_share' review.pk %}" method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn-gx btn-gx-ghost btn-gx-sm">
+        <i class="bi bi-share"></i> Share
+      </button>
+    </form>
+    {% endif %}
+    <button onclick="window.print()" class="btn-gx btn-gx-dark btn-gx-sm"><i class="bi bi-printer"></i> Print</button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Dimension scores -->
+<div class="score-dims">
+  <div class="dim-card">
+    <div class="dim-title">Sales Performance</div>
+    <div class="dim-stars">
+      {% for i in "12345" %}
+      {% if forloop.counter <= review.sales_score %}<span class="star-on">★</span>{% else %}<span class="star-off">★</span>{% endif %}
+      {% endfor %}
+    </div>
+    <div style="font-family:var(--mono);font-size:20px;font-weight:800;margin-top:6px;">{{ review.sales_score }}/5</div>
+  </div>
+  <div class="dim-card">
+    <div class="dim-title">Attendance</div>
+    <div class="dim-stars">
+      {% for i in "12345" %}
+      {% if forloop.counter <= review.attendance_score %}<span class="star-on">★</span>{% else %}<span class="star-off">★</span>{% endif %}
+      {% endfor %}
+    </div>
+    <div style="font-family:var(--mono);font-size:20px;font-weight:800;margin-top:6px;">{{ review.attendance_score }}/5</div>
+  </div>
+  <div class="dim-card">
+    <div class="dim-title">Attitude</div>
+    <div class="dim-stars">
+      {% for i in "12345" %}
+      {% if forloop.counter <= review.attitude_score %}<span class="star-on">★</span>{% else %}<span class="star-off">★</span>{% endif %}
+      {% endfor %}
+    </div>
+    <div style="font-family:var(--mono);font-size:20px;font-weight:800;margin-top:6px;">{{ review.attitude_score }}/5</div>
+  </div>
+</div>
+
+<!-- Narrative -->
+{% if review.strengths %}
+<div class="narrative-section" style="border-left-color:var(--green);">
+  <h4 style="color:var(--green);"><i class="bi bi-hand-thumbs-up"></i> Strengths</h4>
+  <p>{{ review.strengths|linebreaksbr }}</p>
+</div>
+{% endif %}
+
+{% if review.improvements %}
+<div class="narrative-section" style="border-left-color:var(--amber);">
+  <h4 style="color:var(--amber);"><i class="bi bi-arrow-up-circle"></i> Areas for Improvement</h4>
+  <p>{{ review.improvements|linebreaksbr }}</p>
+</div>
+{% endif %}
+
+{% if review.goals %}
+<div class="narrative-section" style="border-left-color:var(--blue);">
+  <h4 style="color:var(--blue);"><i class="bi bi-bullseye"></i> Goals for Next Period</h4>
+  <p>{{ review.goals|linebreaksbr }}</p>
+</div>
+{% endif %}
+
+<div style="margin-top:16px;">
+  <a href="{% url 'employees:performance_list' %}" class="btn-gx btn-gx-ghost btn-gx-sm">← Back to Reviews</a>
+  <a href="{% url 'employees:employee_detail' review.employee.employee_profile.pk %}" class="btn-gx btn-gx-dark btn-gx-sm" style="margin-left:8px;">
+    View Full Profile
+  </a>
+</div>
+{% endblock %}

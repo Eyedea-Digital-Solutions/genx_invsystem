@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Performance Reviews{% endblock %}
+{% block breadcrumb %}<a href="{% url 'employees:dashboard' %}">Employees</a><span class="bc-sep">/</span><span class="bc-current">Performance</span>{% endblock %}
+
+{% block extra_css %}
+<style>
+.review-row {
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;
+  transition:border-color .12s;
+}
+.review-row:hover { border-color:var(--bdr-2); }
+.score-ring {
+  width:52px;height:52px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:17px;font-weight:900;
+  border:2px solid;
+}
+.ring-green  { border-color:var(--green);color:var(--green);background:var(--green-bg); }
+.ring-blue   { border-color:var(--blue);color:var(--blue);background:var(--blue-bg); }
+.ring-amber  { border-color:var(--amber);color:var(--amber);background:var(--amber-bg); }
+.ring-red    { border-color:#f87171;color:#f87171;background:var(--red-bg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div class="ph-left"><h1>Performance Reviews</h1></div>
+  <div class="ph-right">
+    {% if user.is_manager_role %}
+    <a href="{% url 'employees:performance_create' %}" class="btn-gx btn-gx-primary btn-gx-sm">
+      <i class="bi bi-plus"></i> New Review
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{% if reviews %}
+  {% for review in reviews %}
+  <div class="review-row">
+    <div class="score-ring ring-{{ review.score_color }}">{{ review.overall_score }}</div>
+    <div style="flex:1;">
+      <div style="font-weight:700;font-size:14px;">{{ review.employee.get_full_name|default:review.employee.username }}</div>
+      <div style="font-size:11px;color:var(--txt-3);margin-top:2px;">
+        {{ review.review_period_start|date:"d M Y" }} → {{ review.review_period_end|date:"d M Y" }} ·
+        Reviewed by {{ review.reviewer.get_full_name|default:review.reviewer.username }}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;">
+        <span class="gx-badge badge-{% if review.score_color == 'green' %}success{% elif review.score_color == 'blue' %}info{% elif review.score_color == 'amber' %}warning{% else %}danger{% endif %}">
+          {{ review.score_label }}
+        </span>
+        {% if review.is_shared %}
+        <span class="gx-badge badge-neutral"><i class="bi bi-eye"></i> Shared</span>
+        {% else %}
+        <span class="gx-badge" style="background:rgba(255,255,255,.05);color:var(--txt-4);"><i class="bi bi-eye-slash"></i> Draft</span>
+        {% endif %}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <a href="{% url 'employees:performance_detail' review.pk %}" class="btn-gx btn-gx-dark btn-gx-xs">View</a>
+      {% if user.is_manager_role and not review.is_shared %}
+      <form action="{% url 'employees:performance_share' review.pk %}" method="post" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn-gx btn-gx-ghost btn-gx-xs" title="Share with employee">
+          <i class="bi bi-share"></i>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="gx-empty" style="padding:60px 0;">
+  <i class="bi bi-star empty-icon"></i>
+  <div class="empty-title">No reviews yet</div>
+  {% if user.is_manager_role %}
+  <div class="empty-sub">Start by creating the first review</div>
+  <a href="{% url 'employees:performance_create' %}" class="btn-gx btn-gx-primary btn-gx-sm" style="margin-top:16px;">
+    <i class="bi bi-plus"></i> New Review
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

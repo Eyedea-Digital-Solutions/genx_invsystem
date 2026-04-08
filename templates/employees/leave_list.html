@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% block title %}Leave Management{% endblock %}
+{% block breadcrumb %}<a href="{% url 'employees:dashboard' %}">Employees</a><span class="bc-sep">/</span><span class="bc-current">Leave</span>{% endblock %}
+
+{% block extra_css %}
+<style>
+.leave-tabs { display:flex;gap:0;border-bottom:1px solid var(--bdr);margin-bottom:20px; }
+.leave-tab {
+  padding:9px 18px;font-size:12px;font-weight:700;font-family:var(--mono);
+  color:var(--txt-3);cursor:pointer;border-bottom:2px solid transparent;
+  transition:.15s;text-transform:uppercase;letter-spacing:.6px;
+  background:none;border-top:none;border-left:none;border-right:none;
+}
+.leave-tab.active { color:var(--acc-l);border-bottom-color:var(--violet); }
+
+.leave-panel { display:none; }
+.leave-panel.active { display:block; }
+
+.leave-row {
+  display:flex;align-items:flex-start;gap:14px;padding:14px;
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);
+  margin-bottom:8px;transition:border-color .12s;
+}
+.leave-row:hover { border-color:var(--bdr-2); }
+
+.leave-type-icon {
+  width:36px;height:36px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.lt-annual    { background:var(--blue-bg);color:var(--blue); }
+.lt-sick      { background:var(--red-bg);color:#f87171; }
+.lt-emergency { background:var(--amber-bg);color:var(--amber); }
+.lt-unpaid    { background:rgba(255,255,255,.06);color:var(--txt-3); }
+.lt-maternity { background:rgba(244,114,182,.1);color:#f472b6; }
+
+.leave-emp  { font-weight:700;font-size:13px; }
+.leave-meta { font-size:11px;color:var(--txt-3);margin-top:3px; }
+.leave-days { font-family:var(--mono);font-size:20px;font-weight:900;margin-left:auto;
+  flex-shrink:0;text-align:right; }
+.leave-days small { display:block;font-size:10px;font-weight:400;color:var(--txt-4); }
+.leave-acts { display:flex;gap:6px;margin-top:8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div class="ph-left"><h1>Leave Management</h1></div>
+  <div class="ph-right">
+    <a href="{% url 'employees:leave_create' %}" class="btn-gx btn-gx-primary btn-gx-sm">
+      <i class="bi bi-plus"></i> Apply for Leave
+    </a>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="leave-tabs">
+  <button class="leave-tab active" onclick="switchTab('pending',this)">
+    Pending {% if pending %}<span class="gx-badge badge-warning" style="margin-left:4px;">{{ pending|length }}</span>{% endif %}
+  </button>
+  <button class="leave-tab" onclick="switchTab('approved',this)">Approved</button>
+  <button class="leave-tab" onclick="switchTab('rejected',this)">Rejected</button>
+  <button class="leave-tab" onclick="switchTab('upcoming',this)">Upcoming</button>
+</div>
+
+{% with icons="annual:bi-sun,sick:bi-thermometer,emergency:bi-lightning,unpaid:bi-dash-circle,maternity:bi-heart" %}
+
+<!-- PENDING -->
+<div class="leave-panel active" id="tab-pending">
+  {% for leave in pending %}
+  <div class="leave-row">
+    <div class="leave-type-icon lt-{{ leave.leave_type }}">
+      <i class="bi bi-{% if leave.leave_type == 'annual' %}sun{% elif leave.leave_type == 'sick' %}thermometer{% elif leave.leave_type == 'emergency' %}lightning{% elif leave.leave_type == 'maternity' %}heart{% else %}dash-circle{% endif %}"></i>
+    </div>
+    <div style="flex:1;">
+      <div class="leave-emp">{{ leave.employee.get_full_name|default:leave.employee.username }}</div>
+      <div class="leave-meta">
+        {{ leave.get_leave_type_display }} ·
+        {{ leave.start_date|date:"d M Y" }} → {{ leave.end_date|date:"d M Y" }}
+      </div>
+      <div style="font-size:11px;color:var(--txt-2);margin-top:6px;font-style:italic;">{{ leave.reason|truncatechars:100 }}</div>
+      {% if user.is_manager_role %}
+      <div class="leave-acts">
+        <a href="{% url 'employees:leave_review' leave.pk %}" class="btn-gx btn-gx-amber btn-gx-xs">Review</a>
+      </div>
+      {% endif %}
+    </div>
+    <div class="leave-days">{{ leave.days_requested }}<small>days</small></div>
+  </div>
+  {% empty %}
+  <div class="gx-empty"><i class="bi bi-inbox empty-icon"></i><div class="empty-title">No pending requests</div></div>
+  {% endfor %}
+</div>
+
+<!-- APPROVED -->
+<div class="leave-panel" id="tab-approved">
+  {% for leave in approved %}
+  <div class="leave-row">
+    <div class="leave-type-icon lt-{{ leave.leave_type }}">
+      <i class="bi bi-check-circle" style="color:var(--green);"></i>
+    </div>
+    <div style="flex:1;">
+      <div class="leave-emp">{{ leave.employee.get_full_name|default:leave.employee.username }}</div>
+      <div class="leave-meta">
+        {{ leave.get_leave_type_display }} ·
+        {{ leave.start_date|date:"d M Y" }} → {{ leave.end_date|date:"d M Y" }} ·
+        Approved by {{ leave.reviewed_by.get_full_name|default:"-" }} on {{ leave.reviewed_at|date:"d M Y" }}
+      </div>
+    </div>
+    <div class="leave-days" style="color:var(--green);">{{ leave.days_requested }}<small>days</small></div>
+  </div>
+  {% empty %}
+  <div class="gx-empty"><i class="bi bi-calendar-check empty-icon"></i><div class="empty-title">No approved leaves</div></div>
+  {% endfor %}
+</div>
+
+<!-- REJECTED -->
+<div class="leave-panel" id="tab-rejected">
+  {% for leave in rejected %}
+  <div class="leave-row">
+    <div class="leave-type-icon" style="background:var(--red-bg);">
+      <i class="bi bi-x-circle" style="color:#f87171;"></i>
+    </div>
+    <div style="flex:1;">
+      <div class="leave-emp">{{ leave.employee.get_full_name|default:leave.employee.username }}</div>
+      <div class="leave-meta">
+        {{ leave.get_leave_type_display }} ·
+        {{ leave.start_date|date:"d M Y" }} → {{ leave.end_date|date:"d M Y" }} ·
+        Rejected by {{ leave.reviewed_by.get_full_name|default:"-" }}
+      </div>
+    </div>
+    <div class="leave-days" style="color:#f87171;">{{ leave.days_requested }}<small>days</small></div>
+  </div>
+  {% empty %}
+  <div class="gx-empty"><i class="bi bi-calendar-x empty-icon"></i><div class="empty-title">No rejected leaves</div></div>
+  {% endfor %}
+</div>
+
+<!-- UPCOMING -->
+<div class="leave-panel" id="tab-upcoming">
+  {% for leave in upcoming %}
+  <div class="leave-row">
+    <div class="leave-type-icon lt-{{ leave.leave_type }}">
+      <i class="bi bi-calendar-event"></i>
+    </div>
+    <div style="flex:1;">
+      <div class="leave-emp">{{ leave.employee.get_full_name|default:leave.employee.username }}</div>
+      <div class="leave-meta">
+        {{ leave.get_leave_type_display }} ·
+        Starts {{ leave.start_date|date:"d M Y" }} ({{ leave.days_requested }} day{{ leave.days_requested|pluralize }})
+      </div>
+    </div>
+    <div class="leave-days" style="color:var(--blue);">{{ leave.days_requested }}<small>days</small></div>
+  </div>
+  {% empty %}
+  <div class="gx-empty"><i class="bi bi-calendar-week empty-icon"></i><div class="empty-title">No upcoming leaves</div></div>
+  {% endfor %}
+</div>
+
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchTab(name, btn) {
+  document.querySelectorAll('.leave-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.leave-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+{% endblock %}

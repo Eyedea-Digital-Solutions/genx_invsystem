@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load employee_tags %}
 {% block title %}Schedule{% endblock %}
 {% block breadcrumb %}<a href="{% url 'employees:dashboard' %}">Employees</a><span class="bc-sep">/</span><span class="bc-current">Schedule</span>{% endblock %}
 
@@ -143,7 +144,7 @@
     </div>
 
     {% for day in week_days %}
-    {% with shift=shift_map|get_item:employee.pk|get_item:day %}
+    {% get_shift shift_map employee.pk day as shift %}
     <div class="sg-shift-cell {% if day == today %}today-col{% endif %}">
       {% if shift %}
       <div class="shift-block {% if shift.is_confirmed %}confirmed{% endif %}">
@@ -169,7 +170,6 @@
          class="add-shift-btn"><i class="bi bi-plus"></i></a>
       {% endif %}
     </div>
-    {% endwith %}
     {% endfor %}
     {% empty %}
     <div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-3);">

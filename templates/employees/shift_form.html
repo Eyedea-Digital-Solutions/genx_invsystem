@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'employees:dashboard' %}">Employees</a>
+<span class="bc-sep">/</span>
+<a href="{% url 'employees:schedule' %}">Schedule</a>
+<span class="bc-sep">/</span>
+<span class="bc-current">{{ title }}</span>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;margin:0 auto;">
+  <div class="gx-card">
+    <div class="gx-card-head">
+      <div class="gx-card-title"><i class="bi bi-calendar-plus"></i> {{ title }}</div>
+    </div>
+    <div class="gx-card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-stack">
+          <div class="form-group">
+            <label class="form-label">Employee</label>
+            {{ form.employee }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Joint</label>
+            {{ form.joint }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            {{ form.date }}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Start Time</label>
+              {{ form.start_time }}
+            </div>
+            <div class="form-group">
+              <label class="form-label">End Time</label>
+              {{ form.end_time }}
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            {{ form.notes }}
+          </div>
+        </div>
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" style="margin-top:10px;">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div style="display:flex;gap:8px;margin-top:20px;">
+          <button type="submit" class="btn-gx btn-gx-primary" style="flex:1;justify-content:center;">
+            <i class="bi bi-floppy"></i> Save Shift
+          </button>
+          <a href="{% url 'employees:schedule' %}" class="btn-gx btn-gx-ghost">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

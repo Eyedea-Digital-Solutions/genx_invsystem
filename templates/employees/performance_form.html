@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'employees:dashboard' %}">Employees</a>
+<span class="bc-sep">/</span>
+<a href="{% url 'employees:performance_list' %}">Performance</a>
+<span class="bc-sep">/</span>
+<span class="bc-current">New Review</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Star rating widget */
+.star-group { display:flex;gap:4px;margin-top:6px; }
+.star-group input[type=radio] { display:none; }
+.star-group label {
+  font-size:28px;cursor:pointer;color:rgba(255,255,255,.15);
+  transition:color .1s,transform .1s;
+  line-height:1;
+}
+.star-group label:hover,
+.star-group label:hover ~ label,
+.star-group input:checked ~ label { color:var(--amber) !important; }
+/* Reverse trick for RTL star fill */
+.star-group { flex-direction:row-reverse;justify-content:flex-end; }
+.star-group label:hover,
+.star-group label:hover ~ label { color:var(--amber); }
+.star-group input:checked ~ label { color:var(--amber); }
+
+.score-section {
+  background:var(--card-2);border:1px solid var(--bdr);border-radius:var(--r);
+  padding:16px;
+}
+.score-label { font-size:12px;font-weight:700;color:var(--txt-2);margin-bottom:8px; }
+.score-desc  { font-size:10px;color:var(--txt-4);margin-top:4px;font-family:var(--mono); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;margin:0 auto;">
+  <div class="gx-card">
+    <div class="gx-card-head">
+      <div class="gx-card-title"><i class="bi bi-star"></i> {{ title }}</div>
+    </div>
+    <div class="gx-card-body">
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="form-stack">
+          <div class="form-group">
+            <label class="form-label">Employee</label>
+            {{ form.employee }}
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label class="form-label">Period Start</label>
+              {{ form.review_period_start }}
+            </div>
+            <div class="form-group">
+              <label class="form-label">Period End</label>
+              {{ form.review_period_end }}
+            </div>
+          </div>
+
+          <!-- Score widgets -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+
+            <div class="score-section">
+              <div class="score-label"><i class="bi bi-cash-coin" style="color:var(--green);"></i> Sales Performance</div>
+              <div class="star-group" id="stars-sales">
+                {% for val, lbl in form.fields.sales_score.choices %}
+                <input type="radio" name="sales_score" id="ss{{ val }}" value="{{ val }}"
+                       {% if form.sales_score.value == val|stringformat:"s" %}checked{% endif %}>
+                <label for="ss{{ val }}" title="{{ lbl }}">★</label>
+                {% endfor %}
+              </div>
+              <div class="score-desc" id="desc-sales">Click to rate</div>
+            </div>
+
+            <div class="score-section">
+              <div class="score-label"><i class="bi bi-clock-history" style="color:var(--blue);"></i> Attendance</div>
+              <div class="star-group" id="stars-att">
+                {% for val, lbl in form.fields.attendance_score.choices %}
+                <input type="radio" name="attendance_score" id="as{{ val }}" value="{{ val }}"
+                       {% if form.attendance_score.value == val|stringformat:"s" %}checked{% endif %}>
+                <label for="as{{ val }}" title="{{ lbl }}">★</label>
+                {% endfor %}
+              </div>
+              <div class="score-desc" id="desc-att">Click to rate</div>
+            </div>
+
+            <div class="score-section">
+              <div class="score-label"><i class="bi bi-emoji-smile" style="color:var(--amber);"></i> Attitude</div>
+              <div class="star-group" id="stars-atti">
+                {% for val, lbl in form.fields.attitude_score.choices %}
+                <input type="radio" name="attitude_score" id="ats{{ val }}" value="{{ val }}"
+                       {% if form.attitude_score.value == val|stringformat:"s" %}checked{% endif %}>
+                <label for="ats{{ val }}" title="{{ lbl }}">★</label>
+                {% endfor %}
+              </div>
+              <div class="score-desc" id="desc-atti">Click to rate</div>
+            </div>
+
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Strengths</label>
+            {{ form.strengths }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Areas for Improvement</label>
+            {{ form.improvements }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Goals for Next Period</label>
+            {{ form.goals }}
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--card-2);border-radius:var(--r);border:1px solid var(--bdr);">
+            {{ form.is_shared }}
+            <div>
+              <div style="font-weight:700;font-size:13px;">Share with Employee</div>
+              <div style="font-size:11px;color:var(--txt-3);">Employee will be able to view this review immediately.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:24px;">
+          <button type="submit" class="btn-gx btn-gx-primary" style="flex:1;justify-content:center;">
+            <i class="bi bi-check2-circle"></i> Save Review
+          </button>
+          <a href="{% url 'employees:performance_list' %}" class="btn-gx btn-gx-ghost">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SCORE_LABELS = {
+  1: 'Unsatisfactory',
+  2: 'Needs Improvement',
+  3: 'Meets Expectations',
+  4: 'Exceeds Expectations',
+  5: 'Outstanding',
+};
+
+function wireStars(groupId, descId) {
+  const group = document.getElementById(groupId);
+  const desc  = document.getElementById(descId);
+  if (!group || !desc) return;
+  group.querySelectorAll('input[type=radio]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      desc.textContent = SCORE_LABELS[radio.value] || '';
+    });
+    if (radio.checked) desc.textContent = SCORE_LABELS[radio.value] || 'Click to rate';
+  });
+}
+
+wireStars('stars-sales', 'desc-sales');
+wireStars('stars-att',   'desc-att');
+wireStars('stars-atti',  'desc-atti');
+</script>
+{% endblock %}

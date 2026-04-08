@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% block title %}Attendance{% endblock %}
+{% block breadcrumb %}<a href="{% url 'employees:dashboard' %}">Employees</a><span class="bc-sep">/</span><span class="bc-current">Attendance</span>{% endblock %}
+
+{% block extra_css %}
+<style>
+.clock-widget {
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);
+  padding:28px;text-align:center;position:relative;overflow:hidden;
+}
+.clock-widget::before {
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% -20%, rgba(0,214,143,.08) 0%, transparent 70%);
+  pointer-events:none;
+}
+#live-clock {
+  font-family:var(--mono);font-size:48px;font-weight:900;letter-spacing:-2px;
+  color:var(--txt);margin-bottom:4px;line-height:1;
+}
+#live-date { font-family:var(--mono);font-size:12px;color:var(--txt-3);margin-bottom:24px; }
+
+.clock-btn {
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 32px;border-radius:12px;font-size:16px;font-weight:800;
+  font-family:var(--mono);cursor:pointer;border:none;
+  transition:all .15s;letter-spacing:.5px;
+}
+.clock-btn-in  { background:linear-gradient(135deg,var(--green),#00b37e);color:#fff;box-shadow:0 4px 20px rgba(0,214,143,.35); }
+.clock-btn-in:hover  { transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,214,143,.45); }
+.clock-btn-out { background:linear-gradient(135deg,var(--red),#c01630);color:#fff;box-shadow:0 4px 20px rgba(229,25,58,.35); }
+.clock-btn-out:hover { transform:translateY(-2px);box-shadow:0 8px 28px rgba(229,25,58,.45); }
+
+.active-session-card {
+  background:var(--green-bg);border:1px solid rgba(0,214,143,.2);border-radius:var(--r);
+  padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;
+}
+.session-pulse { width:10px;height:10px;border-radius:50%;background:var(--green);
+  animation:pulse-green 2s infinite;flex-shrink:0; }
+@keyframes pulse-green{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.4)}}
+
+.att-row {
+  display:flex;align-items:center;gap:12px;padding:11px 0;
+  border-bottom:1px solid var(--bdr);
+}
+.att-row:last-child { border-bottom:none; }
+.att-avatar {
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--blue),var(--violet));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;
+}
+.att-time { font-family:var(--mono);font-size:12px;font-weight:700; }
+.att-label { font-size:12px;font-weight:600; }
+.att-sub   { font-size:11px;color:var(--txt-3); }
+.att-hours { margin-left:auto;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--txt-2); }
+
+.hours-display {
+  display:flex;align-items:center;justify-content:center;
+  padding:12px;background:rgba(255,255,255,.03);border-radius:8px;
+  border:1px solid var(--bdr);font-family:var(--mono);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <div class="ph-left"><h1>Attendance</h1><p>Today: {{ today|date:"l, d F Y" }}</p></div>
+  <div class="ph-right">
+    <form method="get" style="display:flex;gap:6px;align-items:center;">
+      <input type="date" name="date" value="{{ view_date|date:'Y-m-d' }}"
+             class="gx-input" style="padding:6px 10px;font-size:12px;" onchange="this.form.submit()">
+    </form>
+  </div>
+</div>
+
+<!-- Active session banner -->
+{% if active_session %}
+<div class="active-session-card">
+  <div class="session-pulse"></div>
+  <div style="flex:1;">
+    <div style="font-weight:700;font-size:14px;color:var(--green);">You are clocked in</div>
+    <div style="font-size:12px;color:var(--txt-2);">Since {{ active_session.clock_in|time:"H:i" }} at {{ active_session.joint.display_name }}</div>
+  </div>
+  <form action="{% url 'employees:clock_out' active_session.pk %}" method="post">
+    {% csrf_token %}
+    <button type="submit" class="clock-btn clock-btn-out" style="padding:10px 20px;font-size:13px;">
+      <i class="bi bi-box-arrow-right"></i> Clock Out
+    </button>
+  </form>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start;">
+
+  <!-- CLOCK WIDGET -->
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    <div class="clock-widget">
+      <div id="live-clock">--:--:--</div>
+      <div id="live-date">Loading…</div>
+      {% if not active_session %}
+        <a href="{% url 'employees:clock_in' %}" class="clock-btn clock-btn-in">
+          <i class="bi bi-box-arrow-in-right"></i> Clock In
+        </a>
+      {% else %}
+        <form action="{% url 'employees:clock_out' active_session.pk %}" method="post">
+          {% csrf_token %}
+          <button type="submit" class="clock-btn clock-btn-out">
+            <i class="bi bi-box-arrow-right"></i> Clock Out
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+    <!-- Monthly hours summary -->
+    <div class="gx-card">
+      <div class="gx-card-head"><div class="gx-card-title"><i class="bi bi-hourglass-split"></i> Month Total</div></div>
+      <div style="padding:18px;text-align:center;">
+        <div class="hours-display">
+          <span style="font-size:28px;font-weight:900;color:var(--green);">{{ my_hours|floatformat:1 }}</span>
+          <span style="font-size:14px;color:var(--txt-3);margin-left:6px;">hours</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECORDS TABLE -->
+  <div class="gx-card">
+    <div class="gx-card-head">
+      <div class="gx-card-title"><i class="bi bi-list-ul"></i> Records — {{ view_date|date:"d F Y" }}</div>
+    </div>
+    <div style="padding:0 18px;">
+      {% if records %}
+        {% for record in records %}
+        <div class="att-row">
+          <div class="att-avatar">{{ record.employee.first_name|slice:":1"|upper }}</div>
+          <div style="flex:1;">
+            <div class="att-label">{{ record.employee.get_full_name|default:record.employee.username }}</div>
+            <div class="att-sub">
+              <span class="att-time">{{ record.clock_in|time:"H:i" }}</span>
+              {% if record.clock_out %} → <span class="att-time">{{ record.clock_out|time:"H:i" }}</span>{% else %}<span class="gx-badge badge-success" style="font-size:9px;margin-left:4px;">● Active</span>{% endif %}
+              · {{ record.joint.display_name }}
+            </div>
+          </div>
+          {% if record.is_late %}<span class="gx-badge badge-warning">LATE</span>{% endif %}
+          <div class="att-hours">
+            {% if record.total_hours %}{{ record.total_hours }}h{% elif record.clock_out is None %}—{% else %}—{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="gx-empty" style="padding:32px 0;">
+        <i class="bi bi-clock empty-icon"></i>
+        <div class="empty-title">No records for {{ view_date|date:"d F Y" }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function tick() {
+  const now  = new Date();
+  const hms  = now.toLocaleTimeString('en-GB', { hour12: false });
+  const date = now.toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('live-clock').textContent = hms;
+  document.getElementById('live-date').textContent  = date;
+}
+tick();
+setInterval(tick, 1000);
+</script>
+{% endblock %}
