@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width:480px;margin:0 auto">
+  <div class="card" style="border-color:rgba(229,25,58,.3)">
+    <div class="card-body" style="text-align:center;padding:40px 32px">
+      <div style="width:64px;height:64px;border-radius:50%;background:rgba(229,25,58,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;color:var(--rose)">
+        <i class="bi bi-trash"></i>
+      </div>
+      <h3 style="font-size:20px;font-weight:700;margin-bottom:8px">Confirm Delete</h3>
+      <p style="color:var(--text-muted);margin-bottom:24px">
+        {% block confirm_message %}Are you sure you want to delete <strong>{{ object }}</strong>? This action cannot be undone.{% endblock %}
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        <div style="display:flex;gap:10px;justify-content:center">
+          <a href="{{ back_url|default:'javascript:history.back()' }}" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text)">Cancel</a>
+          <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash me-1"></i>Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

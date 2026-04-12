@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Employees{% endblock %}
+{% block nav_employees %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Employees</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Employees</h1>
+    <p class="page-sub">{{ employees.count|default:0 }} staff members</p>
+  </div>
+  <div class="page-actions">
+    <a href="/employees/add/" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Add Employee</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">All Staff</h3>
+    <div class="card-actions">
+      <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Search employees…" data-table-search="#employees-table" class="search-input">
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="employees-table">
+      <thead>
+        <tr><th>Employee</th><th>Role</th><th>Branch</th><th>Phone</th><th>Status</th><th>Joined</th><th class="text-end">Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for emp in employees %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:50%;background:rgba(124,58,237,.2);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-size:14px">
+                {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+              </div>
+              <div>
+                <div style="font-weight:600">{{ emp.get_full_name|default:emp.username }}</div>
+                <div style="font-size:11px;color:var(--text-muted)">{{ emp.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ emp.role|default:emp.job_title|default:"Staff" }}</td>
+          <td>{{ emp.branch|default:"—" }}</td>
+          <td>{{ emp.phone|default:"—" }}</td>
+          <td>
+            {% if emp.is_active %}<span class="badge badge-success">Active</span>
+            {% else %}<span class="badge badge-secondary">Inactive</span>{% endif %}
+          </td>
+          <td style="color:var(--text-muted);font-size:13px">{{ emp.date_joined|date:"d M Y" }}</td>
+          <td class="text-end">
+            <div style="display:flex;gap:6px;justify-content:flex-end">
+              <a href="/employees/{{ emp.id }}/edit/" class="btn btn-xs"><i class="bi bi-pencil"></i></a>
+              <a href="/employees/{{ emp.id }}/" class="btn btn-xs"><i class="bi bi-eye"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-5">
+          <i class="bi bi-people" style="font-size:40px;display:block;margin-bottom:12px;opacity:.3"></i>
+          No employees yet. <a href="/employees/add/" class="text-accent">Add your first employee</a>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

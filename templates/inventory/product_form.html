@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Edit {{ object.name }}{% else %}Add Product{% endif %}{% endblock %}
+{% block nav_inventory %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item"><a href="/inventory/">Inventory</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">{% if object %}Edit{% else %}Add Product{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% if object %}Edit {{ object.name }}{% else %}Add Product{% endif %}</h1>
+  </div>
+  <div class="page-actions">
+    <a href="/inventory/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  </div>
+</div>
+
+<div style="max-width:820px">
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+      <div>
+        <div class="card mb-4">
+          <div class="card-header"><h3 class="card-title">Basic Information</h3></div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Product Name <span style="color:var(--rose)">*</span></label>
+              <input type="text" name="name" class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                     value="{{ form.name.value|default:'' }}" required placeholder="e.g. Nike Air Max 90">
+              {% if form.name.errors %}<div class="invalid-feedback">{{ form.name.errors|join:" " }}</div>{% endif %}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div>
+                <label class="form-label">SKU / Barcode</label>
+                <input type="text" name="sku" class="form-control font-mono" value="{{ form.sku.value|default:'' }}" placeholder="Auto-generated if blank">
+              </div>
+              <div>
+                <label class="form-label">Brand</label>
+                <input type="text" name="brand" class="form-control" value="{{ form.brand.value|default:'' }}" placeholder="e.g. Nike">
+              </div>
+            </div>
+            <div class="mt-3">
+              <label class="form-label">Description</label>
+              <textarea name="description" class="form-control" rows="3" placeholder="Product description…">{{ form.description.value|default:'' }}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header"><h3 class="card-title">Pricing</h3></div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div>
+                <label class="form-label">Cost Price <span style="color:var(--rose)">*</span></label>
+                <div style="position:relative">
+                  <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)">$</span>
+                  <input type="number" name="cost_price" class="form-control {% if form.cost_price.errors %}is-invalid{% endif %}"
+                         style="padding-left:26px" step="0.01" min="0" value="{{ form.cost_price.value|default:'' }}" required placeholder="0.00" data-currency>
+                  {% if form.cost_price.errors %}<div class="invalid-feedback">{{ form.cost_price.errors|join:" " }}</div>{% endif %}
+                </div>
+              </div>
+              <div>
+                <label class="form-label">Selling Price <span style="color:var(--rose)">*</span></label>
+                <div style="position:relative">
+                  <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)">$</span>
+                  <input type="number" name="selling_price" class="form-control {% if form.selling_price.errors %}is-invalid{% endif %}"
+                         style="padding-left:26px" step="0.01" min="0" value="{{ form.selling_price.value|default:'' }}" required placeholder="0.00" id="selling-price" data-currency>
+                  {% if form.selling_price.errors %}<div class="invalid-feedback">{{ form.selling_price.errors|join:" " }}</div>{% endif %}
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:12px;padding:10px 14px;background:var(--surface-2);border-radius:10px;font-size:13px;color:var(--text-muted)">
+              Margin: <span id="margin-display" style="font-family:var(--font-mono);font-weight:600;color:var(--green)">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Stock Levels</h3></div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+              <div>
+                <label class="form-label">Current Qty</label>
+                <input type="number" name="quantity" class="form-control font-mono" min="0" value="{{ form.quantity.value|default:0 }}">
+              </div>
+              <div>
+                <label class="form-label">Reorder Level</label>
+                <input type="number" name="reorder_level" class="form-control font-mono" min="0" value="{{ form.reorder_level.value|default:5 }}">
+              </div>
+              <div>
+                <label class="form-label">Reorder Qty</label>
+                <input type="number" name="reorder_quantity" class="form-control font-mono" min="0" value="{{ form.reorder_quantity.value|default:'' }}" placeholder="—">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card mb-4">
+          <div class="card-header"><h3 class="card-title">Category &amp; Supplier</h3></div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Category</label>
+              <select name="category" class="form-select">
+                <option value="">— None —</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if form.category.value == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Supplier</label>
+              <select name="supplier" class="form-select">
+                <option value="">— None —</option>
+                {% for sup in suppliers %}
+                <option value="{{ sup.id }}" {% if form.supplier.value == sup.id|stringformat:"s" %}selected{% endif %}>{{ sup.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header"><h3 class="card-title">Product Image</h3></div>
+          <div class="card-body">
+            {% if object.image %}
+            <img src="{{ object.image.url }}" style="width:100%;border-radius:10px;margin-bottom:12px;object-fit:contain;max-height:160px;background:var(--surface-2)">
+            {% else %}
+            <div style="width:100%;height:120px;background:var(--surface-2);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:32px">📦</div>
+            {% endif %}
+            <input type="file" name="image" class="form-control" accept="image/*">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Status</label>
+              <div class="form-check form-switch">
+                <input type="checkbox" name="is_active" class="form-check-input" id="is-active" {% if form.is_active.value != False %}checked{% endif %}>
+                <label class="form-check-label" for="is-active">Active (visible in POS)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="alert" style="background:rgba(229,25,58,.1);border:1px solid rgba(229,25,58,.3);color:#fca5a5;border-radius:10px;padding:12px 16px;font-size:13px;margin-top:16px">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <div style="display:flex;gap:10px;padding:20px 0;border-top:1px solid var(--border);margin-top:16px">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>{% if object %}Save Changes{% else %}Add Product{% endif %}</button>
+      <a href="/inventory/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)">Cancel</a>
+      {% if object %}
+      <a href="/inventory/product/{{ object.id }}/delete/" class="btn btn-sm btn-danger ms-auto" data-confirm="Delete {{ object.name }}?"><i class="bi bi-trash me-1"></i>Delete</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  const cost = document.querySelector('[name="cost_price"]');
+  const sell = document.getElementById('selling-price');
+  const display = document.getElementById('margin-display');
+
+  function updateMargin() {
+    const c = parseFloat(cost?.value || 0);
+    const s = parseFloat(sell?.value || 0);
+    if (c > 0 && s > 0) {
+      const margin = ((s - c) / s * 100).toFixed(1);
+      const profit = (s - c).toFixed(2);
+      display.textContent = `${margin}%  (+$${profit})`;
+      display.style.color = margin < 0 ? 'var(--rose)' : 'var(--green)';
+    } else {
+      display.textContent = '—';
+    }
+  }
+  cost?.addEventListener('input', updateMargin);
+  sell?.addEventListener('input', updateMargin);
+  updateMargin();
+})();
+</script>
+{% endblock %}

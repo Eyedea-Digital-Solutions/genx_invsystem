@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Sales{% endblock %}
+{% block nav_sales %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Sales</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Sales</h1>
+    <p class="page-sub">{{ total_sales|default:0 }} transactions</p>
+  </div>
+  <div class="page-actions">
+    <a href="/sales/pos/" class="btn btn-primary"><i class="bi bi-cart-plus me-1"></i>New Sale</a>
+    <a href="/sales/export/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-download me-1"></i>Export</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(0,214,143,.15);color:var(--green)"><i class="bi bi-currency-dollar"></i></div>
+    <div class="stat-body"><div class="stat-label">Today Revenue</div><div class="stat-value">${{ today_revenue|floatformat:2|default:"0.00" }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(124,58,237,.15);color:var(--accent)"><i class="bi bi-receipt"></i></div>
+    <div class="stat-body"><div class="stat-label">Today Sales</div><div class="stat-value">{{ today_count|default:0 }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(59,130,246,.15);color:var(--blue)"><i class="bi bi-graph-up"></i></div>
+    <div class="stat-body"><div class="stat-label">Avg Order</div><div class="stat-value">${{ avg_order|floatformat:2|default:"0.00" }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="bi bi-calendar-month"></i></div>
+    <div class="stat-body"><div class="stat-label">Month Revenue</div><div class="stat-value">${{ month_revenue|floatformat:2|default:"0.00" }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Transaction History</h3>
+    <div class="card-actions">
+      <form method="get" style="display:flex;gap:8px;align-items:center">
+        <div class="search-box">
+          <i class="bi bi-search"></i>
+          <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Receipt, customer…" class="search-input">
+        </div>
+        <input type="date" name="date_from" value="{{ request.GET.date_from }}" class="filter-select" style="width:auto">
+        <input type="date" name="date_to" value="{{ request.GET.date_to }}" class="filter-select" style="width:auto">
+        <select name="payment" class="filter-select" style="width:auto">
+          <option value="">All Payments</option>
+          <option value="cash" {% if request.GET.payment == 'cash' %}selected{% endif %}>Cash</option>
+          <option value="ecocash" {% if request.GET.payment == 'ecocash' %}selected{% endif %}>EcoCash</option>
+          <option value="card" {% if request.GET.payment == 'card' %}selected{% endif %}>Card</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+        <a href="/sales/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)">Clear</a>
+      </form>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>Receipt</th><th>Date/Time</th><th>Customer</th><th>Payment</th><th>Cashier</th><th class="text-end">Items</th><th class="text-end">Total</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for sale in sales %}
+        <tr>
+          <td><a href="/sales/{{ sale.id }}/" class="text-accent font-mono" style="font-size:13px">{{ sale.receipt_number }}</a></td>
+          <td style="color:var(--text-muted);font-size:12px">{{ sale.created_at|date:"d M Y H:i" }}</td>
+          <td>{{ sale.customer__name|default:"Walk-in" }}</td>
+          <td>
+            {% if sale.payment_method == 'cash' %}<span class="badge-pill"><i class="bi bi-cash me-1"></i>Cash</span>
+            {% elif sale.payment_method == 'ecocash' %}<span class="badge-pill" style="background:rgba(0,214,143,.1);color:var(--green)"><i class="bi bi-phone me-1"></i>EcoCash</span>
+            {% elif sale.payment_method == 'card' %}<span class="badge-pill" style="background:rgba(59,130,246,.1);color:var(--blue)"><i class="bi bi-credit-card me-1"></i>Card</span>
+            {% else %}<span class="badge-pill">{{ sale.payment_method|title }}</span>{% endif %}
+          </td>
+          <td style="font-size:13px">{{ sale.cashier__username|default:"—" }}</td>
+          <td class="text-end font-mono" style="font-size:13px">{{ sale.item_count|default:"—" }}</td>
+          <td class="text-end font-mono" style="color:var(--green);font-weight:600">${{ sale.total_amount|floatformat:2 }}</td>
+          <td>
+            {% if sale.status == 'completed' %}<span class="badge badge-success">Done</span>
+            {% elif sale.status == 'refunded' %}<span class="badge badge-danger">Refunded</span>
+            {% elif sale.status == 'partial_refund' %}<span class="badge badge-warning">Part. Refund</span>
+            {% else %}<span class="badge badge-secondary">{{ sale.status|title }}</span>{% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <a href="/sales/{{ sale.id }}/" class="btn btn-xs" title="View"><i class="bi bi-eye"></i></a>
+              <a href="/sales/{{ sale.id }}/receipt/" class="btn btn-xs" title="Receipt" target="_blank"><i class="bi bi-printer"></i></a>
+              <a href="/returns/new/?sale={{ sale.id }}" class="btn btn-xs" title="Return"><i class="bi bi-arrow-return-left"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-5">
+          <i class="bi bi-receipt" style="font-size:40px;display:block;margin-bottom:12px;opacity:.3"></i>
+          No sales yet. <a href="/sales/pos/" class="text-accent">Make your first sale</a>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}
+  <div class="card-footer" style="display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:13px;color:var(--text-muted)">{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">‹</a></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}<li class="page-item active"><a class="page-link">{{ num }}</a></li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}<li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

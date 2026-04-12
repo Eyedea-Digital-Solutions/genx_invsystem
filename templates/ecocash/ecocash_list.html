@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}EcoCash{% endblock %}
+{% block nav_ecocash %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">EcoCash</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">EcoCash</h1>
+    <p class="page-sub">Mobile money transactions</p>
+  </div>
+  <div class="page-actions">
+    <a href="/ecocash/add/" class="btn btn-primary"><i class="bi bi-plus me-1"></i>Record Transaction</a>
+    <a href="/ecocash/export/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-download me-1"></i>Export</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(0,214,143,.15);color:var(--green)"><i class="bi bi-phone"></i></div>
+    <div class="stat-body"><div class="stat-label">Today</div><div class="stat-value">${{ today_total|floatformat:2|default:"0.00" }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(124,58,237,.15);color:var(--accent)"><i class="bi bi-calendar-week"></i></div>
+    <div class="stat-body"><div class="stat-label">This Week</div><div class="stat-value">${{ week_total|floatformat:2|default:"0.00" }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(59,130,246,.15);color:var(--blue)"><i class="bi bi-hash"></i></div>
+    <div class="stat-body"><div class="stat-label">Transactions</div><div class="stat-value">{{ total_count|default:0 }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="bi bi-currency-exchange"></i></div>
+    <div class="stat-body"><div class="stat-label">This Month</div><div class="stat-value">${{ month_total|floatformat:2|default:"0.00" }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">EcoCash Transactions</h3>
+    <div class="card-actions">
+      <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Search by reference, phone…" data-table-search="#ecocash-table" class="search-input">
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="ecocash-table">
+      <thead>
+        <tr><th>Date/Time</th><th>Reference</th><th>Phone</th><th>Sale</th><th>Cashier</th><th class="text-end">Amount</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for tx in transactions %}
+        <tr>
+          <td style="color:var(--text-muted);font-size:12px">{{ tx.created_at|date:"d M Y H:i" }}</td>
+          <td class="font-mono" style="font-size:12px;color:var(--accent)">{{ tx.reference|default:"—" }}</td>
+          <td class="font-mono" style="font-size:13px">{{ tx.phone_number|default:"—" }}</td>
+          <td>{% if tx.sale_id %}<a href="/sales/{{ tx.sale_id }}/" class="text-accent">{{ tx.sale__receipt_number|default:tx.sale_id }}</a>{% else %}—{% endif %}</td>
+          <td style="font-size:13px">{{ tx.cashier|default:"—" }}</td>
+          <td class="text-end font-mono" style="color:var(--green);font-weight:600">${{ tx.amount|floatformat:2 }}</td>
+          <td>
+            {% if tx.status == 'confirmed' %}<span class="badge badge-success">Confirmed</span>
+            {% elif tx.status == 'pending' %}<span class="badge badge-warning">Pending</span>
+            {% elif tx.status == 'failed' %}<span class="badge badge-danger">Failed</span>
+            {% else %}<span class="badge badge-secondary">{{ tx.status|default:"Unknown"|title }}</span>{% endif %}
+          </td>
+          <td><a href="/ecocash/{{ tx.id }}/" class="btn btn-xs"><i class="bi bi-eye"></i></a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-5">No EcoCash transactions recorded.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}
+  <div class="card-footer">
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>{% endif %}
+      <li class="page-item disabled"><a class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</a></li>
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

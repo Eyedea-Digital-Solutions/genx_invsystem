@@ -1,1329 +1,221 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en" data-theme="dark">
+{% load static %}<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}GenX POS{% endblock %}</title>
-
-    <!-- Fonts: Syne (display) + DM Sans (body) + JetBrains Mono (data) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- Bootstrap & Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-    <style>
-    /* ══════════════════════════════════════════════════════════════════
-       GENX POS v4 — OBSIDIAN DESIGN SYSTEM
-       Deep navy base · Electric violet accent · Phosphor green success
-       Typefaces: Syne (headings) · DM Sans (UI) · JetBrains Mono (data)
-    ══════════════════════════════════════════════════════════════════ */
-
-    /* ── DESIGN TOKENS ─────────────────────────────────────────────── */
-    :root {
-        /* Core palette */
-        --navy:          #0a0a14;
-        --surface:       #13131f;
-        --card:          #1a1a2a;
-        --card-raised:   #1e1e30;
-        --card-hover:    #222236;
-
-        /* Borders */
-        --bdr:           rgba(255,255,255,0.06);
-        --bdr-2:         rgba(255,255,255,0.11);
-        --bdr-3:         rgba(255,255,255,0.18);
-        --bdr-accent:    rgba(124,58,237,0.30);
-
-        /* Text hierarchy */
-        --txt:           rgba(255,255,255,0.92);
-        --txt-2:         rgba(255,255,255,0.60);
-        --txt-3:         rgba(255,255,255,0.35);
-        --txt-4:         rgba(255,255,255,0.15);
-
-        /* Accent system */
-        --violet:        #7c3aed;
-        --violet-l:      #9f67ff;
-        --violet-bg:     rgba(124,58,237,0.12);
-        --violet-glow:   0 0 32px rgba(124,58,237,0.25);
-
-        --green:         #00d68f;
-        --green-bg:      rgba(0,214,143,0.10);
-        --green-glow:    0 0 24px rgba(0,214,143,0.18);
-
-        --red:           #e5193a;
-        --red-bg:        rgba(229,25,58,0.12);
-
-        --amber:         #ffaa00;
-        --amber-bg:      rgba(255,170,0,0.10);
-
-        --blue:          #4d9fff;
-        --blue-bg:       rgba(77,159,255,0.10);
-
-        --cyan:          #06b6d4;
-
-        /* Layout */
-        --sidebar-w:     260px;
-        --sidebar-min:   52px;
-        --topbar-h:      52px;
-        --r:             10px;
-        --r-sm:          6px;
-        --r-lg:          14px;
-        --r-xl:          20px;
-
-        /* Typography */
-        --font-disp:     'Syne', system-ui, sans-serif;
-        --font-body:     'DM Sans', system-ui, sans-serif;
-        --font-mono:     'JetBrains Mono', 'Courier New', monospace;
-
-        /* Shadows */
-        --shadow-sm:     0 1px 4px rgba(0,0,0,0.4);
-        --shadow:        0 4px 20px rgba(0,0,0,0.5);
-        --shadow-lg:     0 12px 48px rgba(0,0,0,0.6);
-        --shadow-glow:   0 0 32px rgba(124,58,237,0.20);
-
-        /* Transitions */
-        --t:             200ms cubic-bezier(0.4,0,0.2,1);
-        --t-fast:        120ms ease;
-        --t-bounce:      300ms cubic-bezier(0.34,1.56,0.64,1);
-    }
-
-    /* ── RESET ─────────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; }
-    html { font-size: 14px; scroll-behavior: smooth; }
-    body {
-        font-family: var(--font-body);
-        background: var(--navy);
-        color: var(--txt);
-        margin: 0;
-        min-height: 100vh;
-        line-height: 1.55;
-        -webkit-font-smoothing: antialiased;
-        overflow-x: hidden;
-    }
-
-    /* ── SCROLLBARS ─────────────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.35); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(124,58,237,0.6); }
-    * { scrollbar-width: thin; scrollbar-color: rgba(124,58,237,0.35) transparent; }
-
-    /* ══════════════════════════════════════════════════════════════════
-       SIDEBAR
-    ══════════════════════════════════════════════════════════════════ */
-    .gx-sidebar {
-        position: fixed; top: 0; left: 0; bottom: 0;
-        width: var(--sidebar-w);
-        background: var(--surface);
-        border-right: 1px solid var(--bdr);
-        z-index: 500;
-        display: flex; flex-direction: column;
-        transition: width var(--t);
-        overflow: hidden;
-    }
-    .gx-sidebar::before {
-        content: ''; position: absolute;
-        top: 0; left: 0; right: 0; height: 260px;
-        background: radial-gradient(ellipse at 50% -20%, rgba(124,58,237,0.22) 0%, transparent 70%);
-        pointer-events: none; z-index: 0;
-    }
-    .gx-sidebar.collapsed { width: var(--sidebar-min); }
-
-    /* Brand */
-    .sb-brand {
-        display: flex; align-items: center; gap: 10px;
-        padding: 0 12px;
-        height: var(--topbar-h);
-        border-bottom: 1px solid var(--bdr);
-        position: relative; z-index: 1;
-        flex-shrink: 0;
-        overflow: hidden;
-        white-space: nowrap;
-    }
-    .sb-logo {
-        width: 28px; height: 28px; flex-shrink: 0;
-        background: linear-gradient(135deg, var(--violet) 0%, #a855f7 100%);
-        border-radius: 8px;
-        display: flex; align-items: center; justify-content: center;
-        font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: #fff;
-        box-shadow: 0 4px 16px rgba(124,58,237,0.45);
-        transition: var(--t);
-    }
-    .sb-logo:hover { box-shadow: 0 6px 24px rgba(124,58,237,0.65); transform: scale(1.05); }
-    .sb-wordmark {
-        font-family: var(--font-disp); font-size: 15px; font-weight: 800;
-        color: var(--txt); letter-spacing: -0.3px;
-        transition: opacity var(--t);
-    }
-    .sb-wordmark em { color: var(--violet-l); font-style: normal; }
-    .gx-sidebar.collapsed .sb-wordmark { opacity: 0; pointer-events: none; }
-
-    /* Toggle button */
-    .sb-toggle {
-        margin-left: auto; flex-shrink: 0;
-        background: none; border: none; cursor: pointer;
-        color: var(--txt-3); font-size: 16px;
-        padding: 6px; border-radius: var(--r-sm);
-        transition: var(--t-fast);
-    }
-    .sb-toggle:hover { color: var(--txt); background: var(--bdr); }
-    .gx-sidebar.collapsed .sb-toggle { margin-left: 0; }
-
-    /* Scroll area */
-    .sb-scroll {
-        flex: 1; overflow-y: auto; overflow-x: hidden;
-        padding: 6px 0;
-        position: relative; z-index: 1;
-    }
-
-    /* Nav section labels */
-    .sb-section {
-        font-family: var(--font-mono);
-        font-size: 9px; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 1.8px;
-        color: var(--txt-4);
-        padding: 14px 16px 4px;
-        white-space: nowrap; overflow: hidden;
-        transition: opacity var(--t);
-    }
-    .gx-sidebar.collapsed .sb-section { opacity: 0; }
-
-    /* Nav links */
-    .sb-link {
-        display: flex; align-items: center; gap: 10px;
-        padding: 8px 12px; margin: 1px 6px;
-        border-radius: var(--r-sm);
-        color: var(--txt-2);
-        text-decoration: none; font-size: 13px; font-weight: 500;
-        border-left: 2px solid transparent;
-        transition: var(--t-fast);
-        white-space: nowrap; overflow: hidden;
-        position: relative;
-    }
-    .sb-link .bi { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
-    .sb-link .sb-text { opacity: 1; transition: opacity var(--t); }
-    .gx-sidebar.collapsed .sb-text { opacity: 0; }
-
-    .sb-link:hover {
-        color: var(--txt);
-        background: var(--card);
-    }
-    .sb-link.active {
-        color: #fff;
-        background: var(--violet-bg);
-        border-left-color: var(--violet);
-    }
-    .sb-link.active .bi { color: var(--violet-l); }
-
-    /* Badge on nav items */
-    .sb-badge {
-        margin-left: auto; flex-shrink: 0;
-        background: var(--red); color: #fff;
-        font-size: 10px; font-weight: 700;
-        padding: 1px 5px; border-radius: 99px; min-width: 18px; text-align: center;
-        transition: opacity var(--t);
-    }
-    .gx-sidebar.collapsed .sb-badge { opacity: 0; }
-
-    /* Collapsed tooltip */
-    .gx-sidebar.collapsed .sb-link {
-        justify-content: center; padding: 10px;
-    }
-    .gx-sidebar.collapsed .sb-link::after {
-        content: attr(data-label);
-        position: absolute; left: calc(var(--sidebar-min) + 8px); top: 50%;
-        transform: translateY(-50%);
-        background: var(--card); border: 1px solid var(--bdr-2);
-        color: var(--txt); padding: 5px 10px; border-radius: var(--r-sm);
-        font-size: 12px; font-weight: 500; white-space: nowrap;
-        opacity: 0; pointer-events: none; transition: opacity var(--t-fast);
-        box-shadow: var(--shadow); z-index: 600;
-    }
-    .gx-sidebar.collapsed .sb-link:hover::after { opacity: 1; }
-
-    /* Footer user area */
-    .sb-footer {
-        border-top: 1px solid var(--bdr);
-        padding: 10px; flex-shrink: 0;
-        position: relative; z-index: 1;
-    }
-    .sb-user {
-        display: flex; align-items: center; gap: 10px;
-        padding: 8px; border-radius: var(--r-sm);
-        cursor: default; overflow: hidden;
-        transition: var(--t-fast);
-    }
-    .sb-user:hover { background: var(--card); }
-    .sb-avatar {
-        width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-        background: linear-gradient(135deg, var(--violet), var(--violet-l));
-        display: flex; align-items: center; justify-content: center;
-        font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: #fff;
-    }
-    .sb-user-info { overflow: hidden; transition: opacity var(--t); }
-    .sb-user-info .u-name { font-size: 12px; font-weight: 600; color: var(--txt); white-space: nowrap; }
-    .sb-user-info .u-role { font-family: var(--font-mono); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--txt-3); }
-    .gx-sidebar.collapsed .sb-user-info { opacity: 0; }
-
-    /* Mobile overlay */
-    .sb-overlay {
-        display: none; position: fixed; inset: 0;
-        background: rgba(0,0,0,0.65); z-index: 499;
-        backdrop-filter: blur(3px);
-    }
-    .sb-overlay.show { display: block; }
-
-    /* ══════════════════════════════════════════════════════════════════
-       TOPBAR
-    ══════════════════════════════════════════════════════════════════ */
-    .gx-topbar {
-        position: fixed; top: 0;
-        left: var(--sidebar-w); right: 0;
-        height: var(--topbar-h);
-        background: rgba(19,19,31,0.85);
-        backdrop-filter: blur(12px);
-        border-bottom: 1px solid var(--bdr);
-        display: flex; align-items: center;
-        padding: 0 20px; gap: 12px;
-        z-index: 400;
-        transition: left var(--t);
-    }
-    .gx-topbar.sb-collapsed { left: var(--sidebar-min); }
-
-    /* Mobile toggle */
-    .topbar-mobile-toggle {
-        display: none; background: none; border: none;
-        color: var(--txt); font-size: 20px; cursor: pointer;
-        padding: 4px; border-radius: var(--r-sm);
-    }
-
-    /* Breadcrumb */
-    .topbar-breadcrumb {
-        display: flex; align-items: center; gap: 6px;
-        font-family: var(--font-mono);
-        font-size: 11px; color: var(--txt-3);
-        flex: 1; min-width: 0;
-    }
-    .topbar-breadcrumb a { color: var(--txt-2); text-decoration: none; transition: var(--t-fast); }
-    .topbar-breadcrumb a:hover { color: var(--violet-l); }
-    .topbar-breadcrumb .bc-sep { color: var(--txt-4); }
-    .topbar-breadcrumb .bc-current { color: var(--txt); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-    /* Command palette trigger */
-    .cmd-trigger {
-        display: flex; align-items: center; gap: 8px;
-        background: var(--card); border: 1px solid var(--bdr-2);
-        border-radius: var(--r-sm); padding: 6px 12px;
-        color: var(--txt-3); font-size: 12px; cursor: pointer;
-        transition: var(--t-fast); white-space: nowrap;
-    }
-    .cmd-trigger:hover { border-color: var(--bdr-accent); color: var(--txt-2); box-shadow: var(--shadow-glow); }
-    .cmd-trigger .kbd {
-        font-family: var(--font-mono); font-size: 10px;
-        background: var(--bdr); padding: 1px 5px; border-radius: 4px; color: var(--txt-4);
-    }
-
-    /* Right actions */
-    .topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-
-    .topbar-btn {
-        width: 34px; height: 34px;
-        background: var(--card); border: 1px solid var(--bdr);
-        border-radius: var(--r-sm);
-        display: flex; align-items: center; justify-content: center;
-        color: var(--txt-2); font-size: 16px; cursor: pointer;
-        text-decoration: none; position: relative;
-        transition: var(--t-fast);
-    }
-    .topbar-btn:hover { background: var(--card-raised); border-color: var(--bdr-2); color: var(--txt); }
-
-    /* Notification dot */
-    .notif-dot {
-        position: absolute; top: 4px; right: 4px;
-        width: 8px; height: 8px;
-        background: var(--red); border-radius: 50%;
-        border: 2px solid var(--surface);
-        animation: pulse-notif 2s infinite;
-    }
-    @keyframes pulse-notif {
-        0%,100% { opacity:1; transform:scale(1); }
-        50% { opacity:.7; transform:scale(1.3); }
-    }
-    .notif-count {
-        position: absolute; top: -4px; right: -4px;
-        background: var(--red); color: #fff;
-        font-size: 9px; font-weight: 700;
-        padding: 1px 4px; border-radius: 99px; min-width: 16px; text-align: center;
-        border: 2px solid var(--surface);
-    }
-
-    /* POS launch button */
-    .btn-pos-launch {
-        display: flex; align-items: center; gap: 6px;
-        background: linear-gradient(135deg, var(--violet), #5b21b6);
-        color: #fff; border: none;
-        border-radius: var(--r-sm); padding: 7px 14px;
-        font-size: 12px; font-weight: 700;
-        text-decoration: none; cursor: pointer;
-        transition: var(--t-fast);
-        box-shadow: 0 4px 16px rgba(124,58,237,0.35);
-        white-space: nowrap;
-    }
-    .btn-pos-launch:hover { box-shadow: 0 6px 24px rgba(124,58,237,0.5); transform: translateY(-1px); color: #fff; }
-
-    /* ══════════════════════════════════════════════════════════════════
-       NOTIFICATION DROPDOWN
-    ══════════════════════════════════════════════════════════════════ */
-    .notif-dropdown {
-        position: absolute; top: calc(100% + 8px); right: 0;
-        width: 340px;
-        background: var(--card); border: 1px solid var(--bdr-2);
-        border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
-        z-index: 600; display: none; overflow: hidden;
-    }
-    .notif-dropdown.open {
-        display: block;
-        animation: slidedown 0.15s ease;
-    }
-    @keyframes slidedown {
-        from { opacity:0; transform:translateY(-8px); }
-        to { opacity:1; transform:translateY(0); }
-    }
-    .notif-head {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 14px 16px; border-bottom: 1px solid var(--bdr);
-        font-size: 13px; font-weight: 700;
-    }
-    .notif-item {
-        display: flex; gap: 12px; padding: 12px 16px;
-        border-bottom: 1px solid var(--bdr);
-        text-decoration: none; color: var(--txt);
-        transition: var(--t-fast);
-    }
-    .notif-item:hover { background: var(--card-raised); color: var(--txt); }
-    .notif-item.unread { border-left: 2px solid var(--violet); }
-    .notif-icon {
-        width: 32px; height: 32px; border-radius: var(--r-sm);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 14px; flex-shrink: 0;
-    }
-    .notif-title { font-size: 12px; font-weight: 600; }
-    .notif-time { font-size: 10px; font-family: var(--font-mono); color: var(--txt-3); margin-top: 2px; }
-    .notif-footer { padding: 10px; text-align: center; }
-    .notif-footer a { font-size: 12px; color: var(--violet-l); text-decoration: none; }
-
-    /* ══════════════════════════════════════════════════════════════════
-       COMMAND PALETTE
-    ══════════════════════════════════════════════════════════════════ */
-    .cmd-overlay {
-        position: fixed; inset: 0;
-        background: rgba(0,0,0,0.75); z-index: 1000;
-        display: none; backdrop-filter: blur(6px);
-        align-items: flex-start; justify-content: center;
-        padding-top: 14vh;
-    }
-    .cmd-overlay.open { display: flex; animation: fadein 0.12s ease; }
-    @keyframes fadein { from { opacity:0; } to { opacity:1; } }
-
-    .cmd-palette {
-        width: 580px; max-width: calc(100vw - 32px);
-        background: var(--card); border: 1px solid var(--bdr-2);
-        border-radius: var(--r-lg); box-shadow: var(--shadow-lg), var(--shadow-glow);
-        overflow: hidden;
-    }
-    .cmd-input-wrap {
-        display: flex; align-items: center; gap: 10px;
-        padding: 14px 16px; border-bottom: 1px solid var(--bdr);
-    }
-    .cmd-input-wrap .bi { color: var(--txt-3); font-size: 16px; flex-shrink: 0; }
-    .cmd-input {
-        flex: 1; background: none; border: none; outline: none;
-        color: var(--txt); font-size: 15px; font-family: var(--font-body);
-    }
-    .cmd-input::placeholder { color: var(--txt-4); }
-    .cmd-results { max-height: 360px; overflow-y: auto; }
-    .cmd-group { font-family: var(--font-mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--txt-4); padding: 10px 16px 4px; }
-    .cmd-result {
-        display: flex; align-items: center; gap: 12px;
-        padding: 10px 16px; cursor: pointer;
-        transition: var(--t-fast); text-decoration: none; color: var(--txt);
-    }
-    .cmd-result:hover, .cmd-result.selected { background: var(--violet-bg); }
-    .cmd-result .bi { color: var(--txt-3); font-size: 14px; width: 18px; flex-shrink: 0; }
-    .cmd-result-label { font-size: 13px; font-weight: 500; }
-    .cmd-result-sub { font-size: 11px; color: var(--txt-3); }
-    .cmd-footer {
-        padding: 10px 16px; border-top: 1px solid var(--bdr);
-        display: flex; gap: 16px;
-        font-size: 11px; color: var(--txt-4); font-family: var(--font-mono);
-    }
-    .cmd-footer .kbd { background: var(--bdr); padding: 1px 5px; border-radius: 3px; margin-right: 4px; }
-
-    /* ══════════════════════════════════════════════════════════════════
-       MAIN LAYOUT
-    ══════════════════════════════════════════════════════════════════ */
-    .gx-main {
-        margin-left: var(--sidebar-w);
-        margin-top: var(--topbar-h);
-        min-height: calc(100vh - var(--topbar-h));
-        transition: margin-left var(--t);
-        display: flex; flex-direction: column;
-    }
-    .gx-main.sb-collapsed { margin-left: var(--sidebar-min); }
-
-    .gx-page { padding: 24px; flex: 1; }
-
-    /* ══════════════════════════════════════════════════════════════════
-       MESSAGES / ALERTS
-    ══════════════════════════════════════════════════════════════════ */
-    .gx-messages { padding: 12px 24px 0; }
-    .gx-alert {
-        display: flex; align-items: center; gap: 10px;
-        padding: 11px 16px; border-radius: var(--r);
-        font-size: 13px; font-weight: 500;
-        margin-bottom: 8px; border: 1px solid;
-        animation: alert-in 0.2s ease;
-    }
-    @keyframes alert-in { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }
-    .alert-success { background: rgba(0,214,143,0.10); border-color: rgba(0,214,143,0.25); color: #4ade80; }
-    .alert-error, .alert-danger { background: var(--red-bg); border-color: rgba(229,25,58,0.25); color: #f87171; }
-    .alert-warning { background: var(--amber-bg); border-color: rgba(255,170,0,0.25); color: #fbbf24; }
-    .alert-info { background: var(--blue-bg); border-color: rgba(77,159,255,0.25); color: #93c5fd; }
-    .alert-close { margin-left: auto; background: none; border: none; cursor: pointer; color: inherit; opacity: 0.5; font-size: 18px; line-height: 1; padding: 0; transition: var(--t-fast); }
-    .alert-close:hover { opacity: 1; }
-
-    /* Toast stack */
-    .toast-stack { position: fixed; top: calc(var(--topbar-h) + 12px); right: 16px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
-    .gx-toast {
-        background: var(--card); border: 1px solid var(--bdr-2);
-        border-radius: var(--r); padding: 12px 16px;
-        display: flex; align-items: center; gap: 10px;
-        min-width: 280px; max-width: 360px;
-        box-shadow: var(--shadow-lg);
-        font-size: 13px; font-weight: 500;
-        pointer-events: all;
-        animation: toast-in 0.25s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    @keyframes toast-in { from { opacity:0; transform:translateX(20px) scale(0.95); } to { opacity:1; transform:translateX(0) scale(1); } }
-
-    /* ══════════════════════════════════════════════════════════════════
-       COMPONENT LIBRARY
-    ══════════════════════════════════════════════════════════════════ */
-
-    /* ── gx-stat-card ─ */
-    .gx-stat {
-        background: var(--card); border: 1px solid var(--bdr);
-        border-radius: var(--r-lg); padding: 20px;
-        position: relative; overflow: hidden;
-        transition: var(--t);
-    }
-    .gx-stat::after {
-        content: ''; position: absolute;
-        top: 0; left: 0; right: 0; height: 2px;
-        background: var(--stat-accent, var(--violet));
-    }
-    .gx-stat:hover { border-color: var(--bdr-2); box-shadow: var(--shadow-glow); transform: translateY(-2px); }
-    .gx-stat .stat-icon {
-        width: 42px; height: 42px; border-radius: 11px;
-        background: var(--stat-bg, var(--violet-bg));
-        color: var(--stat-color, var(--violet-l));
-        display: flex; align-items: center; justify-content: center;
-        font-size: 19px; margin-bottom: 14px;
-    }
-    .gx-stat .stat-label {
-        font-family: var(--font-mono); font-size: 10px; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 1px; color: var(--txt-3); margin-bottom: 4px;
-    }
-    .gx-stat .stat-val {
-        font-family: var(--font-disp); font-size: 28px; font-weight: 800;
-        letter-spacing: -0.5px; line-height: 1; color: var(--txt);
-    }
-    .gx-stat .stat-sub { font-size: 12px; color: var(--txt-3); margin-top: 6px; }
-    .gx-stat .stat-trend {
-        display: inline-flex; align-items: center; gap: 3px;
-        font-size: 11px; font-weight: 700;
-        padding: 2px 7px; border-radius: 99px; margin-top: 4px;
-    }
-    .trend-up { background: var(--green-bg); color: var(--green); }
-    .trend-dn { background: var(--red-bg); color: #f87171; }
-
-    /* ── gx-card ─ */
-    .gx-card {
-        background: var(--card); border: 1px solid var(--bdr);
-        border-radius: var(--r-lg); overflow: hidden;
-        transition: var(--t-fast);
-    }
-    .gx-card:hover { border-color: var(--bdr-2); }
-    .gx-card-glass {
-        background: rgba(26,26,42,0.65); backdrop-filter: blur(16px);
-        border: 1px solid rgba(255,255,255,0.07); border-radius: var(--r-lg);
-    }
-    .gx-card-head {
-        padding: 14px 20px; border-bottom: 1px solid var(--bdr);
-        display: flex; align-items: center; justify-content: space-between;
-    }
-    .gx-card-title {
-        font-size: 14px; font-weight: 700; color: var(--txt);
-        display: flex; align-items: center; gap: 8px;
-    }
-    .gx-card-title .bi { color: var(--violet-l); }
-    .gx-card-body { padding: 20px; }
-
-    /* ── gx-table ─ */
-    .gx-table { width: 100%; border-collapse: collapse; }
-    .gx-table thead th {
-        font-family: var(--font-mono); font-size: 10px; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.8px; color: var(--txt-3);
-        padding: 10px 16px; border-bottom: 1px solid var(--bdr); white-space: nowrap;
-    }
-    .gx-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: var(--t-fast); }
-    .gx-table tbody tr:last-child { border-bottom: none; }
-    .gx-table tbody tr:hover { background: rgba(255,255,255,0.025); }
-    .gx-table td { padding: 12px 16px; font-size: 13px; vertical-align: middle; color: var(--txt); }
-    .gx-table tfoot td { padding: 12px 16px; border-top: 1px solid var(--bdr-2); font-weight: 700; }
-
-    /* ── gx-badge ─ */
-    .gx-badge {
-        display: inline-flex; align-items: center; gap: 4px;
-        padding: 3px 8px; border-radius: 99px;
-        font-size: 11px; font-weight: 600; font-family: var(--font-mono);
-        white-space: nowrap; border: 1px solid;
-    }
-    .badge-violet { background: var(--violet-bg); color: var(--violet-l); border-color: var(--bdr-accent); }
-    .badge-green  { background: var(--green-bg); color: var(--green); border-color: rgba(0,214,143,0.2); }
-    .badge-red    { background: var(--red-bg); color: #f87171; border-color: rgba(229,25,58,0.2); }
-    .badge-amber  { background: var(--amber-bg); color: var(--amber); border-color: rgba(255,170,0,0.2); }
-    .badge-blue   { background: var(--blue-bg); color: var(--blue); border-color: rgba(77,159,255,0.2); }
-    .badge-neutral{ background: rgba(255,255,255,0.06); color: var(--txt-2); border-color: var(--bdr); }
-    .badge-cyan   { background: rgba(6,182,212,0.10); color: var(--cyan); border-color: rgba(6,182,212,0.2); }
-    .badge-success { background: var(--green-bg); color: var(--green); border-color: rgba(0,214,143,0.2); }
-    .badge-warning { background: var(--amber-bg); color: var(--amber); border-color: rgba(255,170,0,0.2); }
-    .badge-danger  { background: var(--red-bg); color: #f87171; border-color: rgba(229,25,58,0.2); }
-    .badge-info    { background: var(--blue-bg); color: var(--blue); border-color: rgba(77,159,255,0.2); }
-
-    /* ── Buttons ─ */
-    .btn-gx {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 8px 16px; border-radius: var(--r-sm);
-        font-size: 13px; font-weight: 600; border: none; cursor: pointer;
-        text-decoration: none; transition: var(--t-fast); white-space: nowrap; letter-spacing: 0.1px;
-    }
-    .btn-gx:hover { transform: translateY(-1px); }
-    .btn-gx:active { transform: translateY(0); }
-    .btn-gx-primary { background: var(--violet); color: #fff; box-shadow: 0 4px 16px rgba(124,58,237,0.3); }
-    .btn-gx-primary:hover { background: var(--violet-l); box-shadow: 0 6px 24px rgba(124,58,237,0.45); color: #fff; }
-    .btn-gx-success { background: var(--green); color: #000; box-shadow: 0 4px 16px rgba(0,214,143,0.25); }
-    .btn-gx-success:hover { background: #00e89a; color: #000; }
-    .btn-gx-danger  { background: var(--red); color: #fff; box-shadow: 0 4px 16px rgba(229,25,58,0.3); }
-    .btn-gx-danger:hover  { background: #f03; color: #fff; }
-    .btn-gx-dark    { background: var(--card); color: var(--txt); border: 1px solid var(--bdr-2); }
-    .btn-gx-dark:hover { background: var(--card-raised); color: var(--txt); border-color: var(--violet); }
-    .btn-gx-ghost   { background: transparent; color: var(--txt-2); border: 1px solid var(--bdr); }
-    .btn-gx-ghost:hover { background: var(--card); color: var(--txt); border-color: var(--bdr-2); }
-    .btn-gx-sm { padding: 6px 12px; font-size: 12px; }
-    .btn-gx-xs { padding: 4px 8px; font-size: 11px; border-radius: 5px; }
-    .btn-gx-amber { background: var(--amber); color: #000; }
-    .btn-gx-amber:hover { filter: brightness(1.1); color: #000; }
-
-    /* ── Forms ─ */
-    .gx-label {
-        font-family: var(--font-mono); font-size: 10px; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.8px; color: var(--txt-3);
-        display: block; margin-bottom: 6px;
-    }
-    .gx-input, .gx-select, .gx-textarea {
-        width: 100%; background: rgba(255,255,255,0.04);
-        border: 1px solid var(--bdr-2); border-radius: var(--r-sm);
-        padding: 9px 13px; font-size: 13px; font-family: var(--font-body);
-        color: var(--txt); transition: var(--t-fast); outline: none;
-    }
-    .gx-input:focus, .gx-select:focus, .gx-textarea:focus {
-        border-color: var(--violet); box-shadow: 0 0 0 3px var(--violet-bg);
-        background: rgba(255,255,255,0.06);
-    }
-    .gx-input::placeholder { color: var(--txt-4); }
-    .gx-select option { background: var(--card); color: var(--txt); }
-    .gx-textarea { resize: vertical; min-height: 80px; }
-
-    /* Bootstrap form overrides */
-    .form-control, .form-select {
-        background: rgba(255,255,255,0.04) !important; border: 1px solid var(--bdr-2) !important;
-        border-radius: var(--r-sm) !important; color: var(--txt) !important;
-        font-size: 13px !important; font-family: var(--font-body) !important;
-        transition: var(--t-fast) !important;
-    }
-    .form-control:focus, .form-select:focus {
-        border-color: var(--violet) !important; box-shadow: 0 0 0 3px var(--violet-bg) !important;
-        background: rgba(255,255,255,0.06) !important;
-    }
-    .form-control::placeholder { color: var(--txt-4) !important; }
-    .form-select option { background: var(--card); }
-    .form-label { color: var(--txt-2) !important; font-size: 12px !important; }
-    .form-text { color: var(--txt-3) !important; }
-    .form-check-input { background-color: var(--bdr) !important; border-color: var(--bdr-2) !important; }
-    .form-check-input:checked { background-color: var(--violet) !important; border-color: var(--violet) !important; }
-    .input-group-text { background: rgba(255,255,255,0.06) !important; border-color: var(--bdr-2) !important; color: var(--txt-3) !important; }
-
-    /* Bootstrap tables */
-    .table { color: var(--txt) !important; }
-    .table > thead > tr > th {
-        font-family: var(--font-mono); font-size: 10px; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.8px;
-        color: var(--txt-3) !important; border-bottom-color: var(--bdr) !important;
-        background: rgba(255,255,255,0.02) !important;
-    }
-    .table > tbody > tr > td { border-bottom-color: rgba(255,255,255,0.04) !important; }
-    .table-hover > tbody > tr:hover > * { background: rgba(255,255,255,0.03) !important; }
-    .table-striped > tbody > tr:nth-of-type(odd) > * { background: rgba(255,255,255,0.015) !important; }
-    .table-sm > thead > tr > th, .table-sm > tbody > tr > td { padding: 7px 12px !important; }
-
-    /* Bootstrap badges */
-    .badge { font-size: 11px !important; font-weight: 600 !important; }
-    .bg-primary { background: var(--violet) !important; }
-    .bg-success { background: rgba(0,214,143,0.9) !important; color: #000 !important; }
-    .bg-danger  { background: rgba(229,25,58,0.9) !important; }
-    .bg-warning { background: rgba(255,170,0,0.9) !important; color: #000 !important; }
-    .bg-info    { background: rgba(77,159,255,0.9) !important; }
-    .bg-secondary { background: rgba(255,255,255,0.12) !important; }
-    .bg-light { background: rgba(255,255,255,0.08) !important; color: var(--txt) !important; }
-
-    /* Bootstrap cards */
-    .card { background: var(--card) !important; border-color: var(--bdr) !important; border-radius: var(--r-lg) !important; }
-    .card-header { background: rgba(255,255,255,0.04) !important; border-bottom-color: var(--bdr) !important; color: var(--txt) !important; }
-    .card-footer { background: rgba(255,255,255,0.03) !important; border-top-color: var(--bdr) !important; }
-
-    /* Bootstrap buttons */
-    .btn { border-radius: var(--r-sm) !important; font-weight: 600 !important; transition: var(--t-fast) !important; }
-    .btn-primary { background: var(--violet) !important; border-color: var(--violet) !important; }
-    .btn-primary:hover { background: var(--violet-l) !important; border-color: var(--violet-l) !important; }
-    .btn-success { background: var(--green) !important; border-color: var(--green) !important; color: #000 !important; }
-    .btn-danger { background: var(--red) !important; border-color: var(--red) !important; }
-    .btn-warning { background: var(--amber) !important; border-color: var(--amber) !important; color: #000 !important; }
-    .btn-dark { background: var(--card) !important; border-color: var(--bdr-2) !important; color: var(--txt) !important; }
-    .btn-dark:hover { background: var(--card-raised) !important; border-color: var(--violet) !important; }
-    .btn-outline-primary { border-color: var(--violet) !important; color: var(--violet-l) !important; }
-    .btn-outline-primary:hover { background: var(--violet) !important; color: #fff !important; }
-    .btn-outline-secondary { border-color: var(--bdr-2) !important; color: var(--txt-2) !important; }
-    .btn-outline-secondary:hover { background: var(--card) !important; color: var(--txt) !important; border-color: var(--bdr-2) !important; }
-    .btn-outline-danger { border-color: rgba(229,25,58,0.5) !important; color: #f87171 !important; }
-    .btn-outline-danger:hover { background: var(--red) !important; color: #fff !important; border-color: var(--red) !important; }
-    .btn-outline-success { border-color: rgba(0,214,143,0.4) !important; color: var(--green) !important; }
-    .btn-outline-success:hover { background: var(--green) !important; color: #000 !important; border-color: var(--green) !important; }
-    .btn-sm { font-size: 12px !important; padding: 5px 11px !important; }
-
-    /* Bootstrap alerts */
-    .alert { border-radius: var(--r) !important; border: 1px solid !important; }
-    .alert-info    { background: var(--blue-bg) !important; border-color: rgba(77,159,255,0.25) !important; color: var(--blue) !important; }
-    .alert-success { background: var(--green-bg) !important; border-color: rgba(0,214,143,0.25) !important; color: var(--green) !important; }
-    .alert-warning { background: var(--amber-bg) !important; border-color: rgba(255,170,0,0.25) !important; color: var(--amber) !important; }
-    .alert-danger  { background: var(--red-bg) !important; border-color: rgba(229,25,58,0.25) !important; color: #f87171 !important; }
-
-    /* Bootstrap modals */
-    .modal-content { background: var(--card) !important; border: 1px solid var(--bdr-2) !important; border-radius: var(--r-lg) !important; }
-    .modal-header { border-bottom-color: var(--bdr) !important; }
-    .modal-footer { border-top-color: var(--bdr) !important; }
-    .modal-title { color: var(--txt) !important; font-weight: 700 !important; }
-    .btn-close { filter: invert(1); }
-    .modal-backdrop { background: rgba(0,0,0,0.7) !important; }
-
-    /* Bootstrap dropdowns */
-    .dropdown-menu { background: var(--card) !important; border-color: var(--bdr-2) !important; border-radius: var(--r) !important; box-shadow: var(--shadow-lg) !important; }
-    .dropdown-item { color: var(--txt-2) !important; font-size: 13px !important; }
-    .dropdown-item:hover { background: var(--card-raised) !important; color: var(--txt) !important; }
-    .dropdown-divider { border-color: var(--bdr) !important; }
-
-    /* Bootstrap tabs */
-    .nav-tabs { border-bottom-color: var(--bdr) !important; }
-    .nav-tabs .nav-link { color: var(--txt-3) !important; border-color: transparent !important; border-radius: var(--r-sm) var(--r-sm) 0 0 !important; }
-    .nav-tabs .nav-link:hover { color: var(--txt) !important; border-color: var(--bdr) !important; }
-    .nav-tabs .nav-link.active { color: var(--violet-l) !important; border-bottom-color: var(--violet) !important; background: transparent !important; border-top-color: var(--bdr) !important; border-left-color: var(--bdr) !important; border-right-color: var(--bdr) !important; }
-    .nav-pills .nav-link { color: var(--txt-2) !important; border-radius: var(--r-sm) !important; }
-    .nav-pills .nav-link.active { background: var(--violet) !important; color: #fff !important; }
-
-    /* ── gx-timeline ─ */
-    .gx-timeline { padding-left: 20px; }
-    .gx-tl-item { position: relative; padding: 0 0 20px 24px; }
-    .gx-tl-item::before { content: ''; position: absolute; left: -1px; top: 10px; bottom: 0; width: 1px; background: var(--bdr); }
-    .gx-tl-item:last-child::before { display: none; }
-    .gx-tl-dot { position: absolute; left: -6px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--violet); border: 2px solid var(--surface); }
-    .gx-tl-dot.green { background: var(--green); }
-    .gx-tl-dot.amber { background: var(--amber); }
-    .gx-tl-dot.red   { background: var(--red); }
-    .gx-tl-dot.muted { background: var(--bdr-2); }
-    .gx-tl-time  { font-family: var(--font-mono); font-size: 10px; color: var(--txt-3); margin-bottom: 3px; }
-    .gx-tl-title { font-size: 13px; font-weight: 600; color: var(--txt); }
-    .gx-tl-body  { font-size: 12px; color: var(--txt-2); margin-top: 3px; }
-
-    /* ── gx-empty-state ─ */
-    .gx-empty { text-align: center; padding: 56px 24px; color: var(--txt-3); }
-    .gx-empty .empty-icon { font-size: 36px; display: block; margin-bottom: 12px; opacity: 0.3; }
-    .gx-empty .empty-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--txt-2); }
-    .gx-empty .empty-sub { font-size: 13px; }
-
-    /* ── gx-skeleton ─ */
-    @keyframes shimmer { 0% { background-position: -600px 0; } 100% { background-position: 600px 0; } }
-    .skeleton {
-        background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
-        background-size: 1200px 100%;
-        animation: shimmer 1.5s infinite;
-        border-radius: var(--r-sm);
-    }
-
-    /* ── Page header ─ */
-    .page-header {
-        display: flex; align-items: flex-start; justify-content: space-between;
-        margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
-    }
-    .page-header h1 {
-        font-family: var(--font-disp); font-size: 22px; font-weight: 800;
-        color: var(--txt); letter-spacing: -0.5px; margin: 0 0 4px;
-    }
-    .page-header p { font-size: 13px; color: var(--txt-3); margin: 0; }
-    .page-header-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-
-    /* ── Breadcrumb ─ */
-    .gx-breadcrumb {
-        display: flex; align-items: center; gap: 6px;
-        font-family: var(--font-mono); font-size: 11px; color: var(--txt-3);
-        margin-bottom: 20px;
-    }
-    .gx-breadcrumb a { color: var(--txt-2); text-decoration: none; transition: var(--t-fast); }
-    .gx-breadcrumb a:hover { color: var(--violet-l); }
-    .gx-breadcrumb .bc-sep { color: var(--txt-4); }
-
-    /* ── Filter bar ─ */
-    .filter-bar {
-        background: var(--card); border: 1px solid var(--bdr);
-        border-radius: var(--r); padding: 14px 16px;
-        display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-        margin-bottom: 16px;
-    }
-
-    /* ── Utility ─ */
-    .mono { font-family: var(--font-mono) !important; }
-    .text-green  { color: var(--green) !important; }
-    .text-red    { color: #f87171 !important; }
-    .text-amber  { color: var(--amber) !important; }
-    .text-violet { color: var(--violet-l) !important; }
-    .text-blue   { color: var(--blue) !important; }
-    .text-muted-custom { color: var(--txt-3) !important; }
-    .font-disp { font-family: var(--font-disp) !important; }
-
-    /* Product badges */
-    .badge-low-stock { background: var(--amber-bg); color: var(--amber); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; font-family: var(--font-mono); }
-    .badge-out { background: var(--red-bg); color: #f87171; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; font-family: var(--font-mono); }
-    .badge-clearance { background: var(--violet-bg); color: var(--violet-l); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); }
-    .badge-sale { background: rgba(217,119,6,0.15); color: #fbbf24; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); }
-
-    /* Product thumbnails */
-    .prod-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: var(--r-sm); border: 1px solid var(--bdr); background: var(--card); display: block; flex-shrink: 0; }
-    .prod-thumb-ph { width: 40px; height: 40px; border-radius: var(--r-sm); border: 1px solid var(--bdr); background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; color: var(--txt-4); font-size: 17px; flex-shrink: 0; }
-
-    /* ── Joint accents ─ */
-    .joint-eyedentity { --joint-color: #8b5cf6; }
-    .joint-genx       { --joint-color: #3b82f6; }
-    .joint-armor_sole { --joint-color: var(--amber); }
-    .joint-accent { border-left: 3px solid var(--joint-color, var(--violet)); }
-
-    /* ── Stat card shorthand ─ */
-    .stat-card {
-        background: var(--card); border: 1px solid var(--bdr); border-radius: var(--r-lg); padding: 18px;
-        transition: var(--t);
-    }
-    .stat-card:hover { border-color: var(--bdr-2); }
-    .stat-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--txt-3); }
-    .stat-value { font-family: var(--font-disp); font-size: 26px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; color: var(--txt); margin-top: 6px; }
-    .stat-sub { font-size: 12px; color: var(--txt-3); margin-top: 4px; }
-    .stat-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-
-    /* ── Page title / breadcrumb shorthand from old templates ─ */
-    .ph { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
-    .ph-left h1 { font-family: var(--font-disp); font-size: 22px; font-weight: 800; color: var(--txt); letter-spacing: -0.5px; margin: 0 0 4px; }
-    .ph-left p  { font-size: 13px; color: var(--txt-3); margin: 0; }
-    .ph-right   { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-
-    /* ── RESPONSIVE ─ */
-    .sb-mobile-toggle {
-        display: none; background: none; border: none;
-        color: var(--txt); font-size: 22px; cursor: pointer; padding: 4px;
-        border-radius: var(--r-sm); transition: var(--t-fast);
-    }
-    .sb-mobile-toggle:hover { background: var(--card); }
-
-    @media (max-width: 1024px) { .gx-page { padding: 18px; } }
-    @media (max-width: 768px) {
-        .gx-sidebar { transform: translateX(-100%); transition: transform var(--t), width var(--t); }
-        .gx-sidebar.mobile-open { transform: translateX(0); width: var(--sidebar-w) !important; }
-        .gx-topbar { left: 0 !important; }
-        .gx-main { margin-left: 0 !important; }
-        .sb-mobile-toggle { display: flex; align-items: center; }
-        .cmd-trigger .cmd-shortcut { display: none; }
-        .gx-page { padding: 14px; }
-        .stat-value { font-size: 22px; }
-    }
-    @media (max-width: 480px) { .gx-page { padding: 10px; } }
-    @media (min-width: 769px) { .gx-sidebar { transform: none !important; } }
-    @media print {
-        .gx-sidebar, .gx-topbar, .toast-stack, .cmd-overlay, .no-print { display: none !important; }
-        .gx-main { margin: 0 !important; }
-        body { background: #fff; color: #000; }
-    }
-
-    {% block extra_css %}{% endblock %}
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GenX POS">
+  {% block meta %}{% endblock %}
+  <title>{% block title %}GenX POS{% endblock %} — GenX</title>
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{% static 'css/genx-design-system.css' %}">
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-{% if user.is_authenticated %}
-
-<!-- Mobile overlay -->
-<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
-
-<!-- ═══════════ SIDEBAR ═══════════ -->
-<nav class="gx-sidebar" id="sidebar">
-    <div class="sb-brand">
-        <div class="sb-logo">GX</div>
-        <span class="sb-wordmark">GenX<em>POS</em></span>
-        <button class="sb-toggle" onclick="toggleSidebar()" title="Collapse sidebar">
-            <i class="bi bi-layout-sidebar-reverse"></i>
-        </button>
-    </div>
-
-    <div class="sb-scroll">
-
-        <div class="sb-section">POS</div>
-
-        <a href="{% url 'sales:pos' %}" class="sb-link {% if request.resolver_match.url_name == 'pos' %}active{% endif %}" data-label="POS Terminal">
-            <i class="bi bi-display"></i>
-            <span class="sb-text">POS Terminal</span>
-        </a>
-        <a href="{% url 'sales:dashboard' %}" class="sb-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" data-label="Dashboard">
-            <i class="bi bi-grid-1x2"></i>
-            <span class="sb-text">Dashboard</span>
-        </a>
-        <a href="{% url 'sales:sale_list' %}" class="sb-link {% if request.resolver_match.url_name == 'sale_list' %}active{% endif %}" data-label="Sales History">
-            <i class="bi bi-receipt"></i>
-            <span class="sb-text">Sales History</span>
-        </a>
-        {% if user.is_manager_role %}
-        <a href="{% url 'sales:analytics_dashboard' %}" class="sb-link {% if 'analytics' in request.path %}active{% endif %}" data-label="Analytics">
-            <i class="bi bi-bar-chart-line"></i>
-            <span class="sb-text">Analytics</span>
-        </a>
-        <a href="{% url 'sales:reports' %}" class="sb-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" data-label="Reports">
-            <i class="bi bi-file-earmark-bar-graph"></i>
-            <span class="sb-text">Reports</span>
-        </a>
-        {% endif %}
-
-        <div class="sb-section">Inventory</div>
-
-        <a href="{% url 'inventory:inventory_dashboard' %}" class="sb-link {% if request.resolver_match.url_name == 'inventory_dashboard' %}active{% endif %}" data-label="Stock Overview">
-            <i class="bi bi-boxes"></i>
-            <span class="sb-text">Stock Overview</span>
-        </a>
-        <a href="{% url 'inventory:product_list' %}" class="sb-link {% if request.resolver_match.url_name == 'product_list' %}active{% endif %}" data-label="Products">
-            <i class="bi bi-tag"></i>
-            <span class="sb-text">Products</span>
-        </a>
-        {% if user.is_manager_role %}
-        <a href="{% url 'inventory:stock_take_list' %}" class="sb-link {% if 'stock-take' in request.path %}active{% endif %}" data-label="Stock Takes">
-            <i class="bi bi-clipboard-check"></i>
-            <span class="sb-text">Stock Takes</span>
-        </a>
-        <a href="{% url 'inventory:transfer_create' %}" class="sb-link {% if request.resolver_match.url_name == 'transfer_create' %}active{% endif %}" data-label="Transfers">
-            <i class="bi bi-arrow-left-right"></i>
-            <span class="sb-text">Transfers</span>
-        </a>
-        {% endif %}
-
-        <div class="sb-section">Customers</div>
-
-        <a href="{% url 'customers:customer_list' %}" class="sb-link {% if 'customers' in request.path %}active{% endif %}" data-label="Customers">
-            <i class="bi bi-people"></i>
-            <span class="sb-text">Customers</span>
-        </a>
-
-        <div class="sb-section">Operations</div>
-
-        <a href="{% url 'returns:return_search' %}" class="sb-link {% if 'returns' in request.path %}active{% endif %}" data-label="Returns">
-            <i class="bi bi-arrow-return-left"></i>
-            <span class="sb-text">Returns</span>
-        </a>
-        <a href="{% url 'purchasing:po_list' %}" class="sb-link {% if 'purchasing' in request.path %}active{% endif %}" data-label="Purchase Orders">
-            <i class="bi bi-cart-check"></i>
-            <span class="sb-text">Purchase Orders</span>
-        </a>
-        <a href="{% url 'expense:expense_list' %}" class="sb-link {% if request.resolver_match.app_name == 'expense' %}active{% endif %}" data-label="Expenses">
-            <i class="bi bi-receipt-cutoff"></i>
-            <span class="sb-text">Expenses</span>
-        </a>
-        <a href="{% url 'cashup:dashboard' %}" class="sb-link {% if 'cashup' in request.path %}active{% endif %}" data-label="Cash-Up">
-            <i class="bi bi-cash-stack"></i>
-            <span class="sb-text">Cash-Up</span>
-        </a>
-        <a href="{% url 'ecocash:pending_payments' %}" class="sb-link {% if 'ecocash' in request.path %}active{% endif %}" data-label="EcoCash">
-            <i class="bi bi-phone"></i>
-            <span class="sb-text">EcoCash</span>
-        </a>
-
-        {% if user.is_manager_role %}
-        <div class="sb-section">Marketing</div>
-        <a href="{% url 'promotions:dashboard' %}" class="sb-link {% if request.resolver_match.app_name == 'promotions' %}active{% endif %}" data-label="Promotions">
-            <i class="bi bi-megaphone"></i>
-            <span class="sb-text">Promotions</span>
-        </a>
-        {% endif %}
-
-        {% if user.is_admin_role %}
-        <div class="sb-section">System</div>
-        <a href="{% url 'users:user_list' %}" class="sb-link {% if request.resolver_match.app_name == 'users' %}active{% endif %}" data-label="Users">
-            <i class="bi bi-shield-person"></i>
-            <span class="sb-text">Users</span>
-        </a>
-        <a href="{% url 'admin:index' %}" class="sb-link" data-label="Admin Panel" target="_blank" rel="noopener">
-            <i class="bi bi-gear-wide-connected"></i>
-            <span class="sb-text">Admin Panel</span>
-        </a>
-        {% endif %}
-
-    </div>
-
-    <div class="sb-footer">
-        <div class="sb-user">
-            <div class="sb-avatar">{{ user.username|slice:":1"|upper }}</div>
-            <div class="sb-user-info">
-                <div class="u-name">{{ user.get_full_name|default:user.username }}</div>
-                <div class="u-role">{{ user.get_role_display }}</div>
-            </div>
-        </div>
-        <a href="{% url 'users:logout' %}" class="sb-link" data-label="Sign Out" style="margin-top: 4px;">
-            <i class="bi bi-box-arrow-left"></i>
-            <span class="sb-text">Sign Out</span>
-        </a>
-    </div>
-</nav>
-
-<!-- ═══════════ TOPBAR ═══════════ -->
-<header class="gx-topbar" id="topbar">
-    <button class="sb-mobile-toggle" onclick="openSidebar()">
-        <i class="bi bi-list"></i>
-    </button>
-
-    <!-- Breadcrumb -->
-    <div class="topbar-breadcrumb">
-        {% block breadcrumb %}
-        <a href="{% url 'sales:dashboard' %}">Home</a>
-        <span class="bc-sep">/</span>
-        <span class="bc-current">{% block page_title %}{% endblock %}</span>
-        {% endblock %}
-    </div>
-
-    <!-- Command palette trigger -->
-    <button class="cmd-trigger" onclick="openCmd()" id="cmdTrigger">
-        <i class="bi bi-search" style="font-size:13px;"></i>
-        <span>Search…</span>
-        <span class="cmd-shortcut" style="display:flex;gap:3px;margin-left:8px;">
-            <span class="kbd">⌘</span><span class="kbd">K</span>
-        </span>
-    </button>
-
-    <div class="topbar-actions">
-
-        <!-- Notification bell -->
-        <div style="position:relative;">
-            <button class="topbar-btn" id="notifBtn" onclick="toggleNotif()" title="Notifications">
-                <i class="bi bi-bell"></i>
-                {% if pending_ecocash or low_stock_count %}
-                <span class="notif-dot"></span>
-                {% endif %}
-            </button>
-
-            <div class="notif-dropdown" id="notifDropdown">
-                <div class="notif-head">
-                    <span>Notifications</span>
-                    <button style="background:none;border:none;color:var(--violet-l);font-size:11px;cursor:pointer;" onclick="markAllRead()">Mark all read</button>
-                </div>
-                <div id="notifList">
-                    {% if low_stock_count and low_stock_count > 0 %}
-                    <a href="{% url 'inventory:inventory_dashboard' %}" class="notif-item unread" onclick="document.getElementById('notifDropdown').classList.remove('open')">
-                        <div class="notif-icon" style="background:var(--amber-bg);color:var(--amber);">
-                            <i class="bi bi-exclamation-triangle"></i>
-                        </div>
-                        <div class="notif-body">
-                            <div class="notif-title">{{ low_stock_count }} item{{ low_stock_count|pluralize }} low on stock</div>
-                            <div class="notif-time">Needs restocking</div>
-                        </div>
-                    </a>
-                    {% endif %}
-                    {% if pending_ecocash %}
-                    <a href="{% url 'ecocash:pending_payments' %}" class="notif-item unread" onclick="document.getElementById('notifDropdown').classList.remove('open')">
-                        <div class="notif-icon" style="background:var(--blue-bg);color:var(--blue);">
-                            <i class="bi bi-phone"></i>
-                        </div>
-                        <div class="notif-body">
-                            <div class="notif-title">{{ pending_ecocash }} pending EcoCash payment{{ pending_ecocash|pluralize }}</div>
-                            <div class="notif-time">Awaiting confirmation</div>
-                        </div>
-                    </a>
-                    {% endif %}
-                    {% if not pending_ecocash and not low_stock_count %}
-                    <div style="padding:32px;text-align:center;color:var(--txt-3);font-size:12px;">
-                        <i class="bi bi-bell-slash" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4;"></i>
-                        You're all caught up
-                    </div>
-                    {% endif %}
-                </div>
-                <div class="notif-footer"><a href="#">View all notifications</a></div>
-            </div>
-        </div>
-
-        <!-- Joint indicator -->
-        {% if user.primary_joint %}
-        <div class="gx-badge badge-violet d-none d-md-inline-flex">
-            <i class="bi bi-shop"></i> {{ user.primary_joint.display_name }}
-        </div>
-        {% endif %}
-
-        <!-- POS launch -->
-        <a href="{% url 'sales:pos' %}" class="btn-pos-launch d-none d-sm-flex">
-            <i class="bi bi-display"></i>
-            <span>POS</span>
-        </a>
-    </div>
-</header>
-
-<!-- ═══════════ COMMAND PALETTE ═══════════ -->
-<div class="cmd-overlay" id="cmdOverlay" onclick="closeCmd()">
-    <div class="cmd-palette" onclick="event.stopPropagation()">
-        <div class="cmd-input-wrap">
-            <i class="bi bi-search"></i>
-            <input type="text" class="cmd-input" id="cmdInput"
-                   placeholder="Search products, customers, receipts…"
-                   oninput="cmdSearch(this.value)"
-                   onkeydown="cmdKeyNav(event)">
-            <span class="kbd" style="font-family:var(--font-mono);font-size:11px;color:var(--txt-3);">ESC</span>
-        </div>
-        <div class="cmd-results" id="cmdResults">
-            <div class="cmd-group">Quick Actions</div>
-            <a href="{% url 'sales:pos' %}" class="cmd-result">
-                <i class="bi bi-display"></i>
-                <div><div class="cmd-result-label">Open POS Terminal</div><div class="cmd-result-sub">Start a new sale</div></div>
-            </a>
-            <a href="{% url 'customers:customer_create' %}" class="cmd-result">
-                <i class="bi bi-person-plus"></i>
-                <div><div class="cmd-result-label">Add New Customer</div><div class="cmd-result-sub">Register customer for loyalty</div></div>
-            </a>
-            <a href="{% url 'inventory:product_create' %}" class="cmd-result">
-                <i class="bi bi-plus-circle"></i>
-                <div><div class="cmd-result-label">Add New Product</div><div class="cmd-result-sub">Create a product listing</div></div>
-            </a>
-            <a href="{% url 'returns:return_search' %}" class="cmd-result">
-                <i class="bi bi-arrow-return-left"></i>
-                <div><div class="cmd-result-label">Process Return</div><div class="cmd-result-sub">Search by receipt number</div></div>
-            </a>
-            <a href="{% url 'cashup:open' %}" class="cmd-result">
-                <i class="bi bi-cash-stack"></i>
-                <div><div class="cmd-result-label">Open Cash-Up</div><div class="cmd-result-sub">Start shift reconciliation</div></div>
-            </a>
-            <div id="cmdDynamic"></div>
-        </div>
-        <div class="cmd-footer">
-            <span><span class="kbd">↑↓</span>Navigate</span>
-            <span><span class="kbd">↵</span>Select</span>
-            <span><span class="kbd">ESC</span>Close</span>
-        </div>
-    </div>
+<div id="offline-banner" class="offline-banner">
+  <i class="bi bi-wifi-off"></i>
+  <span>You're offline — sales are saved locally and will sync automatically when reconnected.</span>
+  <button onclick="OfflineManager?.syncNow()" class="btn btn-sm btn-warning ms-auto">Retry Sync</button>
 </div>
 
-<!-- ═══════════ MAIN WRAPPER ═══════════ -->
-<div class="gx-main" id="gxMain">
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+<aside id="sidebar" class="sidebar">
+  <div class="sidebar-brand">
+    <img src="{% static 'icons/icon-96.png' %}" alt="G" class="sidebar-logo">
+    <div class="sidebar-brand-text">
+      <span class="brand-name">GenX POS</span>
+      <span class="brand-sub">v5</span>
+    </div>
+    <button id="sidebar-toggle" class="sidebar-collapse-btn" aria-label="Toggle sidebar">
+      <i class="bi bi-chevron-left"></i>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section-label">Main</div>
+
+    <a href="{% url 'admin:index' %}" class="sidebar-link {% block nav_dashboard %}{% endblock %}">
+      <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+    </a>
+
+    <a href="/sales/pos/" class="sidebar-link {% block nav_pos %}{% endblock %}">
+      <i class="bi bi-cart3"></i><span>POS Terminal</span>
+      <span id="sync-count" class="sync-badge"></span>
+    </a>
+
+    <a href="/analytics/dashboard/" class="sidebar-link {% block nav_analytics %}{% endblock %}">
+      <i class="bi bi-bar-chart-line"></i><span>Analytics</span>
+    </a>
+
+    <div class="sidebar-section-label">Operations</div>
+
+    <a href="/inventory/" class="sidebar-link {% block nav_inventory %}{% endblock %}">
+      <i class="bi bi-boxes"></i><span>Inventory</span>
+    </a>
+
+    <a href="/sales/" class="sidebar-link {% block nav_sales %}{% endblock %}">
+      <i class="bi bi-receipt"></i><span>Sales</span>
+    </a>
+
+    <a href="/cashup/" class="sidebar-link {% block nav_cashup %}{% endblock %}">
+      <i class="bi bi-cash-stack"></i><span>Cash Up</span>
+    </a>
+
+    <a href="/returns/" class="sidebar-link {% block nav_returns %}{% endblock %}">
+      <i class="bi bi-arrow-return-left"></i><span>Returns</span>
+    </a>
+
+    <a href="/purchasing/" class="sidebar-link {% block nav_purchasing %}{% endblock %}">
+      <i class="bi bi-truck"></i><span>Purchasing</span>
+    </a>
+
+    <a href="/expenses/" class="sidebar-link {% block nav_expenses %}{% endblock %}">
+      <i class="bi bi-wallet2"></i><span>Expenses</span>
+    </a>
+
+    <div class="sidebar-section-label">Customers & Staff</div>
+
+    <a href="/customers/" class="sidebar-link {% block nav_customers %}{% endblock %}">
+      <i class="bi bi-people"></i><span>Customers</span>
+    </a>
+
+    <a href="/employees/" class="sidebar-link {% block nav_employees %}{% endblock %}">
+      <i class="bi bi-person-badge"></i><span>Employees</span>
+    </a>
+
+    <div class="sidebar-section-label">Marketing</div>
+
+    <a href="/promotions/" class="sidebar-link {% block nav_promotions %}{% endblock %}">
+      <i class="bi bi-tag"></i><span>Promotions</span>
+    </a>
+
+    <a href="/ecocash/" class="sidebar-link {% block nav_ecocash %}{% endblock %}">
+      <i class="bi bi-phone"></i><span>EcoCash</span>
+    </a>
+
+    <div class="sidebar-section-label">System</div>
+
+    <a href="/inventory/stock-take/" class="sidebar-link {% block nav_stocktake %}{% endblock %}">
+      <i class="bi bi-clipboard-check"></i><span>Stock Take</span>
+    </a>
+
+    <a href="/inventory/low-stock/" class="sidebar-link {% block nav_lowstock %}{% endblock %}">
+      <i class="bi bi-exclamation-triangle"></i><span>Low Stock</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">{{ request.user.first_name|first|upper|default:request.user.username|first|upper }}</div>
+      <div class="sidebar-user-info">
+        <span class="sidebar-username">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <span class="sidebar-role">{% if request.user.is_superuser %}Admin{% elif request.user.is_staff %}Staff{% else %}Cashier{% endif %}</span>
+      </div>
+      <a href="/accounts/logout/" class="sidebar-logout" title="Logout"><i class="bi bi-box-arrow-right"></i></a>
+    </div>
+    <div class="pwa-status-bar">
+      <span id="pwa-status" class="online">● ONLINE</span>
+    </div>
+  </div>
+</aside>
+
+<div class="main-wrapper">
+  <header class="topbar">
+    <button id="sidebar-toggle-top" class="topbar-menu-btn d-lg-none" onclick="document.getElementById('sidebar').classList.toggle('collapsed');document.getElementById('sidebar-overlay').classList.toggle('show');">
+      <i class="bi bi-list"></i>
+    </button>
+
+    <div class="topbar-breadcrumb">
+      {% block breadcrumb %}
+      <span class="breadcrumb-item">GenX POS</span>
+      {% endblock %}
+    </div>
+
+    <div class="topbar-center d-none d-md-flex">
+      <div class="topbar-search">
+        <i class="bi bi-search"></i>
+        <input type="text" id="global-search" placeholder="Search products… (Ctrl+K for commands)" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <button class="topbar-icon-btn d-md-none" id="command-palette-trigger" title="Commands">
+        <i class="bi bi-search"></i>
+      </button>
+      <button class="topbar-icon-btn" id="command-palette-trigger-desktop" title="Command Palette (Ctrl+K)" onclick="document.getElementById('command-palette').classList.toggle('show');document.getElementById('command-input')?.focus();">
+        <i class="bi bi-terminal"></i>
+      </button>
+      <a href="/sales/pos/" class="topbar-icon-btn" title="POS Terminal">
+        <i class="bi bi-cart3"></i>
+      </a>
+      <div class="topbar-divider"></div>
+      <a href="/accounts/logout/" class="topbar-icon-btn" title="Logout">
+        <i class="bi bi-box-arrow-right"></i>
+      </a>
+    </div>
+  </header>
+
+  <main class="main-content">
     {% if messages %}
-    <div class="gx-messages">
-        {% for message in messages %}
-        <div class="gx-alert alert-{{ message.tags|default:'info' }}">
-            <i class="bi bi-{% if message.tags == 'success' %}check-circle-fill{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-circle-fill{% elif message.tags == 'warning' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
-            {{ message }}
-            <button class="alert-close" onclick="this.closest('.gx-alert').remove()">×</button>
-        </div>
-        {% endfor %}
+    <div class="messages-container">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}bi-x-circle{% elif message.tags == 'warning' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
     </div>
     {% endif %}
 
-    <div class="gx-page">
-        {% block content %}{% endblock %}
-    </div>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="main-footer">
+    <span>GenX POS v5 &copy; {% now "Y" %} Eyedentity / GenX / Armor Sole</span>
+    <span class="ms-auto text-muted" style="font-size:11px;font-family:var(--font-mono)">{{ request.user.username }}</span>
+  </footer>
 </div>
 
-<!-- Toast stack -->
-<div class="toast-stack" id="toastStack"></div>
-
-{% else %}
-{% block auth_content %}{% endblock %}
-{% endif %}
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<div id="command-palette" class="command-palette" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="command-palette-box">
+    <div class="command-input-wrap">
+      <i class="bi bi-search"></i>
+      <input id="command-input" type="text" placeholder="Type a command or search…" autocomplete="off" spellcheck="false">
+      <kbd>ESC</kbd>
+    </div>
+    <div id="command-results" class="command-results"></div>
+  </div>
+</div>
 
 <script>
-/* ════════════════════════════════════════════════════════════
-   SIDEBAR — collapse / mobile
-════════════════════════════════════════════════════════════ */
-(function() {
-    const sb   = document.getElementById('sidebar');
-    const tb   = document.getElementById('topbar');
-    const main = document.getElementById('gxMain');
-    const KEY  = 'gx_sb_collapsed';
-
-    function apply(collapsed) {
-        sb?.classList.toggle('collapsed', collapsed);
-        tb?.classList.toggle('sb-collapsed', collapsed);
-        main?.classList.toggle('sb-collapsed', collapsed);
-    }
-
-    window.toggleSidebar = () => {
-        const c = !sb?.classList.contains('collapsed');
-        apply(c); localStorage.setItem(KEY, c);
-    };
-    window.openSidebar  = () => {
-        sb?.classList.add('mobile-open');
-        document.getElementById('sbOverlay')?.classList.add('show');
-        document.body.style.overflow = 'hidden';
-    };
-    window.closeSidebar = () => {
-        sb?.classList.remove('mobile-open');
-        document.getElementById('sbOverlay')?.classList.remove('show');
-        document.body.style.overflow = '';
-    };
-
-    // Restore saved state
-    if (localStorage.getItem(KEY) === 'true') apply(true);
-
-    window.addEventListener('resize', () => { if (window.innerWidth > 768) closeSidebar(); });
-    document.querySelectorAll('.gx-sidebar .sb-link').forEach(l => l.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); }));
-})();
-
-/* ════════════════════════════════════════════════════════════
-   NOTIFICATIONS
-════════════════════════════════════════════════════════════ */
-window.toggleNotif = () => document.getElementById('notifDropdown')?.classList.toggle('open');
-window.markAllRead = () => {
-    document.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
-    document.getElementById('notifDropdown')?.classList.remove('open');
-};
-document.addEventListener('click', e => {
-    if (!e.target.closest('#notifBtn') && !e.target.closest('#notifDropdown'))
-        document.getElementById('notifDropdown')?.classList.remove('open');
-});
-
-/* ════════════════════════════════════════════════════════════
-   COMMAND PALETTE
-════════════════════════════════════════════════════════════ */
-let _cmdOpen = false, _cmdIdx = -1;
-
-window.openCmd = () => {
-    document.getElementById('cmdOverlay')?.classList.add('open');
-    setTimeout(() => document.getElementById('cmdInput')?.focus(), 50);
-    _cmdOpen = true; _cmdIdx = -1;
-};
-window.closeCmd = () => {
-    document.getElementById('cmdOverlay')?.classList.remove('open');
-    const inp = document.getElementById('cmdInput');
-    if (inp) inp.value = '';
-    document.getElementById('cmdDynamic').innerHTML = '';
-    _cmdOpen = false;
-};
-
-let _cmdTimer = null;
-window.cmdSearch = q => {
-    clearTimeout(_cmdTimer);
-    const dyn = document.getElementById('cmdDynamic');
-    if (!q || q.length < 2) { dyn.innerHTML = ''; return; }
-    _cmdTimer = setTimeout(async () => {
-        try {
-            const r = await fetch(`/customers/api/lookup/?q=${encodeURIComponent(q)}`);
-            const d = await r.json();
-            let html = '';
-            if (d.customers?.length) {
-                html += '<div class="cmd-group">Customers</div>';
-                d.customers.slice(0,4).forEach(c => {
-                    html += `<a href="/customers/${c.id}/" class="cmd-result">
-                        <i class="bi bi-person"></i>
-                        <div><div class="cmd-result-label">${c.name}</div><div class="cmd-result-sub">${c.phone} · ⭐ ${c.loyalty_points} pts</div></div>
-                    </a>`;
-                });
-            }
-            html += `<div class="cmd-group">Receipts</div>
-            <a href="/sales/list/?q=${encodeURIComponent(q)}" class="cmd-result">
-                <i class="bi bi-search"></i>
-                <div><div class="cmd-result-label">Search receipts for "${q}"</div><div class="cmd-result-sub">View all matching sales</div></div>
-            </a>`;
-            dyn.innerHTML = html;
-        } catch(e) {}
-    }, 250);
-};
-
-window.cmdKeyNav = e => {
-    if (e.key === 'Escape') { closeCmd(); return; }
-    const res = document.querySelectorAll('#cmdResults .cmd-result');
-    if (!res.length) return;
-    if (e.key === 'ArrowDown')  { e.preventDefault(); _cmdIdx = Math.min(_cmdIdx+1, res.length-1); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); _cmdIdx = Math.max(_cmdIdx-1, 0); }
-    else if (e.key === 'Enter' && _cmdIdx >= 0) { e.preventDefault(); res[_cmdIdx]?.click(); closeCmd(); return; }
-    res.forEach((r,i) => r.classList.toggle('selected', i === _cmdIdx));
-    res[_cmdIdx]?.scrollIntoView({ block:'nearest' });
-};
-
-document.addEventListener('keydown', e => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); _cmdOpen ? closeCmd() : openCmd(); }
-    if (e.key === 'Escape' && _cmdOpen) closeCmd();
-});
-
-/* ════════════════════════════════════════════════════════════
-   TOAST SYSTEM
-════════════════════════════════════════════════════════════ */
-window.showToast = (msg, type='info', dur=4000) => {
-    const stack = document.getElementById('toastStack');
-    if (!stack) return;
-    const icons = { success:'check-circle-fill', danger:'exclamation-circle-fill', warning:'exclamation-triangle-fill', info:'info-circle-fill' };
-    const cols  = { success:'var(--green)', danger:'#f87171', warning:'var(--amber)', info:'var(--blue)' };
-    const t = document.createElement('div');
-    t.className = 'gx-toast';
-    t.style.borderLeft = `3px solid ${cols[type]||cols.info}`;
-    t.innerHTML = `<i class="bi bi-${icons[type]||icons.info}" style="color:${cols[type]||cols.info};flex-shrink:0;"></i><span style="flex:1;">${msg}</span><button onclick="this.closest('.gx-toast').remove()" style="background:none;border:none;cursor:pointer;color:var(--txt-3);font-size:16px;padding:0;line-height:1;flex-shrink:0;">×</button>`;
-    stack.appendChild(t);
-    setTimeout(() => { t.style.transition='opacity .3s,transform .3s'; t.style.opacity='0'; t.style.transform='translateX(20px)'; setTimeout(()=>t.remove(),300); }, dur);
-};
-
-/* ════════════════════════════════════════════════════════════
-   ANIMATED COUNTERS
-════════════════════════════════════════════════════════════ */
-(function() {
-    const obs = new IntersectionObserver(entries => {
-        entries.forEach(e => {
-            if (!e.isIntersecting) return;
-            const el = e.target;
-            const end = parseFloat(el.dataset.end || 0);
-            const prefix = el.dataset.prefix || '';
-            const suffix = el.dataset.suffix || '';
-            const dec    = parseInt(el.dataset.decimals || 0);
-            const dur    = 800, start = performance.now();
-            const tick = now => {
-                const p = Math.min((now-start)/dur, 1);
-                const eased = 1 - Math.pow(1-p, 3);
-                el.textContent = prefix + (end*eased).toFixed(dec) + suffix;
-                if (p < 1) requestAnimationFrame(tick);
-            };
-            requestAnimationFrame(tick);
-            obs.unobserve(el);
-        });
-    }, { threshold: 0.3 });
-    document.querySelectorAll('[data-end]').forEach(el => obs.observe(el));
-})();
+  const CSRF_TOKEN = '{{ csrf_token }}';
+  const USER_IS_STAFF = {{ request.user.is_staff|yesno:'true,false' }};
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/sw.js' %}" type="module" onerror="console.warn('SW scope issue')"></script>
+<script src="{% static 'js/offline.js' %}"></script>
+<script src="{% static 'js/app.js' %}"></script>
+<script src="{% static 'js/charts.js' %}"></script>
 {% block extra_js %}{% endblock %}
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/js/sw.js', { scope: '/' }).catch(() => {});
+  }
+</script>
 </body>
 </html>

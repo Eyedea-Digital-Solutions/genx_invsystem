@@ -1,23 +1,52 @@
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
 from django.views.generic import RedirectView
-
+from sales.analytics_views import analytics_dashboard
 from inventory_system.admin_site import genx_admin_site
 
+
+def manifest_view(request):
+    import json, os
+    manifest_path = os.path.join(settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT, 'manifest.json')
+    try:
+        with open(manifest_path) as f:
+            data = json.load(f)
+        return JsonResponse(data, content_type='application/manifest+json')
+    except Exception:
+        return JsonResponse({
+            "name": "GenX POS",
+            "short_name": "GenX",
+            "start_url": "/sales/pos/",
+            "display": "standalone",
+            "background_color": "#080810",
+            "theme_color": "#7c3aed",
+            "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]
+        }, content_type='application/manifest+json')
+
+
 urlpatterns = [
-    path("admin/",        genx_admin_site.urls),
-    path("",              RedirectView.as_view(pattern_name="sales:pos"), name="home"),
-    path("users/",        include("users.urls",      namespace="users")),
-    path("inventory/",    include("inventory.urls",  namespace="inventory")),
-    path("sales/",        include("sales.urls",      namespace="sales")),
-    path("ecocash/",      include("ecocash.urls",    namespace="ecocash")),
-    path("promotions/",   include("promotions.urls", namespace="promotions")),
-    path("expenses/",     include("expense.urls",    namespace="expense")),
-    path("cashup/",       include("cashup.urls",     namespace="cashup")),
-    # Phase 2 upgrades
-    path("customers/",    include("customers.urls",  namespace="customers")),
-    path("returns/",      include("returns.urls",    namespace="returns")),
-    path("purchasing/",   include("purchasing.urls", namespace="purchasing")),
-] + static(settings.MEDIA_URL,  document_root=settings.MEDIA_ROOT) \
-  + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    path('', RedirectView.as_view(url='/analytics/dashboard/', permanent=False)),
+    path('admin/', genx_admin_site.urls),
+
+    path('inventory/', include('inventory.urls')),
+    path('sales/', include('sales.urls')),
+    path('cashup/', include('cashup.urls')),
+    path('customers/', include('customers.urls')),
+    path('employees/', include('employees.urls')),
+    path('users/', include('users.urls')),
+    path('returns/', include('returns.urls')),
+    path('purchasing/', include('purchasing.urls')),
+    path('expenses/', include('expense.urls')),
+    path('promotions/', include('promotions.urls')),
+    path('ecocash/', include('ecocash.urls')),
+    path('analytics/dashboard/', analytics_dashboard, name='analytics_dashboard'),
+    path('accounts/', include('django.contrib.auth.urls')),
+
+    path('manifest.json', manifest_view, name='manifest'),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

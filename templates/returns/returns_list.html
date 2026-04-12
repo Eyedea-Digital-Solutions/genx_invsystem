@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Returns{% endblock %}
+{% block nav_returns %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Returns</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Returns</h1>
+    <p class="page-sub">Manage product returns &amp; refunds</p>
+  </div>
+  <div class="page-actions">
+    <a href="/returns/new/" class="btn btn-primary"><i class="bi bi-plus me-1"></i>New Return</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(229,25,58,.15);color:var(--rose)"><i class="bi bi-arrow-return-left"></i></div>
+    <div class="stat-body"><div class="stat-label">Total Returns</div><div class="stat-value">{{ total_returns|default:0 }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="bi bi-clock"></i></div>
+    <div class="stat-body"><div class="stat-label">Pending</div><div class="stat-value">{{ pending_returns|default:0 }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(124,58,237,.15);color:var(--accent)"><i class="bi bi-currency-dollar"></i></div>
+    <div class="stat-body"><div class="stat-label">Refunded</div><div class="stat-value">${{ total_refunded|floatformat:2|default:"0.00" }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Return Records</h3>
+    <div class="card-actions">
+      <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Search returns…" data-table-search="#returns-table" class="search-input">
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="returns-table">
+      <thead>
+        <tr><th>Return #</th><th>Date</th><th>Original Sale</th><th>Customer</th><th>Reason</th><th class="text-end">Amount</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for ret in returns %}
+        <tr>
+          <td class="font-mono">{{ ret.return_number|default:ret.id }}</td>
+          <td style="color:var(--text-muted);font-size:13px">{{ ret.created_at|date:"d M Y H:i" }}</td>
+          <td><a href="/sales/{{ ret.sale_id }}/" class="text-accent font-mono">{{ ret.sale__receipt_number|default:ret.sale_id }}</a></td>
+          <td>{{ ret.customer__name|default:"Walk-in" }}</td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ret.reason|default:"—" }}</td>
+          <td class="text-end font-mono" style="color:var(--rose)">${{ ret.refund_amount|floatformat:2 }}</td>
+          <td>
+            {% if ret.status == 'approved' %}<span class="badge badge-success">Approved</span>
+            {% elif ret.status == 'pending' %}<span class="badge badge-warning">Pending</span>
+            {% elif ret.status == 'rejected' %}<span class="badge badge-danger">Rejected</span>
+            {% else %}<span class="badge badge-secondary">{{ ret.status|title }}</span>{% endif %}
+          </td>
+          <td><a href="/returns/{{ ret.id }}/" class="btn btn-xs"><i class="bi bi-eye"></i></a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-5">No returns recorded.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Promotions{% endblock %}
+{% block nav_promotions %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Promotions</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Promotions</h1>
+    <p class="page-sub">Discounts, vouchers &amp; loyalty programs</p>
+  </div>
+  <div class="page-actions">
+    <a href="/promotions/add/" class="btn btn-primary"><i class="bi bi-plus me-1"></i>New Promotion</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(0,214,143,.15);color:var(--green)"><i class="bi bi-tag"></i></div>
+    <div class="stat-body"><div class="stat-label">Active Promos</div><div class="stat-value">{{ active_promotions|default:0 }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="bi bi-clock-history"></i></div>
+    <div class="stat-body"><div class="stat-label">Expiring Soon</div><div class="stat-value">{{ expiring_soon|default:0 }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(124,58,237,.15);color:var(--accent)"><i class="bi bi-ticket-perforated"></i></div>
+    <div class="stat-body"><div class="stat-label">Total Vouchers</div><div class="stat-value">{{ total_vouchers|default:0 }}</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">All Promotions</h3>
+    <div class="card-actions">
+      <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Search…" data-table-search="#promos-table" class="search-input">
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="promos-table">
+      <thead>
+        <tr><th>Promotion</th><th>Type</th><th>Value</th><th>Valid From</th><th>Valid To</th><th>Uses</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for promo in promotions %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ promo.name }}</div>
+            {% if promo.code %}<div class="font-mono" style="font-size:11px;color:var(--text-muted)">Code: {{ promo.code }}</div>{% endif %}
+          </td>
+          <td><span class="badge-pill">{{ promo.discount_type|title }}</span></td>
+          <td class="font-mono">{% if promo.discount_type == 'percentage' %}{{ promo.discount_value }}%{% else %}${{ promo.discount_value|floatformat:2 }}{% endif %}</td>
+          <td style="color:var(--text-muted);font-size:13px">{{ promo.start_date|date:"d M Y"|default:"—" }}</td>
+          <td style="color:var(--text-muted);font-size:13px">{{ promo.end_date|date:"d M Y"|default:"—" }}</td>
+          <td class="font-mono">{{ promo.usage_count|default:0 }}{% if promo.usage_limit %}/{{ promo.usage_limit }}{% endif %}</td>
+          <td>
+            {% if promo.is_active %}<span class="badge badge-success">Active</span>
+            {% else %}<span class="badge badge-secondary">Inactive</span>{% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <a href="/promotions/{{ promo.id }}/edit/" class="btn btn-xs"><i class="bi bi-pencil"></i></a>
+              <a href="/promotions/{{ promo.id }}/toggle/" class="btn btn-xs"><i class="bi bi-toggle-on"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-5">No promotions yet. <a href="/promotions/add/" class="text-accent">Create one</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

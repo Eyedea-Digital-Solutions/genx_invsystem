@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Stock Take{% endblock %}
+{% block nav_stocktake %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item"><a href="/inventory/stock-take/">Stock Take</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">{{ stock_take.reference|default:stock_take.id }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Stock Take</h1>
+    <p class="page-sub">{{ stock_take.conducted_at|date:"d M Y H:i" }} &mdash; {{ stock_take.conducted_by }}</p>
+  </div>
+  <div class="page-actions">
+    {% if stock_take.status != 'completed' %}
+    <form method="post" action="/inventory/stock-take/{{ stock_take.id }}/complete/" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary" data-confirm="Mark this stock take as complete?"><i class="bi bi-check-lg me-1"></i>Complete</button>
+    </form>
+    {% endif %}
+    <a href="/inventory/stock-take/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Items</h3>
+    <div class="card-actions">
+      <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Search products…" data-table-search="#stocktake-table" class="search-input">
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <form method="post" action="/inventory/stock-take/{{ stock_take.id }}/save/">
+      {% csrf_token %}
+      <table class="table table-hover mb-0" id="stocktake-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th class="text-center">System Qty</th>
+            <th class="text-center">Counted Qty</th>
+            <th class="text-center">Variance</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in stock_take.items.all %}
+          <tr>
+            <td>
+              <div style="font-weight:600">{{ item.product__name|default:item.product }}</div>
+              <div class="font-mono" style="font-size:11px;color:var(--text-muted)">{{ item.product__sku|default:"" }}</div>
+            </td>
+            <td class="text-center font-mono">{{ item.expected_quantity }}</td>
+            <td class="text-center">
+              {% if stock_take.status == 'completed' %}
+                <span class="font-mono">{{ item.counted_quantity }}</span>
+              {% else %}
+                <input type="number" name="counted_{{ item.id }}" value="{{ item.counted_quantity|default:'' }}"
+                       class="form-control" style="width:90px;margin:0 auto;text-align:center;font-family:var(--font-mono)"
+                       min="0" oninput="updateVariance(this, {{ item.expected_quantity }})">
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <span id="var_{{ item.id }}" class="font-mono" style="font-weight:600;color:{% if item.variance < 0 %}var(--rose){% elif item.variance > 0 %}var(--amber){% else %}var(--green){% endif %}">
+                {% if item.variance is not None %}{{ item.variance|floatformat:0 }}{% else %}—{% endif %}
+              </span>
+            </td>
+            <td>
+              {% if stock_take.status != 'completed' %}
+              <input type="text" name="notes_{{ item.id }}" value="{{ item.notes|default:'' }}" class="form-control" style="font-size:13px" placeholder="Optional note…">
+              {% else %}
+              {{ item.notes|default:"" }}
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-5">No items in this stock take.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if stock_take.status != 'completed' %}
+      <div style="padding:16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-floppy me-1"></i>Save Counts</button>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateVariance(input, expected) {
+  const counted = parseInt(input.value) || 0;
+  const variance = counted - expected;
+  const itemId = input.name.replace('counted_', '');
+  const el = document.getElementById('var_' + itemId);
+  if (el) {
+    el.textContent = variance >= 0 ? '+' + variance : variance;
+    el.style.color = variance < 0 ? 'var(--rose)' : variance > 0 ? 'var(--amber)' : 'var(--green)';
+  }
+}
+</script>
+{% endblock %}

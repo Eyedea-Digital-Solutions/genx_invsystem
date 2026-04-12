@@ -1,656 +1,165 @@
-{% extends 'base.html' %}
-{% load humanize %}
-{% load inv_extras %}
-{% block title %}Inventory — {{ joint.display_name|default:"All Joints" }}{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Inventory{% endblock %}
+{% block nav_inventory %}active{% endblock %}
+
 {% block breadcrumb %}
-<a href="{% url 'sales:dashboard' %}">Home</a>
-<span class="bc-sep">/</span>
-<span class="bc-current">Inventory</span>
-{% endblock %}
-{% block page_title %}Inventory{% endblock %}
-
-{% block extra_css %}
-<style>
-.inv-kpis { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px; }
-.inv-kpi {
-    background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:16px;
-    position:relative;overflow:hidden;transition:var(--t);
-}
-.inv-kpi::after { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kpi-c,var(--violet)); }
-.inv-kpi:hover { border-color:var(--bdr-2);transform:translateY(-1px); }
-.inv-kpi-icon { width:36px;height:36px;border-radius:9px;background:var(--kpi-bg,var(--violet-bg));color:var(--kpi-c,var(--violet-l));display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:10px; }
-.inv-kpi-label { font-family:var(--font-mono);font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--txt-3);margin-bottom:3px; }
-.inv-kpi-val { font-family:var(--font-disp);font-size:22px;font-weight:800;line-height:1; }
-.inv-kpi-sub { font-size:11px;color:var(--txt-3);margin-top:3px; }
-
-/* Filters */
-.inv-filters {
-    background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);
-    padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:14px;
-}
-.inv-filters select,.inv-filters input {
-    background:rgba(255,255,255,0.05);border:1px solid var(--bdr-2);border-radius:var(--r-sm);
-    padding:6px 10px;color:var(--txt);font-size:12px;font-family:var(--font-body);outline:none;
-    transition:var(--t-fast);
-}
-.inv-filters select:focus,.inv-filters input:focus { border-color:var(--violet);box-shadow:0 0 0 2px var(--violet-bg); }
-.inv-filters select option { background:var(--card); }
-.filter-chip {
-    padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;
-    background:rgba(255,255,255,0.05);border:1px solid var(--bdr);color:var(--txt-3);
-    font-family:var(--font-mono);transition:var(--t-fast);white-space:nowrap;
-}
-.filter-chip.on,.filter-chip:hover { background:var(--violet-bg);border-color:var(--bdr-accent);color:var(--violet-l); }
-.filter-chip.chip-red.on { background:var(--red-bg);border-color:rgba(229,25,58,.2);color:#f87171; }
-.filter-chip.chip-amber.on { background:var(--amber-bg);border-color:rgba(255,170,0,.2);color:var(--amber); }
-
-/* Bulk action bar */
-.bulk-bar {
-    background:var(--violet-bg);border:1px solid var(--bdr-accent);border-radius:var(--r);
-    padding:10px 14px;display:none;align-items:center;gap:10px;margin-bottom:10px;
-    font-size:12px;
-}
-.bulk-bar.show { display:flex; }
-.bulk-count { font-family:var(--font-mono);font-weight:700;color:var(--violet-l); }
-
-/* Stock table */
-.stock-table-wrap { background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);overflow:hidden; }
-.stock-table { width:100%;border-collapse:collapse; }
-.stock-table thead th {
-    font-family:var(--font-mono);font-size:10px;font-weight:600;text-transform:uppercase;
-    letter-spacing:.8px;color:var(--txt-3);padding:10px 12px;
-    border-bottom:1px solid var(--bdr);background:rgba(255,255,255,.02);
-    white-space:nowrap;cursor:pointer;user-select:none;
-}
-.stock-table thead th:hover { color:var(--txt); }
-.stock-table thead th .sort-icon { margin-left:4px;opacity:.4;font-size:9px; }
-.stock-table thead th.sorted .sort-icon { opacity:1;color:var(--violet-l); }
-.stock-table tbody tr { border-bottom:1px solid rgba(255,255,255,.04);transition:var(--t-fast); }
-.stock-table tbody tr:last-child { border-bottom:none; }
-.stock-table tbody tr:hover { background:rgba(255,255,255,.025); }
-.stock-table tbody tr.selected { background:var(--violet-bg); }
-.stock-table td { padding:10px 12px;font-size:12px;vertical-align:middle; }
-
-.prod-cell { display:flex;align-items:center;gap:10px; }
-.prod-img { width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--bdr);flex-shrink:0; }
-.prod-img-ph { width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,.04);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;color:var(--txt-4);font-size:16px;flex-shrink:0; }
-.prod-name { font-weight:600;font-size:12px;line-height:1.3; }
-.prod-sku { font-family:var(--font-mono);font-size:10px;color:var(--txt-3); }
-
-.stock-qty { font-family:var(--font-mono);font-weight:700;font-size:13px; }
-.qty-ok { color:var(--txt); }
-.qty-low { color:var(--amber); }
-.qty-out { color:#f87171; }
-
-/* Inline quick-adjust */
-.qty-adjust { display:flex;align-items:center;gap:4px; }
-.qty-adj-btn {
-    width:22px;height:22px;border-radius:4px;background:rgba(255,255,255,.06);
-    border:1px solid var(--bdr);color:var(--txt-2);font-size:13px;
-    display:flex;align-items:center;justify-content:center;
-    cursor:pointer;transition:var(--t-fast);flex-shrink:0;
-}
-.qty-adj-btn:hover { background:var(--violet-bg);border-color:var(--bdr-accent);color:var(--violet-l); }
-
-/* Value column */
-.val-cell { font-family:var(--font-mono);font-size:12px;color:var(--green); }
-
-/* Pagination */
-.pag { display:flex;align-items:center;gap:6px;justify-content:center;padding:14px; }
-.pag-btn {
-    width:30px;height:30px;border-radius:var(--r-sm);background:var(--card);
-    border:1px solid var(--bdr);color:var(--txt-2);font-size:12px;
-    display:flex;align-items:center;justify-content:center;
-    cursor:pointer;text-decoration:none;transition:var(--t-fast);
-    font-family:var(--font-mono);font-weight:600;
-}
-.pag-btn:hover,.pag-btn.current { background:var(--violet-bg);border-color:var(--bdr-accent);color:var(--violet-l); }
-.pag-btn.disabled { opacity:.3;pointer-events:none; }
-
-/* Stock level mini-bar */
-.stock-bar-wrap { width:60px;height:5px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px; }
-.stock-bar { height:100%;border-radius:99px;transition:width .4s; }
-.sb-ok { background:var(--green); }
-.sb-low { background:var(--amber); }
-.sb-out { background:var(--red); }
-
-@media(max-width:768px){ .hide-mobile{display:none!important;} }
-</style>
+<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Inventory</span>
 {% endblock %}
 
 {% block content %}
-<div class="ph">
-    <div class="ph-left">
-        <h1>Inventory</h1>
-        <p>{{ total_products }} product{{ total_products|pluralize }} · Stock value ${{ total_value|floatformat:2 }}</p>
-    </div>
-    <div class="ph-right">
-        {% if user.is_manager_role %}
-        <a href="{% url 'inventory:stock_take_create' %}" class="btn-gx btn-gx-ghost btn-gx-sm">
-            <i class="bi bi-clipboard-check"></i>Stock Take
-        </a>
-        <a href="{% url 'inventory:bulk_import' %}" class="btn-gx btn-gx-ghost btn-gx-sm">
-            <i class="bi bi-upload"></i>Import
-        </a>
-        <a href="{% url 'inventory:export_csv' %}" class="btn-gx btn-gx-ghost btn-gx-sm">
-            <i class="bi bi-download"></i>Export
-        </a>
-        {% endif %}
-        <a href="{% url 'inventory:product_create' %}" class="btn-gx btn-gx-primary btn-gx-sm">
-            <i class="bi bi-plus-lg"></i>Add Product
-        </a>
-    </div>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Inventory</h1>
+    <p class="page-sub">{{ total_products|default:0 }} products across {{ total_categories|default:0 }} categories</p>
+  </div>
+  <div class="page-actions">
+    <a href="/inventory/product/add/" class="btn btn-primary"><i class="bi bi-plus me-1"></i>Add Product</a>
+    <a href="/inventory/import/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-upload me-1"></i>Import</a>
+    <a href="/inventory/export/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-download me-1"></i>Export</a>
+  </div>
 </div>
 
-<!-- KPI ROW -->
-<div class="inv-kpis">
-    <div class="inv-kpi" style="--kpi-c:var(--violet-l);--kpi-bg:var(--violet-bg);">
-        <div class="inv-kpi-icon"><i class="bi bi-tag"></i></div>
-        <div class="inv-kpi-label">Total Products</div>
-        <div class="inv-kpi-val" data-end="{{ total_products }}">{{ total_products }}</div>
-        <div class="inv-kpi-sub">{{ active_products }} active</div>
-    </div>
-    <div class="inv-kpi" style="--kpi-c:var(--green);--kpi-bg:var(--green-bg);">
-        <div class="inv-kpi-icon"><i class="bi bi-currency-dollar"></i></div>
-        <div class="inv-kpi-label">Stock Value</div>
-        <div class="inv-kpi-val" style="font-size:19px;" data-end="{{ total_value|floatformat:2 }}" data-prefix="$" data-decimals="2">${{ total_value|floatformat:2 }}</div>
-        <div class="inv-kpi-sub">At retail price</div>
-    </div>
-    <div class="inv-kpi" style="--kpi-c:var(--amber);--kpi-bg:var(--amber-bg);">
-        <div class="inv-kpi-icon"><i class="bi bi-exclamation-triangle"></i></div>
-        <div class="inv-kpi-label">Low Stock</div>
-        <div class="inv-kpi-val" style="color:var(--amber);" data-end="{{ low_stock_count }}">{{ low_stock_count }}</div>
-        <div class="inv-kpi-sub">Below min threshold</div>
-    </div>
-    <div class="inv-kpi" style="--kpi-c:#f87171;--kpi-bg:var(--red-bg);">
-        <div class="inv-kpi-icon"><i class="bi bi-x-circle"></i></div>
-        <div class="inv-kpi-label">Out of Stock</div>
-        <div class="inv-kpi-val" style="color:#f87171;" data-end="{{ out_of_stock }}">{{ out_of_stock }}</div>
-        <div class="inv-kpi-sub">Zero quantity</div>
-    </div>
-    <div class="inv-kpi" style="--kpi-c:var(--blue);--kpi-bg:var(--blue-bg);">
-        <div class="inv-kpi-icon"><i class="bi bi-arrow-left-right"></i></div>
-        <div class="inv-kpi-label">Transfers Pending</div>
-        <div class="inv-kpi-val" style="color:var(--blue);" data-end="{{ pending_transfers }}">{{ pending_transfers }}</div>
-        <div class="inv-kpi-sub"><a href="{% url 'inventory:transfer_list' %}" style="color:inherit;">View transfers</a></div>
-    </div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(124,58,237,.15);color:var(--accent)"><i class="bi bi-boxes"></i></div>
+    <div class="stat-body"><div class="stat-label">Total Products</div><div class="stat-value">{{ total_products|default:0 }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(229,25,58,.15);color:var(--rose)"><i class="bi bi-exclamation-triangle"></i></div>
+    <div class="stat-body"><div class="stat-label">Low Stock</div><div class="stat-value">{{ low_stock_count|default:0 }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="bi bi-x-circle"></i></div>
+    <div class="stat-body"><div class="stat-label">Out of Stock</div><div class="stat-value">{{ out_of_stock_count|default:0 }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(0,214,143,.15);color:var(--green)"><i class="bi bi-currency-dollar"></i></div>
+    <div class="stat-body"><div class="stat-label">Stock Value</div><div class="stat-value">${{ total_stock_value|floatformat:0|default:"0" }}</div></div>
+  </div>
 </div>
 
-<!-- FILTERS -->
-<form method="get" id="filterForm">
-<div class="inv-filters">
-    <!-- Joint filter -->
-    <div>
-        <label class="gx-label">Joint</label>
-        <select name="joint" onchange="this.form.submit()">
-            <option value="">All Joints</option>
-            {% for j in joints %}
-            <option value="{{ j.pk }}" {% if request.GET.joint == j.pk|stringformat:"s" %}selected{% endif %}>{{ j.display_name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <!-- Category -->
-    <div>
-        <label class="gx-label">Category</label>
-        <select name="category" onchange="this.form.submit()">
-            <option value="">All Categories</option>
-            {% for c in categories %}
-            <option value="{{ c.pk }}" {% if request.GET.category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <!-- Brand -->
-    <div>
-        <label class="gx-label">Brand</label>
-        <select name="brand" onchange="this.form.submit()">
-            <option value="">All Brands</option>
-            {% for b in brands %}
-            <option value="{{ b.pk }}" {% if request.GET.brand == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <!-- Search -->
-    <div style="flex:1;min-width:160px;">
-        <label class="gx-label">Search</label>
-        <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Name, SKU, barcode…" style="width:100%;">
-    </div>
-    <!-- Stock status chips -->
-    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:flex-end;padding-bottom:1px;">
-        <button type="submit" name="stock" value="" class="filter-chip {% if not request.GET.stock %}on{% endif %}">All</button>
-        <button type="submit" name="stock" value="ok" class="filter-chip {% if request.GET.stock == 'ok' %}on{% endif %}">In Stock</button>
-        <button type="submit" name="stock" value="low" class="filter-chip chip-amber {% if request.GET.stock == 'low' %}on{% endif %}">Low</button>
-        <button type="submit" name="stock" value="out" class="filter-chip chip-red {% if request.GET.stock == 'out' %}on{% endif %}">Out</button>
-    </div>
-    <button type="submit" class="btn-gx btn-gx-ghost btn-gx-sm"><i class="bi bi-search"></i>Filter</button>
-    {% if request.GET.q or request.GET.joint or request.GET.category or request.GET.brand or request.GET.stock %}
-    <a href="{% url 'inventory:inventory_dashboard' %}" class="btn-gx btn-gx-ghost btn-gx-sm" style="color:#f87171;border-color:rgba(229,25,58,.2);">
-        <i class="bi bi-x"></i>Clear
-    </a>
-    {% endif %}
-</div>
-</form>
-
-<!-- BULK ACTION BAR -->
-{% if user.is_manager_role %}
-<div class="bulk-bar" id="bulkBar">
-    <span class="bulk-count" id="bulkCount">0</span> selected
-    <div style="flex:1;"></div>
-    <button class="btn-gx btn-gx-ghost btn-gx-sm" onclick="bulkAction('price_adjust')">
-        <i class="bi bi-percent"></i>Price Adjust
-    </button>
-    <button class="btn-gx btn-gx-ghost btn-gx-sm" onclick="bulkAction('restock')">
-        <i class="bi bi-plus-circle"></i>Restock All
-    </button>
-    <button class="btn-gx btn-gx-ghost btn-gx-sm" onclick="bulkAction('transfer')">
-        <i class="bi bi-arrow-left-right"></i>Transfer
-    </button>
-    <button class="btn-gx btn-gx-danger btn-gx-sm" onclick="bulkAction('deactivate')">
-        <i class="bi bi-eye-slash"></i>Deactivate
-    </button>
-    <button class="btn-gx btn-gx-ghost btn-gx-sm" onclick="clearSelection()">Clear</button>
-</div>
-{% endif %}
-
-<!-- PRODUCT TABLE -->
-<div class="stock-table-wrap">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--bdr);">
-        <div style="font-size:12px;color:var(--txt-3);">
-            Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }} products
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Products</h3>
+    <div class="card-actions">
+      <div class="filter-bar">
+        <div class="search-box">
+          <i class="bi bi-search"></i>
+          <input type="text" id="product-search" placeholder="Search products…" data-table-search="#products-table" class="search-input">
         </div>
-        <div style="display:flex;gap:6px;">
-            <span style="font-family:var(--font-mono);font-size:10px;color:var(--txt-4);align-self:center;">Sort:</span>
-            <a href="?{% url_replace request 'sort' 'name' %}" class="btn-gx btn-gx-ghost btn-gx-xs {% if sort == 'name' %}active{% endif %}">Name</a>
-            <a href="?{% url_replace request 'sort' 'stock' %}" class="btn-gx btn-gx-ghost btn-gx-xs {% if sort == 'stock' %}active{% endif %}">Stock</a>
-            <a href="?{% url_replace request 'sort' 'value' %}" class="btn-gx btn-gx-ghost btn-gx-xs {% if sort == 'value' %}active{% endif %}">Value</a>
-            <a href="?{% url_replace request 'sort' 'price' %}" class="btn-gx btn-gx-ghost btn-gx-xs {% if sort == 'price' %}active{% endif %}">Price</a>
-        </div>
+        <select id="category-filter" class="filter-select" onchange="filterProducts()">
+          <option value="">All Categories</option>
+          {% for cat in categories %}
+          <option value="{{ cat.name }}" {% if selected_cat == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+        <select id="stock-filter" class="filter-select" onchange="filterProducts()">
+          <option value="">All Stock</option>
+          <option value="low">Low Stock</option>
+          <option value="out">Out of Stock</option>
+          <option value="ok">In Stock</option>
+        </select>
+      </div>
     </div>
-
-    <table class="stock-table" id="stockTable">
-        <thead>
-            <tr>
-                {% if user.is_manager_role %}
-                <th style="width:36px;padding:10px 6px 10px 14px;">
-                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"
-                           style="accent-color:var(--violet);width:14px;height:14px;">
-                </th>
-                {% endif %}
-                <th>Product</th>
-                <th class="hide-mobile">Joint</th>
-                <th class="hide-mobile">Category</th>
-                <th>Price</th>
-                <th>Stock</th>
-                <th class="hide-mobile">Value</th>
-                <th style="width:80px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in page_obj %}
-            <tr data-id="{{ item.product.pk }}" id="row{{ item.product.pk }}">
-                {% if user.is_manager_role %}
-                <td style="padding:10px 6px 10px 14px;">
-                    <input type="checkbox" class="row-cb" value="{{ item.product.pk }}"
-                           onchange="rowCheck(this)"
-                           style="accent-color:var(--violet);width:14px;height:14px;">
-                </td>
-                {% endif %}
-                <td>
-                    <div class="prod-cell">
-                        {% if item.product.image %}
-                        <img src="{{ item.product.image.url }}" alt="" class="prod-img">
-                        {% else %}
-                        <div class="prod-img-ph"><i class="bi bi-image"></i></div>
-                        {% endif %}
-                        <div>
-                            <div class="prod-name">
-                                {{ item.product.name }}
-                                {% if item.product.is_clearance %}<span class="gx-badge badge-violet" style="font-size:9px;padding:1px 5px;">CLR</span>{% endif %}
-                            </div>
-                            <div class="prod-sku">{{ item.product.code|default:"—" }}</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="hide-mobile">
-                    <span class="gx-badge badge-neutral" style="font-size:10px;">{{ item.product.joint.display_name }}</span>
-                </td>
-                <td class="hide-mobile" style="color:var(--txt-3);font-size:11px;">
-                    {{ item.product.category.name|default:"—" }}
-                </td>
-                <td>
-                    <div style="font-family:var(--font-mono);font-weight:700;">${{ item.product.price|floatformat:2 }}</div>
-                    {% if item.product.sale_price %}
-                    <div style="font-family:var(--font-mono);font-size:10px;color:var(--amber);">Sale: ${{ item.product.sale_price|floatformat:2 }}</div>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if item.stock.quantity == 0 %}
-                    <span class="stock-qty qty-out">OUT
-                        <div class="stock-bar-wrap"><div class="stock-bar sb-out" style="width:100%;"></div></div>
-                    </span>
-                    {% elif item.stock.quantity <= item.stock.min_quantity %}
-                    <span class="stock-qty qty-low">{{ item.stock.quantity }}
-                        <div class="stock-bar-wrap"><div class="stock-bar sb-low" style="width:{% widthratio item.stock.quantity item.stock.min_quantity|default:1 100 %}%;"></div></div>
-                    </span>
-                    {% else %}
-                    <span class="stock-qty qty-ok">{{ item.stock.quantity }}
-                        <div class="stock-bar-wrap"><div class="stock-bar sb-ok" style="width:100%;"></div></div>
-                    </span>
-                    {% endif %}
-                    {% if user.is_manager_role %}
-                    <div class="qty-adjust" style="margin-top:5px;">
-                        <button class="qty-adj-btn" onclick="quickAdjust({{ item.product.pk }}, -1)" title="Remove 1">−</button>
-                        <button class="qty-adj-btn" onclick="openAdjModal({{ item.product.pk }}, '{{ item.product.name|escapejs }}', {{ item.stock.quantity }})" title="Adjust qty" style="font-size:11px;width:auto;padding:0 6px;">adj</button>
-                        <button class="qty-adj-btn" onclick="quickAdjust({{ item.product.pk }}, 1)" title="Add 1">+</button>
-                    </div>
-                    {% endif %}
-                </td>
-                <td class="hide-mobile val-cell">
-                    ${{ item.line_value|floatformat:2 }}
-                </td>
-                <td>
-                    <div style="display:flex;gap:4px;">
-                        <a href="{% url 'inventory:product_detail' item.product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs" title="View">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                        {% if user.is_manager_role %}
-                        <a href="{% url 'inventory:product_edit' item.product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs" title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        {% endif %}
-                    </div>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="8">
-                    <div class="gx-empty">
-                        <i class="bi bi-boxes empty-icon"></i>
-                        <div class="empty-title">No products found</div>
-                        <div class="empty-sub">Try adjusting your filters or <a href="{% url 'inventory:product_create' %}" style="color:var(--violet-l);">add a product</a></div>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- PAGINATION -->
-    {% if page_obj.paginator.num_pages > 1 %}
-    <div class="pag" style="border-top:1px solid var(--bdr);">
-        {% if page_obj.has_previous %}
-        <a href="?{% url_replace request 'page' page_obj.previous_page_number %}" class="pag-btn"><i class="bi bi-chevron-left"></i></a>
-        {% else %}
-        <span class="pag-btn disabled"><i class="bi bi-chevron-left"></i></span>
-        {% endif %}
-
-        {% for i in page_obj.paginator.page_range %}
-            {% if i == page_obj.number %}
-            <span class="pag-btn current">{{ i }}</span>
-            {% elif i == 1 or i == page_obj.paginator.num_pages or i >= page_obj.number|add:"-2" and i <= page_obj.number|add:"2" %}
-            <a href="?{% url_replace request 'page' i %}" class="pag-btn">{{ i }}</a>
-            {% elif i == page_obj.number|add:"-3" or i == page_obj.number|add:"3" %}
-            <span class="pag-btn disabled">…</span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="products-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>SKU</th>
+          <th>Category</th>
+          <th class="text-end">Cost</th>
+          <th class="text-end">Price</th>
+          <th class="text-center">Stock</th>
+          <th class="text-center">Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for product in products %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              {% if product.image %}
+              <img src="{{ product.image.url }}" style="width:36px;height:36px;border-radius:8px;object-fit:cover">
+              {% else %}
+              <div style="width:36px;height:36px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>
+              {% endif %}
+              <div>
+                <div style="font-weight:600">{{ product.name }}</div>
+                {% if product.brand %}<div style="font-size:11px;color:var(--text-muted)">{{ product.brand }}</div>{% endif %}
+              </div>
+            </div>
+          </td>
+          <td class="font-mono" style="font-size:12px;color:var(--text-muted)">{{ product.sku|default:"—" }}</td>
+          <td>{{ product.category|default:"—" }}</td>
+          <td class="text-end font-mono">${{ product.cost_price|floatformat:2|default:"0.00" }}</td>
+          <td class="text-end font-mono" style="color:var(--accent)">${{ product.selling_price|floatformat:2 }}</td>
+          <td class="text-center">
+            <span class="font-mono" style="font-size:13px;font-weight:600;color:{% if product.quantity <= 0 %}var(--rose){% elif product.quantity <= product.reorder_level|default:5 %}var(--amber){% else %}var(--green){% endif %}">
+              {{ product.quantity }}
+            </span>
+          </td>
+          <td class="text-center">
+            {% if product.quantity <= 0 %}
+            <span class="badge badge-danger">Out</span>
+            {% elif product.quantity <= product.reorder_level|default:5 %}
+            <span class="badge badge-warning">Low</span>
+            {% else %}
+            <span class="badge badge-success">OK</span>
             {% endif %}
+          </td>
+          <td class="text-end">
+            <div style="display:flex;gap:6px;justify-content:flex-end">
+              <a href="/inventory/product/{{ product.id }}/edit/" class="btn btn-xs"><i class="bi bi-pencil"></i></a>
+              <a href="/inventory/product/{{ product.id }}/adjust/" class="btn btn-xs"><i class="bi bi-plus-minus"></i></a>
+              <a href="/inventory/product/{{ product.id }}/" class="btn btn-xs"><i class="bi bi-eye"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-5">
+          <i class="bi bi-boxes" style="font-size:40px;display:block;margin-bottom:12px;opacity:.3"></i>
+          No products found. <a href="/inventory/product/add/" class="text-accent">Add your first product</a>
+        </td></tr>
         {% endfor %}
-
-        {% if page_obj.has_next %}
-        <a href="?{% url_replace request 'page' page_obj.next_page_number %}" class="pag-btn"><i class="bi bi-chevron-right"></i></a>
-        {% else %}
-        <span class="pag-btn disabled"><i class="bi bi-chevron-right"></i></span>
-        {% endif %}
-    </div>
-    {% endif %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}
+  <div class="card-footer">
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>{% endif %}
+        <li class="page-item disabled"><a class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</a></li>
+        {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>{% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
 </div>
-
-<!-- ── QUICK ADJUST MODAL ────────────────────────────────────────── -->
-<div class="modal fade" id="adjModal" tabindex="-1">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Adjust Stock</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="adjProductName" style="font-weight:600;margin-bottom:12px;color:var(--txt-2);"></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-                    <div>
-                        <label class="gx-label">Current Qty</label>
-                        <div id="adjCurrent" style="font-family:var(--font-mono);font-size:20px;font-weight:800;"></div>
-                    </div>
-                    <div>
-                        <label class="gx-label">Adjust By</label>
-                        <input type="number" id="adjAmount" class="gx-input" value="0" step="1">
-                    </div>
-                </div>
-                <div>
-                    <label class="gx-label">Reason</label>
-                    <select id="adjReason" class="gx-select">
-                        <option value="recount">Recount / Correction</option>
-                        <option value="damage">Damage / Loss</option>
-                        <option value="return_supplier">Return to Supplier</option>
-                        <option value="found">Found Stock</option>
-                        <option value="promo">Promotional Use</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div style="margin-top:10px;">
-                    <label class="gx-label">Note (optional)</label>
-                    <input type="text" id="adjNote" class="gx-input" placeholder="Brief reason…">
-                </div>
-                <div id="adjPreview" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:var(--r-sm);font-family:var(--font-mono);font-size:12px;text-align:center;color:var(--txt-2);">
-                    New qty: <span id="adjNew" style="font-weight:700;color:var(--green);">—</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-gx btn-gx-ghost btn-gx-sm" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn-gx btn-gx-primary btn-gx-sm" onclick="submitAdjust()">
-                    <i class="bi bi-check-lg"></i>Apply
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ── BULK ACTION MODAL ─────────────────────────────────────────── -->
-<div class="modal fade" id="bulkModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="bulkModalTitle">Bulk Action</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="bulkModalBody">Loading…</div>
-            <div class="modal-footer">
-                <button class="btn-gx btn-gx-ghost btn-gx-sm" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn-gx btn-gx-primary btn-gx-sm" id="bulkConfirm" onclick="submitBulk()">Confirm</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-/* ══════════════════════════════════════════════════════════════════
-   INVENTORY DASHBOARD JS
-   - Row select / bulk actions
-   - Quick ±1 stock adjustment
-   - Stock adjustment modal
-══════════════════════════════════════════════════════════════════ */
-const CSRF = '{{ csrf_token }}';
-let selectedIds = new Set();
-let adjProductId = null;
-let bulkAction_type = null;
-
-/* ── Row selection ─────────────────────────────────────────────── */
-function rowCheck(cb) {
-    const id = cb.value;
-    if (cb.checked) selectedIds.add(id);
-    else selectedIds.delete(id);
-    updateBulkBar();
-    cb.closest('tr').classList.toggle('selected', cb.checked);
-}
-function toggleSelectAll(cb) {
-    document.querySelectorAll('.row-cb').forEach(r => {
-        r.checked = cb.checked;
-        const id = r.value;
-        cb.checked ? selectedIds.add(id) : selectedIds.delete(id);
-        r.closest('tr').classList.toggle('selected', cb.checked);
-    });
-    updateBulkBar();
-}
-function clearSelection() {
-    selectedIds.clear();
-    document.querySelectorAll('.row-cb').forEach(r => { r.checked=false; r.closest('tr').classList.remove('selected'); });
-    const sa = document.getElementById('selectAll');
-    if (sa) sa.checked = false;
-    updateBulkBar();
-}
-function updateBulkBar() {
-    const bar = document.getElementById('bulkBar');
-    const cnt = document.getElementById('bulkCount');
-    if (!bar) return;
-    bar.classList.toggle('show', selectedIds.size > 0);
-    if (cnt) cnt.textContent = selectedIds.size;
-}
-
-/* ── Quick adjust (+/-1) ───────────────────────────────────────── */
-async function quickAdjust(productId, delta) {
-    try {
-        const r = await fetch('{% url "inventory:api_stock_adjust" %}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-            body: JSON.stringify({ product_id: productId, delta, reason: 'recount', note: 'Quick adjust' })
-        });
-        const d = await r.json();
-        if (d.ok) {
-            showToast(`Stock updated → ${d.new_qty}`, 'success', 2500);
-            // Update displayed qty without full reload
-            const row = document.getElementById('row' + productId);
-            if (row) {
-                const span = row.querySelector('.stock-qty');
-                if (span) {
-                    const cls = d.new_qty === 0 ? 'qty-out' : (d.new_qty <= d.min_qty ? 'qty-low' : 'qty-ok');
-                    span.className = 'stock-qty ' + cls;
-                    span.childNodes[0].textContent = d.new_qty === 0 ? 'OUT' : d.new_qty;
-                }
-            }
-        } else {
-            showToast(d.error || 'Adjustment failed', 'danger');
-        }
-    } catch(e) { showToast('Network error', 'danger'); }
-}
-
-/* ── Adjust modal ──────────────────────────────────────────────── */
-function openAdjModal(productId, name, currentQty) {
-    adjProductId = productId;
-    document.getElementById('adjProductName').textContent = name;
-    document.getElementById('adjCurrent').textContent = currentQty;
-    document.getElementById('adjAmount').value = '0';
-    document.getElementById('adjNote').value = '';
-    updateAdjPreview(currentQty, 0);
-    document.getElementById('adjAmount').oninput = function() {
-        updateAdjPreview(currentQty, parseInt(this.value||0));
-    };
-    new bootstrap.Modal(document.getElementById('adjModal')).show();
-}
-function updateAdjPreview(current, delta) {
-    const newQ = current + delta;
-    const el = document.getElementById('adjNew');
-    if (el) {
-        el.textContent = newQ < 0 ? '⚠ Cannot go below 0' : newQ;
-        el.style.color = newQ < 0 ? '#f87171' : (newQ === 0 ? '#f87171' : 'var(--green)');
-    }
-}
-async function submitAdjust() {
-    const delta  = parseInt(document.getElementById('adjAmount').value || 0);
-    const reason = document.getElementById('adjReason').value;
-    const note   = document.getElementById('adjNote').value;
-    if (delta === 0) { showToast('Delta is 0 — nothing to adjust', 'warning'); return; }
-    try {
-        const r = await fetch('{% url "inventory:api_stock_adjust" %}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-            body: JSON.stringify({ product_id: adjProductId, delta, reason, note })
-        });
-        const d = await r.json();
-        bootstrap.Modal.getInstance(document.getElementById('adjModal'))?.hide();
-        if (d.ok) { showToast(`Stock adjusted → ${d.new_qty}`, 'success'); setTimeout(()=>location.reload(), 800); }
-        else showToast(d.error || 'Failed', 'danger');
-    } catch(e) { showToast('Network error', 'danger'); }
-}
-
-/* ── Bulk actions ──────────────────────────────────────────────── */
-const BULK_LABELS = {
-    price_adjust: 'Price Adjustment',
-    restock:      'Restock All',
-    transfer:     'Transfer to Another Joint',
-    deactivate:   'Deactivate Products',
-};
-const BULK_BODIES = {
-    price_adjust: `
-        <p style="font-size:12px;color:var(--txt-3);margin-bottom:12px;">Apply a price change to <strong id="bc_count">?</strong> selected products.</p>
-        <label class="gx-label">Adjustment Type</label>
-        <select id="bulk_adj_type" class="gx-select" style="margin-bottom:10px;">
-            <option value="pct_inc">% Increase</option>
-            <option value="pct_dec">% Decrease</option>
-            <option value="fixed_inc">Fixed Amount +</option>
-            <option value="fixed_dec">Fixed Amount −</option>
-        </select>
-        <label class="gx-label">Amount</label>
-        <input type="number" id="bulk_adj_val" class="gx-input" value="10" min="0" step="0.01">`,
-    restock: `
-        <p style="font-size:12px;color:var(--txt-3);margin-bottom:12px;">Add stock to <strong id="bc_count">?</strong> selected products.</p>
-        <label class="gx-label">Quantity to Add (each)</label>
-        <input type="number" id="bulk_restock_qty" class="gx-input" value="10" min="1">`,
-    transfer: `
-        <p style="font-size:12px;color:var(--txt-3);margin-bottom:12px;">Transfer <strong id="bc_count">?</strong> products to another joint.</p>
-        <label class="gx-label">Destination Joint</label>
-        <select id="bulk_dest_joint" class="gx-select">
-            {% for j in joints %}<option value="{{ j.pk }}">{{ j.display_name }}</option>{% endfor %}
-        </select>`,
-    deactivate: `
-        <div class="gx-alert alert-warning" style="margin-bottom:12px;border-radius:var(--r-sm);padding:10px 12px;font-size:12px;">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            This will hide <strong id="bc_count">?</strong> products from the POS. Existing sales are unaffected.
-        </div>`,
-};
-window.bulkAction = (type) => {
-    if (!selectedIds.size) { showToast('Select at least one product', 'warning'); return; }
-    bulkAction_type = type;
-    document.getElementById('bulkModalTitle').textContent = BULK_LABELS[type];
-    document.getElementById('bulkModalBody').innerHTML = BULK_BODIES[type] || 'Confirm action';
-    document.getElementById('bulkModalBody').querySelectorAll('#bc_count').forEach(el => el.textContent = selectedIds.size);
-    const confirmBtn = document.getElementById('bulkConfirm');
-    if (type === 'deactivate') { confirmBtn.className = 'btn-gx btn-gx-danger btn-gx-sm'; confirmBtn.textContent = 'Deactivate'; }
-    else { confirmBtn.className = 'btn-gx btn-gx-primary btn-gx-sm'; confirmBtn.textContent = 'Apply'; }
-    new bootstrap.Modal(document.getElementById('bulkModal')).show();
-};
-async function submitBulk() {
-    const payload = {
-        action:     bulkAction_type,
-        product_ids: [...selectedIds],
-    };
-    if (bulkAction_type === 'price_adjust') {
-        payload.adj_type = document.getElementById('bulk_adj_type')?.value;
-        payload.adj_val  = parseFloat(document.getElementById('bulk_adj_val')?.value || 0);
-    } else if (bulkAction_type === 'restock') {
-        payload.qty = parseInt(document.getElementById('bulk_restock_qty')?.value || 0);
-    } else if (bulkAction_type === 'transfer') {
-        payload.dest_joint = document.getElementById('bulk_dest_joint')?.value;
-    }
-    try {
-        const r = await fetch('{% url "inventory:api_bulk_action" %}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-            body: JSON.stringify(payload)
-        });
-        const d = await r.json();
-        bootstrap.Modal.getInstance(document.getElementById('bulkModal'))?.hide();
-        if (d.ok) { showToast(d.message || 'Action applied', 'success'); setTimeout(()=>location.reload(), 900); }
-        else showToast(d.error || 'Failed', 'danger');
-    } catch(e) { showToast('Network error', 'danger'); }
+function filterProducts() {
+  const cat = document.getElementById('category-filter').value.toLowerCase();
+  const stock = document.getElementById('stock-filter').value;
+  document.querySelectorAll('#products-table tbody tr').forEach(row => {
+    const rowCat = row.cells[2]?.textContent.toLowerCase() || '';
+    const qty = parseInt(row.cells[5]?.textContent || '0');
+    let show = true;
+    if (cat && !rowCat.includes(cat)) show = false;
+    if (stock === 'out' && qty > 0) show = false;
+    if (stock === 'low' && (qty <= 0 || qty > 5)) show = false;
+    if (stock === 'ok' && qty <= 5) show = false;
+    row.style.display = show ? '' : 'none';
+  });
 }
 </script>
 {% endblock %}

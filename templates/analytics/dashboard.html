@@ -1,826 +1,153 @@
-{% extends 'base.html' %}
-{% block title %}Analytics — {{ month }}{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Analytics{% endblock %}
+{% block nav_analytics %}active{% endblock %}
+
 {% block breadcrumb %}
-<a href="{% url 'sales:dashboard' %}">Home</a>
-<span class="bc-sep">/</span>
-<span class="bc-current">Analytics</span>
-{% endblock %}
-{% block page_title %}Analytics{% endblock %}
-
-{% block extra_css %}
-<style>
-/* ══════════════════════════════════════════════════════════════
-   ANALYTICS DASHBOARD — Section 3 upgrade
-   Obsidian system tokens + phosphor-green / electric-violet accents
-   Charts via Chart.js (CDN), auto-refresh every 60 s
-══════════════════════════════════════════════════════════════ */
-
-/* ── page layout ── */
-.ana-wrap  { display:flex;flex-direction:column;gap:24px; }
-
-/* ── toolbar ── */
-.ana-toolbar {
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  padding:12px 16px;
-  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);
-}
-.ana-toolbar .lbl { font-family:var(--mono);font-size:10px;font-weight:600;
-  text-transform:uppercase;letter-spacing:.8px;color:var(--txt-3); }
-#joint-filter, #days-filter {
-  background:rgba(255,255,255,.06);border:1px solid var(--bdr-2);
-  border-radius:6px;color:var(--txt);padding:6px 10px;font-size:12px;
-  font-family:var(--font);outline:none;transition:border-color .15s;
-}
-#joint-filter:focus, #days-filter:focus { border-color:var(--accent); }
-#joint-filter option, #days-filter option { background:var(--card-2); }
-.refresh-dot {
-  width:8px;height:8px;border-radius:50%;
-  background:var(--green);box-shadow:0 0 6px var(--green);
-  flex-shrink:0;animation:pulse-green 2s infinite;
-}
-@keyframes pulse-green{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.35)}}
-#refresh-label { font-family:var(--mono);font-size:10px;color:var(--txt-3); }
-
-/* ── KPI row ── */
-.kpi-row { display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:14px; }
-
-.kpi {
-  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);
-  padding:18px;position:relative;overflow:hidden;
-  transition:border-color .2s,transform .15s,box-shadow .2s;
-}
-.kpi::before {
-  content:'';position:absolute;inset:0 0 auto 0;height:2px;
-  background:var(--kpi-stripe,var(--accent));
-}
-.kpi:hover { border-color:var(--bdr-2);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.4); }
-
-.kpi-icon {
-  width:38px;height:38px;border-radius:10px;
-  background:var(--kpi-bg,var(--violet-bg));color:var(--kpi-col,var(--violet-l));
-  display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:12px;
-}
-.kpi-label { font-family:var(--mono);font-size:10px;font-weight:600;
-  text-transform:uppercase;letter-spacing:.9px;color:var(--txt-3);margin-bottom:4px; }
-.kpi-val { font-family:var(--font-disp,var(--font));font-size:26px;font-weight:800;
-  letter-spacing:-.5px;color:var(--txt);line-height:1; }
-.kpi-sub { font-size:11px;color:var(--txt-3);margin-top:5px;display:flex;align-items:center;gap:4px; }
-.kpi-badge {
-  display:inline-flex;align-items:center;gap:3px;
-  font-family:var(--mono);font-size:10px;font-weight:700;
-  padding:2px 7px;border-radius:20px;
-}
-.badge-up   { background:var(--green-bg);color:var(--green); }
-.badge-dn   { background:var(--red-bg);color:#f87171; }
-.badge-flat { background:rgba(255,255,255,.07);color:var(--txt-3); }
-
-/* ── chart grid ── */
-.chart-grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
-.chart-grid-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px; }
-
-.chart-panel {
-  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);
-  overflow:hidden;
-}
-.chart-head {
-  padding:13px 18px;border-bottom:1px solid var(--bdr);
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
-}
-.chart-title { font-size:13px;font-weight:700;color:var(--txt);
-  display:flex;align-items:center;gap:8px; }
-.chart-title i { color:var(--violet-l); }
-.chart-body { padding:18px;position:relative; }
-.chart-body canvas { width:100%!important; }
-
-.chart-toggle { display:flex;gap:4px; }
-.c-tab {
-  padding:4px 10px;border-radius:5px;border:1px solid var(--bdr-2);
-  background:none;color:var(--txt-3);font-size:11px;font-weight:600;
-  cursor:pointer;transition:all .12s;font-family:var(--mono);
-}
-.c-tab.active, .c-tab:hover { background:var(--accent);color:#fff;border-color:var(--accent); }
-
-/* ── table ── */
-.ana-table-wrap { overflow-x:auto; }
-
-.velocity-bar { height:6px;background:rgba(255,255,255,.07);border-radius:4px;margin-top:3px; }
-.velocity-fill { height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--cyan)); }
-.velocity-fill.warn { background:linear-gradient(90deg,var(--red),var(--amber)); }
-
-/* ── staff cards ── */
-.staff-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px; }
-.staff-card {
-  background:var(--card-2);border:1px solid var(--bdr);border-radius:var(--r);
-  padding:14px;transition:border-color .15s;
-}
-.staff-card:hover { border-color:var(--bdr-2); }
-.staff-rank { font-family:var(--mono);font-size:10px;color:var(--txt-4);margin-bottom:6px; }
-.staff-name { font-weight:700;font-size:13px;margin-bottom:2px; }
-.staff-rev  { font-family:var(--mono);font-size:18px;font-weight:800;color:var(--green); }
-.staff-sub  { font-size:11px;color:var(--txt-3);margin-top:2px; }
-
-/* ── reorder flags ── */
-.reorder-badge {
-  display:inline-flex;align-items:center;gap:4px;
-  padding:2px 7px;border-radius:20px;
-  font-family:var(--mono);font-size:10px;font-weight:700;
-}
-.flag-ok  { background:var(--green-bg);color:var(--green); }
-.flag-warn { background:var(--red-bg);color:#f87171; }
-
-/* ── export bar ── */
-.export-bar {
-  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);
-  padding:12px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-}
-.export-bar .lbl { font-size:12px;font-weight:600;color:var(--txt-2);margin-right:4px; }
-.exp-btn {
-  display:inline-flex;align-items:center;gap:5px;
-  padding:6px 13px;border-radius:6px;border:1px solid var(--bdr-2);
-  background:rgba(255,255,255,.04);color:var(--txt-2);
-  font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;
-  text-decoration:none;font-family:var(--mono);
-}
-.exp-btn:hover { border-color:var(--accent);color:var(--acc-l);background:var(--violet-bg); }
-
-/* ── low stock table highlight ── */
-.stock-out  { color:#f87171;font-weight:700; }
-.stock-low  { color:var(--amber);font-weight:700; }
-.stock-ok   { color:var(--green); }
-
-/* ── responsive ── */
-@media(max-width:1100px){ .chart-grid-3 { grid-template-columns:1fr 1fr; } }
-@media(max-width:800px) { .chart-grid-2,.chart-grid-3 { grid-template-columns:1fr; } .kpi-row { grid-template-columns:repeat(2,1fr); } }
-@media(max-width:480px) { .kpi-row { grid-template-columns:1fr; } }
-</style>
+<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Analytics</span>
 {% endblock %}
 
 {% block content %}
-<div class="ana-wrap">
-
-<!-- ═══════ TOOLBAR ═══════ -->
-<div class="ana-toolbar">
-  <div class="refresh-dot" id="refreshDot"></div>
-  <span id="refresh-label">Auto-refresh every 60s</span>
-  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-    <span class="lbl">Joint</span>
-    <select id="joint-filter">
-      <option value="">All Joints</option>
-      {% for j in joints %}
-      <option value="{{ j.pk }}">{{ j.display_name }}</option>
-      {% endfor %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Analytics</h1>
+    <p class="page-sub">Sales performance &amp; insights</p>
+  </div>
+  <div class="page-actions">
+    <select class="form-select form-select-sm" id="period-select" onchange="window.location.href='?period='+this.value" style="width:auto;background:var(--surface-2);border-color:var(--border);color:var(--text)">
+      <option value="7" {% if period == '7' %}selected{% endif %}>Last 7 days</option>
+      <option value="30" {% if period == '30' or not period %}selected{% endif %}>Last 30 days</option>
+      <option value="90" {% if period == '90' %}selected{% endif %}>Last 90 days</option>
+      <option value="365" {% if period == '365' %}selected{% endif %}>This year</option>
     </select>
-    <span class="lbl">Period</span>
-    <select id="days-filter">
-      <option value="7">Last 7 days</option>
-      <option value="30" selected>Last 30 days</option>
-      <option value="90">Last 90 days</option>
-      <option value="365">Last 365 days</option>
-    </select>
+    <a href="?export=csv" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-download me-1"></i>Export</a>
   </div>
 </div>
 
-<!-- ═══════ KPI CARDS ═══════ -->
-<div class="kpi-row" id="kpiRow">
-
-  <!-- Today Revenue -->
-  <div class="kpi" style="--kpi-stripe:var(--green);--kpi-bg:var(--green-bg);--kpi-col:var(--green);">
-    <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
-    <div class="kpi-label">Today Revenue</div>
-    <div class="kpi-val" id="kToday">${{ today_stats.net|floatformat:2 }}</div>
-    <div class="kpi-sub">
-      {{ today_stats.count }} sale{{ today_stats.count|pluralize }}
-      {% if today_stats.pct_vs_yesterday is not None %}
-        {% if today_stats.pct_vs_yesterday >= 0 %}
-          <span class="kpi-badge badge-up">↑ {{ today_stats.pct_vs_yesterday }}%</span>
-        {% else %}
-          <span class="kpi-badge badge-dn">↓ {{ today_stats.pct_vs_yesterday|slice:"1:" }}%</span>
-        {% endif %}
-        vs yesterday
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Week Revenue -->
-  <div class="kpi" style="--kpi-stripe:var(--blue);--kpi-bg:var(--blue-bg);--kpi-col:var(--blue);">
-    <div class="kpi-icon"><i class="bi bi-calendar-week"></i></div>
-    <div class="kpi-label">This Week</div>
-    <div class="kpi-val" id="kWeek">${{ week_stats.net|floatformat:2 }}</div>
-    <div class="kpi-sub">{{ week_stats.count }} transaction{{ week_stats.count|pluralize }}</div>
-  </div>
-
-  <!-- Month Revenue -->
-  <div class="kpi" style="--kpi-stripe:var(--violet);--kpi-bg:var(--violet-bg);--kpi-col:var(--violet-l);">
-    <div class="kpi-icon"><i class="bi bi-bar-chart-line"></i></div>
-    <div class="kpi-label">{{ month }}</div>
-    <div class="kpi-val" id="kMonth">${{ month_stats.net|floatformat:2 }}</div>
-    <div class="kpi-sub">{{ month_stats.count }} sales · AOV ${{ month_stats.aov }}</div>
-  </div>
-
-  <!-- AOV today -->
-  <div class="kpi" style="--kpi-stripe:var(--cyan);--kpi-bg:rgba(6,182,212,.1);--kpi-col:var(--cyan);">
-    <div class="kpi-icon"><i class="bi bi-receipt"></i></div>
-    <div class="kpi-label">Avg Order Value</div>
-    <div class="kpi-val" id="kAov">${{ today_stats.aov|floatformat:2 }}</div>
-    <div class="kpi-sub">Today</div>
-  </div>
-
-  <!-- Top product today -->
-  <div class="kpi" style="--kpi-stripe:var(--amber);--kpi-bg:var(--amber-bg);--kpi-col:var(--amber);">
-    <div class="kpi-icon"><i class="bi bi-trophy"></i></div>
-    <div class="kpi-label">Top Product Today</div>
-    <div class="kpi-val" id="kTop" style="font-size:14px;font-weight:700;line-height:1.3;">
-      {% if top_today %}{{ top_today.product__name|truncatechars:28 }}{% else %}—{% endif %}
-    </div>
-    <div class="kpi-sub" id="kTopSub">&nbsp;</div>
-  </div>
-
-  <!-- Returns -->
-  <div class="kpi" style="--kpi-stripe:var(--red);--kpi-bg:var(--red-bg);--kpi-col:#f87171;">
-    <div class="kpi-icon"><i class="bi bi-arrow-return-left"></i></div>
-    <div class="kpi-label">Returns (Month)</div>
-    <div class="kpi-val" id="kReturns">{{ return_count }}</div>
-    <div class="kpi-sub">${{ return_value|floatformat:2 }} refunded</div>
-  </div>
-
-</div>
-
-
-<!-- ═══════ ROW 1: Revenue trend + Payment breakdown ═══════ -->
-<div class="chart-grid-2">
-
-  <!-- Revenue trend -->
-  <div class="chart-panel">
-    <div class="chart-head">
-      <div class="chart-title"><i class="bi bi-graph-up-arrow"></i>Revenue Trend</div>
-      <div class="chart-toggle">
-        <button class="c-tab active" onclick="setRevToggle('revenue',this)">Revenue</button>
-        <button class="c-tab" onclick="setRevToggle('txns',this)">Transactions</button>
+<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));display:grid;gap:16px;margin-bottom:24px">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(124,58,237,.15);color:var(--accent)"><i class="bi bi-currency-dollar"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Total Revenue</div>
+      <div class="stat-value">${{ total_revenue|floatformat:2|default:"0.00" }}</div>
+      <div class="stat-delta {% if revenue_delta >= 0 %}positive{% else %}negative{% endif %}">
+        <i class="bi {% if revenue_delta >= 0 %}bi-arrow-up{% else %}bi-arrow-down{% endif %}"></i>
+        {{ revenue_delta|floatformat:1|default:"0.0" }}% vs previous period
       </div>
     </div>
-    <div class="chart-body" style="height:260px;">
-      <canvas id="chartRevenue"></canvas>
-    </div>
   </div>
-
-  <!-- Payment donut -->
-  <div class="chart-panel">
-    <div class="chart-head">
-      <div class="chart-title"><i class="bi bi-pie-chart"></i>Payment Methods</div>
-    </div>
-    <div class="chart-body" style="height:260px;display:flex;align-items:center;justify-content:center;">
-      <canvas id="chartPayment" style="max-width:250px;max-height:250px;"></canvas>
-    </div>
-  </div>
-
-</div>
-
-
-<!-- ═══════ ROW 2: Top products + Hourly distribution ═══════ -->
-<div class="chart-grid-2">
-
-  <!-- Top products -->
-  <div class="chart-panel">
-    <div class="chart-head">
-      <div class="chart-title"><i class="bi bi-bar-chart-steps"></i>Top Products</div>
-      <div class="chart-toggle">
-        <button class="c-tab active" onclick="setProdToggle('revenue',this)">Revenue</button>
-        <button class="c-tab" onclick="setProdToggle('qty',this)">Qty</button>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(0,214,143,.15);color:var(--green)"><i class="bi bi-receipt"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Total Sales</div>
+      <div class="stat-value">{{ total_sales|default:0 }}</div>
+      <div class="stat-delta {% if sales_delta >= 0 %}positive{% else %}negative{% endif %}">
+        <i class="bi {% if sales_delta >= 0 %}bi-arrow-up{% else %}bi-arrow-down{% endif %}"></i>
+        {{ sales_delta|floatformat:1|default:"0.0" }}% vs previous period
       </div>
     </div>
-    <div class="chart-body" style="height:280px;">
-      <canvas id="chartProducts"></canvas>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(59,130,246,.15);color:var(--blue)"><i class="bi bi-cart-check"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Avg Order Value</div>
+      <div class="stat-value">${{ avg_order_value|floatformat:2|default:"0.00" }}</div>
     </div>
   </div>
-
-  <!-- Hourly distribution -->
-  <div class="chart-panel">
-    <div class="chart-head">
-      <div class="chart-title"><i class="bi bi-clock-history"></i>Hourly Distribution</div>
-    </div>
-    <div class="chart-body" style="height:280px;">
-      <canvas id="chartHourly"></canvas>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="bi bi-people"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Unique Customers</div>
+      <div class="stat-value">{{ unique_customers|default:0 }}</div>
     </div>
   </div>
-
-</div>
-
-
-<!-- ═══════ ROW 3: Staff performance ═══════ -->
-<div class="chart-panel">
-  <div class="chart-head">
-    <div class="chart-title"><i class="bi bi-people"></i>Staff Performance — {{ month }}</div>
-    <span style="font-size:11px;color:var(--txt-3);">Sorted by revenue</span>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(229,25,58,.15);color:var(--rose)"><i class="bi bi-arrow-return-left"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Returns</div>
+      <div class="stat-value">{{ total_returns|default:0 }}</div>
+    </div>
   </div>
-  <div class="chart-body">
-    <div class="staff-grid" id="staffGrid">
-      {% for s in staff_perf %}
-      <div class="staff-card">
-        <div class="staff-rank">#{{ forloop.counter }}</div>
-        <div class="staff-name">{{ s.user.get_full_name|default:s.user.username }}</div>
-        <div class="staff-rev">${{ s.revenue|floatformat:2 }}</div>
-        <div class="staff-sub">{{ s.count }} sale{{ s.count|pluralize }}</div>
-      </div>
-      {% empty %}
-      <div style="color:var(--txt-3);font-size:13px;padding:16px;">No sales data this month.</div>
-      {% endfor %}
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(6,182,212,.15);color:var(--cyan)"><i class="bi bi-box-seam"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Products Sold</div>
+      <div class="stat-value">{{ products_sold|default:0 }}</div>
     </div>
   </div>
 </div>
 
-
-<!-- ═══════ ROW 4: Staff bar chart ═══════ -->
-{% if staff_perf %}
-<div class="chart-panel">
-  <div class="chart-head">
-    <div class="chart-title"><i class="bi bi-bar-chart"></i>Staff Comparison (bar)</div>
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Revenue Trend</h3>
+    </div>
+    <div class="card-body" style="height:280px;position:relative">
+      <canvas id="revenue-chart" data-chart="sales-line"
+        data-chart-data='{"labels":{{ chart_labels|safe|default:"[]" }},"data":{{ chart_revenue|safe|default:"[]" }},"label":"Revenue ($)"}'></canvas>
+    </div>
   </div>
-  <div class="chart-body" style="height:260px;">
-    <canvas id="chartStaff"></canvas>
-  </div>
-</div>
-{% endif %}
-
-
-<!-- ═══════ ROW 5: Velocity / reorder ═══════ -->
-<div class="chart-panel">
-  <div class="chart-head">
-    <div class="chart-title"><i class="bi bi-speedometer2"></i>Product Velocity &amp; Reorder Forecast</div>
-    <a href="{% url 'sales:analytics_export_csv' %}?report=products&date_from={{ month|date:'Y-m-01' }}" class="exp-btn">
-      <i class="bi bi-download"></i>Export
-    </a>
-  </div>
-  <div class="chart-body">
-    <div class="ana-table-wrap">
-      <table class="gx-table" id="velocityTable">
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th class="text-center">Units/day</th>
-            <th class="text-center">Stock</th>
-            <th class="text-center">Days Remaining</th>
-            <th>Velocity</th>
-            <th class="text-center">Flag</th>
-          </tr>
-        </thead>
-        <tbody id="velocityBody">
-          <tr><td colspan="6" style="text-align:center;color:var(--txt-3);padding:20px;">Loading…</td></tr>
-        </tbody>
-      </table>
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">Sales by Category</h3></div>
+    <div class="card-body" style="height:280px;position:relative">
+      <canvas id="category-chart" data-chart="category-donut"
+        data-chart-data='{"labels":{{ category_labels|safe|default:"[]" }},"data":{{ category_data|safe|default:"[]" }}}'></canvas>
     </div>
   </div>
 </div>
 
-
-<!-- ═══════ ROW 6: Top products table ═══════ -->
-<div class="chart-panel">
-  <div class="chart-head">
-    <div class="chart-title"><i class="bi bi-list-ol"></i>Top Products — {{ month }}</div>
-  </div>
-  <div class="chart-body">
-    <div class="ana-table-wrap">
-      <table class="gx-table">
-        <thead>
-          <tr>
-            <th>#</th><th>Product</th><th>Joint</th>
-            <th class="text-end">Qty Sold</th><th class="text-end">Revenue</th>
-          </tr>
-        </thead>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">Top Products</h3></div>
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Product</th><th class="text-end">Qty</th><th class="text-end">Revenue</th></tr></thead>
         <tbody>
           {% for p in top_products %}
           <tr>
-            <td style="font-family:var(--mono);color:var(--txt-3);">{{ forloop.counter }}</td>
-            <td style="font-weight:600;">{{ p.product__name }}</td>
-            <td><span class="gx-badge badge-neutral">{{ p.product__joint__display_name }}</span></td>
-            <td class="text-end mono">{{ p.total_qty }}</td>
-            <td class="text-end mono" style="font-weight:700;color:var(--green);">${{ p.total_revenue|floatformat:2 }}</td>
+            <td>{{ p.name }}</td>
+            <td class="text-end font-mono">{{ p.total_qty }}</td>
+            <td class="text-end font-mono text-accent">${{ p.total_revenue|floatformat:2 }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="5" style="text-align:center;color:var(--txt-3);padding:24px;">No data</td></tr>
+          <tr><td colspan="3" class="text-center text-muted py-4">No data</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
-</div>
-
-
-<!-- ═══════ ROW 7: Low stock ═══════ -->
-{% if low_stock %}
-<div class="chart-panel">
-  <div class="chart-head">
-    <div class="chart-title" style="color:#f87171;"><i class="bi bi-exclamation-triangle" style="color:var(--red);"></i>Low Stock Alerts</div>
-    <a href="{% url 'inventory:inventory_dashboard' %}" class="exp-btn">View All</a>
-  </div>
-  <div class="chart-body">
-    <div class="ana-table-wrap">
-      <table class="gx-table">
-        <thead><tr><th>Product</th><th>Joint</th><th>Category</th><th class="text-center">Stock</th><th class="text-center">Min</th><th></th></tr></thead>
-        <tbody>
-          {% for p in low_stock %}
-          <tr>
-            <td style="font-weight:600;">{{ p.name }}</td>
-            <td><span class="gx-badge badge-neutral">{{ p.joint.display_name }}</span></td>
-            <td style="color:var(--txt-3);font-size:12px;">{{ p.category.name|default:"—" }}</td>
-            <td class="text-center">
-              {% if p.current_stock == 0 %}
-                <span class="stock-out">0 — OUT</span>
-              {% else %}
-                <span class="stock-low">{{ p.current_stock }}</span>
-              {% endif %}
-            </td>
-            <td class="text-center mono" style="color:var(--txt-3);">{{ p.stock.min_quantity }}</td>
-            <td>
-              {% if user.is_manager_role %}
-              <a href="{% url 'inventory:stock_adjust' p.pk %}" class="exp-btn" style="padding:4px 9px;">Restock</a>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">Payment Methods</h3></div>
+    <div class="card-body" style="height:240px;position:relative">
+      <canvas id="payment-chart" data-chart="category-donut"
+        data-chart-data='{"labels":{{ payment_labels|safe|default:"[]" }},"data":{{ payment_data|safe|default:"[]" }}}'></canvas>
     </div>
   </div>
 </div>
-{% endif %}
 
-
-<!-- ═══════ EXPORT BAR ═══════ -->
-<div class="export-bar">
-  <span class="lbl">Export CSV:</span>
-  <a class="exp-btn" id="expSales" href="{% url 'sales:analytics_export_csv' %}?report=sales">
-    <i class="bi bi-download"></i>Sales
-  </a>
-  <a class="exp-btn" id="expProducts" href="{% url 'sales:analytics_export_csv' %}?report=products">
-    <i class="bi bi-download"></i>Products
-  </a>
-  <a class="exp-btn" id="expInventory" href="{% url 'sales:analytics_export_csv' %}?report=inventory">
-    <i class="bi bi-download"></i>Inventory
-  </a>
-  <a class="exp-btn" id="expStaff" href="{% url 'sales:analytics_export_csv' %}?report=staff">
-    <i class="bi bi-download"></i>Staff
-  </a>
+<div class="card">
+  <div class="card-header"><h3 class="card-title">Recent Sales</h3></div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Receipt</th><th>Date</th><th>Customer</th><th>Payment</th><th class="text-end">Total</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for sale in recent_sales %}
+        <tr>
+          <td><a href="/sales/{{ sale.id }}/" class="text-accent font-mono">{{ sale.receipt_number }}</a></td>
+          <td class="text-muted">{{ sale.created_at|date:"d M Y H:i" }}</td>
+          <td>{{ sale.customer__name|default:"Walk-in" }}</td>
+          <td><span class="badge-pill">{{ sale.payment_method|title }}</span></td>
+          <td class="text-end font-mono">${{ sale.total_amount|floatformat:2 }}</td>
+          <td><span class="badge badge-success">{{ sale.status|title|default:"Complete" }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No sales yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
-
-</div><!-- /.ana-wrap -->
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-/* ══════════════════════════════════════════════════════════════
-   ANALYTICS JS
-══════════════════════════════════════════════════════════════ */
-
-// ── chart defaults ─────────────────────────────────────────────
-Chart.defaults.color          = 'rgba(255,255,255,0.45)';
-Chart.defaults.font.family    = "'JetBrains Mono', monospace";
-Chart.defaults.font.size      = 11;
-Chart.defaults.borderColor    = 'rgba(255,255,255,0.06)';
-
-const VIOLET  = '#7c3aed';
-const GREEN   = '#00d68f';
-const AMBER   = '#ffaa00';
-const BLUE    = '#4d9fff';
-const CYAN    = '#06b6d4';
-const RED     = '#e5193a';
-const PALETTE = [VIOLET, GREEN, BLUE, AMBER, CYAN, RED, '#a855f7', '#f472b6', '#34d399', '#fbbf24'];
-
-function mkGrad(ctx, col1, col2) {
-  const g = ctx.createLinearGradient(0, 0, 0, 320);
-  g.addColorStop(0, col1);
-  g.addColorStop(1, col2);
-  return g;
-}
-
-// ── filter state ───────────────────────────────────────────────
-let jointId = '';
-let days    = 30;
-
-const jSel = document.getElementById('joint-filter');
-const dSel = document.getElementById('days-filter');
-
-jSel.addEventListener('change', () => { jointId = jSel.value; rebuildAll(); updateExportLinks(); });
-dSel.addEventListener('change', () => { days    = parseInt(dSel.value); rebuildAll(); });
-
-// ── revenue chart ─────────────────────────────────────────────
-let revData     = { labels:[], revenues:[], txns:[] };
-let revMode     = 'revenue';
-let revChart    = null;
-
-async function loadRevenue() {
-  const r = await fetch(`/sales/analytics/api/revenue/?days=${days}&joint_id=${jointId}`);
-  revData = await r.json();
-  renderRevChart();
-}
-
-function renderRevChart() {
-  const ctx  = document.getElementById('chartRevenue').getContext('2d');
-  const data = revMode === 'revenue' ? revData.revenues : revData.txns;
-  const col  = revMode === 'revenue' ? GREEN : VIOLET;
-  const lbl  = revMode === 'revenue' ? 'Revenue ($)' : 'Transactions';
-
-  if (revChart) { revChart.destroy(); }
-  revChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: revData.labels,
-      datasets: [{
-        label: lbl,
-        data:  data,
-        borderColor: col,
-        borderWidth: 2,
-        pointRadius: 0,
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: col,
-        tension: 0.4,
-        fill: true,
-        backgroundColor: mkGrad(ctx, col.replace(')', ',.18)').replace('rgb', 'rgba'), 'rgba(0,0,0,0)'),
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#1a1a2a',
-          borderColor: 'rgba(255,255,255,.1)',
-          borderWidth: 1,
-          padding: 10,
-          callbacks: {
-            label: ctx => revMode === 'revenue'
-              ? ` $${ctx.parsed.y.toFixed(2)}`
-              : ` ${ctx.parsed.y} txns`,
-          }
-        }
-      },
-      scales: {
-        x: { grid:{ color:'rgba(255,255,255,.04)' }, ticks:{ maxTicksLimit:8 } },
-        y: {
-          grid:{ color:'rgba(255,255,255,.04)' },
-          ticks: {
-            callback: v => revMode === 'revenue' ? '$'+v : v,
-          }
-        }
-      }
-    }
-  });
-}
-
-function setRevToggle(mode, btn) {
-  revMode = mode;
-  document.querySelectorAll('.chart-toggle .c-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderRevChart();
-}
-
-// ── payment donut ──────────────────────────────────────────────
-let payChart = null;
-async function loadPayment() {
-  const r = await fetch(`/sales/analytics/api/payment-breakdown/?days=${days}&joint_id=${jointId}`);
-  const d = await r.json();
-  const ctx = document.getElementById('chartPayment').getContext('2d');
-  if (payChart) payChart.destroy();
-  payChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels:   d.labels,
-      datasets: [{ data: d.counts, backgroundColor: PALETTE, borderWidth: 0, hoverOffset: 6 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      cutout: '68%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels:{ padding:14, usePointStyle:true, pointStyleWidth:8 }
-        },
-        tooltip: { backgroundColor:'#1a1a2a', padding:10, borderColor:'rgba(255,255,255,.08)', borderWidth:1 }
-      }
-    }
-  });
-}
-
-// ── top products horizontal bar ────────────────────────────────
-let prodData  = { labels:[], revenues:[], quantities:[] };
-let prodMode  = 'revenue';
-let prodChart = null;
-
-async function loadProducts() {
-  const r = await fetch(`/sales/analytics/api/top-products/?days=${days}&joint_id=${jointId}&limit=10`);
-  prodData = await r.json();
-  renderProdChart();
-}
-
-function renderProdChart() {
-  const ctx  = document.getElementById('chartProducts').getContext('2d');
-  const data = prodMode === 'revenue' ? prodData.revenues : prodData.quantities;
-  const lbl  = prodMode === 'revenue' ? 'Revenue ($)' : 'Qty Sold';
-  const col  = prodMode === 'revenue' ? GREEN : VIOLET;
-
-  if (prodChart) prodChart.destroy();
-  prodChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: [...(prodData.labels||[])].reverse(),
-      datasets: [{
-        label: lbl,
-        data:  [...data].reverse(),
-        backgroundColor: col.replace(')', ',.75)').replace('rgb', 'rgba'),
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      indexAxis: 'y',
-      plugins: { legend:{ display:false }, tooltip:{ backgroundColor:'#1a1a2a', padding:10 } },
-      scales: {
-        x: { grid:{ color:'rgba(255,255,255,.04)' }, ticks:{ callback: v => prodMode==='revenue'?'$'+v:v } },
-        y: { grid:{ display:false }, ticks:{ font:{ size:10 } } }
-      }
-    }
-  });
-}
-
-function setProdToggle(mode, btn) {
-  prodMode = mode;
-  // toggle the SECOND chart-toggle group
-  const groups = document.querySelectorAll('.chart-toggle');
-  groups[1]?.querySelectorAll('.c-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderProdChart();
-}
-
-// ── hourly area chart ─────────────────────────────────────────
-let hourlyChart = null;
-async function loadHourly() {
-  const r = await fetch(`/sales/analytics/api/hourly/?days=${days}&joint_id=${jointId}`);
-  const d = await r.json();
-  const ctx = document.getElementById('chartHourly').getContext('2d');
-  if (hourlyChart) hourlyChart.destroy();
-  hourlyChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: d.labels,
-      datasets: [{
-        label: 'Transactions',
-        data: d.counts,
-        borderColor: AMBER,
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.4,
-        fill: true,
-        backgroundColor: mkGrad(ctx, 'rgba(255,170,0,.25)', 'rgba(255,170,0,0)'),
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode:'index', intersect:false },
-      plugins: { legend:{ display:false }, tooltip:{ backgroundColor:'#1a1a2a', padding:10 } },
-      scales: {
-        x: { grid:{ color:'rgba(255,255,255,.04)' }, ticks:{ maxTicksLimit:8 } },
-        y: { grid:{ color:'rgba(255,255,255,.04)' }, beginAtZero:true }
-      }
-    }
-  });
-}
-
-// ── staff bar chart ────────────────────────────────────────────
-let staffChart = null;
-async function loadStaff() {
-  const r = await fetch(`/sales/analytics/api/staff/?days=${days}&joint_id=${jointId}`);
-  const d = await r.json();
-  const ctxEl = document.getElementById('chartStaff');
-  if (!ctxEl) return;
-  const ctx = ctxEl.getContext('2d');
-  if (staffChart) staffChart.destroy();
-  staffChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: d.labels,
-      datasets: [
-        {
-          label: 'Revenue ($)', data: d.revenues,
-          backgroundColor: GREEN.replace(')', ',.7)').replace('rgb','rgba'), borderRadius: 4,
-          yAxisID: 'y',
-        },
-        {
-          label: 'Transactions', data: d.counts,
-          backgroundColor: VIOLET.replace(')', ',.7)').replace('rgb','rgba'), borderRadius: 4,
-          yAxisID: 'y2',
-        },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend:{ labels:{ padding:16, usePointStyle:true, pointStyleWidth:8 } },
-        tooltip:{ backgroundColor:'#1a1a2a', padding:10 }
-      },
-      scales: {
-        x: { grid:{ display:false } },
-        y:  { position:'left',  grid:{ color:'rgba(255,255,255,.04)' }, ticks:{ callback: v => '$'+v } },
-        y2: { position:'right', grid:{ display:false } }
-      }
-    }
-  });
-}
-
-// ── velocity table ────────────────────────────────────────────
-async function loadVelocity() {
-  const r = await fetch(`/sales/analytics/api/velocity/?days=${days}&joint_id=${jointId}&limit=20`);
-  const d = await r.json();
-  const tbody = document.getElementById('velocityBody');
-  if (!tbody) return;
-
-  const maxRate = Math.max(...d.products.map(p => p.daily_rate), 1);
-
-  tbody.innerHTML = d.products.map(p => {
-    const pct  = Math.round(p.daily_rate / maxRate * 100);
-    const warn = p.reorder_flag;
-    const drHTML = p.days_remaining !== null
-      ? `<span class="${warn ? 'stock-out' : p.days_remaining < 30 ? 'stock-low' : 'stock-ok'}">${p.days_remaining}d</span>`
-      : '<span style="color:var(--txt-4)">∞</span>';
-
-    return `<tr>
-      <td style="font-weight:600;">${p.product}</td>
-      <td class="text-center mono">${p.daily_rate}</td>
-      <td class="text-center mono">${p.stock}</td>
-      <td class="text-center">${drHTML}</td>
-      <td>
-        <div class="velocity-bar" style="width:120px;">
-          <div class="velocity-fill ${warn?'warn':''}" style="width:${pct}%;"></div>
-        </div>
-      </td>
-      <td class="text-center">
-        ${warn
-          ? `<span class="reorder-badge flag-warn"><i class="bi bi-exclamation-triangle-fill"></i>REORDER</span>`
-          : `<span class="reorder-badge flag-ok"><i class="bi bi-check2"></i>OK</span>`}
-      </td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--txt-3);padding:20px;">No data</td></tr>`;
-}
-
-// ── live KPI refresh ──────────────────────────────────────────
-async function refreshLiveKpis() {
-  try {
-    const r = await fetch(`/sales/analytics/api/live/?joint_id=${jointId}`);
-    const d = await r.json();
-
-    const fmt = v => '$' + parseFloat(v).toFixed(2);
-
-    const kToday = document.getElementById('kToday');
-    const kAov   = document.getElementById('kAov');
-    const kTop   = document.getElementById('kTop');
-    if (kToday) kToday.textContent = fmt(d.today_revenue);
-    if (kAov)   kAov.textContent   = fmt(d.aov);
-    if (kTop)   kTop.textContent   = d.top_product || '—';
-
-    const lbl = document.getElementById('refresh-label');
-    if (lbl) lbl.textContent = `Refreshed at ${d.refreshed_at}`;
-
-    // flash green on dot
-    const dot = document.getElementById('refreshDot');
-    if (dot) {
-      dot.style.background = '#fff';
-      setTimeout(() => dot.style.background = '', 300);
-    }
-  } catch(e) {}
-}
-
-// ── update export links with current filters ──────────────────
-function updateExportLinks() {
-  const base = '/sales/analytics/export/?';
-  document.querySelectorAll('[id^="exp"]').forEach(a => {
-    const report = a.id.replace('exp','').toLowerCase();
-    const url = new URL(a.href, location.origin);
-    url.searchParams.set('report', report);
-    if (jointId) url.searchParams.set('joint_id', jointId);
-    else url.searchParams.delete('joint_id');
-    a.href = url.toString();
-  });
-}
-
-// ── rebuild all charts ─────────────────────────────────────────
-async function rebuildAll() {
-  await Promise.all([
-    loadRevenue(),
-    loadPayment(),
-    loadProducts(),
-    loadHourly(),
-    loadStaff(),
-    loadVelocity(),
-  ]);
-  updateExportLinks();
-}
-
-// ── boot ──────────────────────────────────────────────────────
-rebuildAll();
-refreshLiveKpis();
-
-// Auto-refresh: KPIs every 60s, all charts every 5 min
-setInterval(refreshLiveKpis, 60_000);
-setInterval(rebuildAll,       5 * 60_000);
-</script>
 {% endblock %}

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt {{ sale.receipt_number }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Courier New', Courier, monospace; font-size: 11px; width: 80mm; max-width: 80mm; padding: 4mm; background: #fff; color: #000; }
+    .center { text-align: center; }
+    .right { text-align: right; }
+    .bold { font-weight: bold; }
+    .divider { border-top: 1px dashed #000; margin: 4px 0; }
+    .store-name { font-size: 16px; font-weight: 800; text-align: center; margin-bottom: 2px; }
+    .store-sub { font-size: 10px; text-align: center; color: #444; margin-bottom: 8px; }
+    .receipt-no { font-size: 13px; font-weight: 700; text-align: center; margin: 6px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    table td { padding: 2px 0; font-size: 11px; vertical-align: top; }
+    table td:last-child { text-align: right; white-space: nowrap; }
+    .total-row td { font-weight: 700; font-size: 12px; padding-top: 4px; }
+    .grand-total td { font-size: 14px; font-weight: 800; border-top: 2px solid #000; padding-top: 6px; }
+    .thank-you { text-align: center; margin-top: 12px; font-size: 11px; }
+    .barcode { text-align: center; margin: 8px 0; font-size: 9px; letter-spacing: 2px; }
+    @media print {
+      @page { margin: 0; size: 80mm auto; }
+      body { width: 80mm; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="store-name">GENX POS</div>
+<div class="store-sub">
+  {% if branch %}{{ branch }}{% else %}Eyedentity / GenX / Armor Sole{% endif %}<br>
+  {% if store_phone %}Tel: {{ store_phone }}{% endif %}
+</div>
+
+<div class="divider"></div>
+
+<div class="receipt-no">RECEIPT: {{ sale.receipt_number }}</div>
+<table>
+  <tr><td>Date:</td><td style="text-align:right">{{ sale.created_at|date:"d/m/Y H:i" }}</td></tr>
+  <tr><td>Cashier:</td><td style="text-align:right">{{ sale.cashier__username|default:"—" }}</td></tr>
+  {% if sale.customer__name %}<tr><td>Customer:</td><td style="text-align:right">{{ sale.customer__name }}</td></tr>{% endif %}
+</table>
+
+<div class="divider"></div>
+
+<table>
+  <thead>
+    <tr>
+      <td class="bold">Item</td>
+      <td class="bold" style="text-align:center">Qty</td>
+      <td class="bold" style="text-align:right">Amount</td>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in sale.items.all %}
+    <tr>
+      <td style="padding-right:4px">{{ item.product__name|truncatechars:20 }}</td>
+      <td style="text-align:center">{{ item.quantity }}</td>
+      <td style="text-align:right">${{ item.total_price|floatformat:2 }}</td>
+    </tr>
+    <tr>
+      <td style="font-size:9px;color:#555;padding-left:4px" colspan="3">@ ${{ item.unit_price|floatformat:2 }} each</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="divider"></div>
+
+<table>
+  <tr><td>Subtotal:</td><td>${{ sale.subtotal|floatformat:2 }}</td></tr>
+  {% if sale.discount_amount and sale.discount_amount > 0 %}
+  <tr><td>Discount {% if sale.discount_percentage %}({{ sale.discount_percentage }}%){% endif %}:</td><td>-${{ sale.discount_amount|floatformat:2 }}</td></tr>
+  {% endif %}
+  {% if sale.tax_amount and sale.tax_amount > 0 %}
+  <tr><td>Tax:</td><td>${{ sale.tax_amount|floatformat:2 }}</td></tr>
+  {% endif %}
+  <tr class="grand-total"><td><b>TOTAL:</b></td><td><b>${{ sale.total_amount|floatformat:2 }}</b></td></tr>
+</table>
+
+<div class="divider"></div>
+
+<table>
+  <tr><td>Payment:</td><td style="text-align:right;text-transform:capitalize">{{ sale.payment_method }}</td></tr>
+  {% if sale.cash_tendered %}
+  <tr><td>Cash Tendered:</td><td style="text-align:right">${{ sale.cash_tendered|floatformat:2 }}</td></tr>
+  <tr><td>Change:</td><td style="text-align:right">${{ sale.change_given|floatformat:2 }}</td></tr>
+  {% endif %}
+</table>
+
+<div class="divider"></div>
+
+<div class="barcode">{{ sale.receipt_number }}</div>
+
+<div class="thank-you">
+  Thank you for shopping with us!<br>
+  <small>Goods sold are not returnable without receipt</small>
+</div>
+
+<script>window.print();</script>
+</body>
+</html>
