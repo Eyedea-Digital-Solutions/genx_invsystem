@@ -166,19 +166,77 @@ def dashboard(request):
 
 @login_required
 def pos(request):
+    from inventory.models import Category
+    import json as _json
+
     joints = Joint.objects.all()
     held_sales = Sale.objects.filter(
         is_held=True, sold_by=request.user
     ).prefetch_related('items__product').order_by('-held_at')
 
     default_joint = None
-    if request.user.primary_joint:
+    if hasattr(request.user, 'primary_joint') and request.user.primary_joint:
         default_joint = request.user.primary_joint
+
+    # ── Products ──────────────────────────────────────────────────────
+    # Load for the selected joint (query param) or default joint or all
+    joint_id = request.GET.get('joint_id') or (str(default_joint.pk) if default_joint else None)
+
+    products_qs = Product.objects.select_related(
+        'joint', 'category', 'brand', 'stock'
+    ).prefetch_related(
+        'free_accessories__accessory_product__stock'
+    ).filter(is_active=True)
+
+    if joint_id:
+        products_qs = products_qs.filter(joint_id=joint_id)
+
+    # Annotate free-accessories data onto each product
+    products = []
+    for p in products_qs:
+        accs = []
+        try:
+            for rule in p.free_accessories.filter(is_active=True).select_related('accessory_product'):
+                accs.append({
+                    'accessory_id': rule.accessory_product_id,
+                    'accessory_name': rule.accessory_product.name,
+                    'quantity': rule.quantity,
+                    'label': rule.get_label(),
+                })
+        except Exception:
+            pass
+        p.has_free_accessories = bool(accs)
+        p.free_accessories_json = _json.dumps(accs)
+        products.append(p)
+
+    # ── Categories ────────────────────────────────────────────────────
+    if joint_id:
+        categories = Category.objects.filter(joint_id=joint_id).order_by('sort_order', 'name')
+    elif default_joint:
+        categories = Category.objects.filter(joint=default_joint).order_by('sort_order', 'name')
+    else:
+        categories = Category.objects.all().order_by('name')
+
+    # ── Customers ─────────────────────────────────────────────────────
+    customers = []
+    try:
+        from customers.models import Customer as CustomerModel
+        customers = list(CustomerModel.objects.filter(is_active=True).order_by('name')[:300])
+    except Exception:
+        pass
+
+    # ── Settings ──────────────────────────────────────────────────────
+    from django.conf import settings as _settings
+    tax_rate = getattr(_settings, 'POS_TAX_RATE', 0)
 
     return render(request, 'pos/pos.html', {
         'joints': joints,
         'held_sales': held_sales,
         'default_joint': default_joint,
+        'products': products,
+        'categories': categories,
+        'customers': customers,
+        'tax_rate': tax_rate,
     })
 
 
