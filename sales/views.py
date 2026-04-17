@@ -56,50 +56,60 @@ def _get_or_create_customer(customer_id, customer_name, customer_phone, performe
 def dashboard(request):
     today = timezone.now().date()
 
-    today_sales = Sale.objects.filter(
-        sale_date__date=today, is_held=False
-    ).prefetch_related('items')
-    today_total = sum(sale.total_amount for sale in today_sales)
-    today_count = today_sales.count()
+    try:
+        today_sales = Sale.objects.filter(
+            sale_date__date=today, is_held=False
+        ).prefetch_related('items')
+        today_total = sum(sale.total_amount for sale in today_sales)
+        today_count = today_sales.count()
 
-    month_start = today.replace(day=1)
-    month_sales = Sale.objects.filter(
-        sale_date__date__gte=month_start, is_held=False
-    ).prefetch_related('items')
-    month_total = sum(sale.total_amount for sale in month_sales)
+        month_start = today.replace(day=1)
+        month_sales = Sale.objects.filter(
+            sale_date__date__gte=month_start, is_held=False
+        ).prefetch_related('items')
+        month_total = sum(sale.total_amount for sale in month_sales)
 
-    low_stock = Product.objects.select_related('stock', 'joint').filter(
-        is_active=True,
-        stock__quantity__lte=settings.LOW_STOCK_THRESHOLD
-    )
+        low_stock = Product.objects.select_related('stock', 'joint').filter(
+            is_active=True,
+            stock__quantity__lte=settings.LOW_STOCK_THRESHOLD
+        )
 
-    expiring_soon = Product.objects.select_related('stock', 'joint').filter(
-        is_active=True,
-        stock__expiry_date__isnull=False,
-        stock__expiry_date__lte=timezone.now().date() + timezone.timedelta(days=30)
-    )
+        expiring_soon = Product.objects.select_related('stock', 'joint').filter(
+            is_active=True,
+            stock__expiry_date__isnull=False,
+            stock__expiry_date__lte=timezone.now().date() + timezone.timedelta(days=30)
+        )
 
-    recent_sales = Sale.objects.select_related('joint', 'sold_by').prefetch_related('items').filter(
-        is_held=False
-    ).order_by('-created_at')[:10]
+        recent_sales = Sale.objects.select_related('joint', 'sold_by').prefetch_related('items').filter(
+            is_held=False
+        ).order_by('-created_at')[:10]
 
-    joint_stats = []
-    for joint in Joint.objects.all():
-        joint_today_sales = [s for s in today_sales if s.joint_id == joint.pk]
-        joint_today_total = sum(sale.total_amount for sale in joint_today_sales)
-        joint_stats.append({
-            'joint': joint,
-            'count': len(joint_today_sales),
-            'total': joint_today_total,
-        })
+        joint_stats = []
+        for joint in Joint.objects.all():
+            joint_today_sales = [s for s in today_sales if s.joint_id == joint.pk]
+            joint_today_total = sum(sale.total_amount for sale in joint_today_sales)
+            joint_stats.append({
+                'joint': joint,
+                'count': len(joint_today_sales),
+                'total': joint_today_total,
+            })
+    except Exception as e:
+        # Handle empty database or missing relationships gracefully
+        today_total = 0
+        today_count = 0
+        month_total = 0
+        low_stock = []
+        expiring_soon = []
+        recent_sales = []
+        joint_stats = []
 
     context = {
         'today_total': today_total,
         'today_count': today_count,
         'month_total': month_total,
-        'month_count': month_sales.count(),
+        'month_count': month_sales.count() if 'month_sales' in locals() else 0,
         'low_stock': low_stock,
-        'low_stock_count': low_stock.count(),
+        'low_stock_count': len(low_stock),
         'expiring_soon': expiring_soon,
         'recent_sales': recent_sales,
         'joint_stats': joint_stats,
