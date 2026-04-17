@@ -7,7 +7,7 @@
 {{ block.super }}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ── DESIGN TOKENS ───────────────────────────────────────── */
 :root {
@@ -823,6 +823,97 @@ td.today a { background: var(--blue-l) !important; color: var(--blue) !important
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.14); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.22); }
 </style>
+<style>
+:root {
+  --red: #9a6bff;
+  --red-h: #8658f6;
+  --red-bg: rgba(154,107,255,.14);
+  --red-bd: rgba(154,107,255,.26);
+  --purple: #b79dff;
+  --purple-l: #efe7ff;
+  --green: #8fe388;
+  --blue: #9dc5ff;
+  --amber: #f0c46b;
+  --d0: #171322;
+  --d1: #1d1730;
+  --d2: #241d39;
+  --d3: #2b2243;
+  --d4: #352a52;
+  --d5: #403161;
+  --dbd: rgba(210,189,255,.08);
+  --dbd2: rgba(210,189,255,.14);
+  --dbd3: rgba(210,189,255,.24);
+  --dtxt: rgba(250,246,255,.94);
+  --dmut: rgba(220,208,245,.62);
+  --dmut2: rgba(190,176,222,.32);
+  --s0: rgba(36, 29, 57, .78);
+  --s1: rgba(44, 36, 66, .82);
+  --s2: rgba(51, 42, 77, .88);
+  --s3: rgba(210,189,255,.16);
+  --stxt: rgba(250,246,255,.94);
+  --ssub: rgba(223,212,247,.68);
+  --smut: rgba(193,180,225,.46);
+  --sh: 1px solid rgba(210,189,255,.12);
+  --sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(183, 157, 255, .18), transparent 28%),
+    radial-gradient(circle at 85% 12%, rgba(126, 88, 246, .18), transparent 22%),
+    linear-gradient(160deg, #15111f 0%, #1d1730 36%, #241d39 100%) !important;
+}
+
+#gx-header,
+div.breadcrumbs,
+#nav-sidebar,
+#content-main .module,
+#changelist,
+.change-form .module,
+.inline-group,
+.submit-row,
+#gx-footer {
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+#gx-brand .gx-name,
+#content h1,
+#content-main h1 {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif !important;
+}
+
+#gx-brand .gx-mark,
+.gx-avatar {
+  background: linear-gradient(135deg, #9a6bff, #7b52ef) !important;
+  box-shadow: 0 12px 28px rgba(154,107,255,.28) !important;
+}
+
+.gx-rbtn.pos,
+.submit-row .default,
+ul.object-tools li a:hover,
+#changelist-search input[type="submit"]:hover,
+.actions button:hover,
+.actions input[type="submit"]:hover {
+  background: linear-gradient(135deg, #9a6bff, #7b52ef) !important;
+  border-color: transparent !important;
+}
+
+#changelist-search,
+.actions,
+.paginator,
+ul.toplinks,
+.submit-row {
+  background: rgba(255,255,255,.03) !important;
+}
+
+#result_list tbody tr:hover,
+#content-main .module td:hover,
+#nav-sidebar a:hover {
+  background: rgba(154,107,255,.08) !important;
+}
+</style>
 {% endblock %}
 
 {% block branding %}{% endblock %}
@@ -884,7 +975,7 @@ td.today a { background: var(--blue-l) !important; color: var(--blue) !important
 
   <div id="gx-right">
     <a href="/sales/pos/" class="gx-rbtn pos">■ POS</a>
-    <a href="/sales/dashboard/" class="gx-rbtn">⊞ Dashboard</a>
+    <a href="/analytics/dashboard/" class="gx-rbtn">⊞ Dashboard</a>
     <a href="/expenses/" class="gx-rbtn">≡ Expenses</a>
 
     {% if user.is_authenticated %}
@@ -902,7 +993,7 @@ td.today a { background: var(--blue-l) !important; color: var(--blue) !important
 
 {% block footer %}
 <div id="gx-footer">
-  <span>GENX POS · ADMIN</span>
+  <span>GENX POS · PRO ADMIN</span>
   <span>Eyedentity · GenX Zimbabwe · Armor Sole</span>
 </div>
 {% endblock %}

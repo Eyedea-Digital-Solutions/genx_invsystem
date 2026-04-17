@@ -5,7 +5,7 @@
 
 {% block content_title %}
 <h1>
-  <span style="width:36px;height:36px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;">⚡</span>
+  <span style="width:36px;height:36px;background:var(--accent-bg);border:1px solid var(--red-bd);border-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;color:var(--purple-l);">✦</span>
   Dashboard
   <span style="font-family:var(--mono);font-size:10px;font-weight:500;color:var(--smut);letter-spacing:1px;text-transform:uppercase;margin-left:4px;align-self:flex-end;padding-bottom:2px;">GenX POS</span>
 </h1>
@@ -206,14 +206,14 @@
 
   <div class="gxd-panel">
     <div class="gxd-panel-head">
-      <div class="gxd-panel-icon" style="background:rgba(229,25,58,.1);color:var(--red);">
+      <div class="gxd-panel-icon" style="background:var(--accent-bg);color:var(--purple);">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </div>
       Users &amp; Joints
     </div>
     <div class="gxd-panel-grid">
       <a href="{% url 'admin:users_user_changelist' %}" class="gxd-ql">
-        <span class="gxd-ql-dot" style="background:var(--red);"></span>All Users
+        <span class="gxd-ql-dot" style="background:var(--purple);"></span>All Users
       </a>
       <a href="{% url 'admin:users_user_add' %}" class="gxd-ql gxd-ql--add">
         <span class="gxd-ql-dot" style="background:#16a34a;"></span>+ Add User
@@ -387,7 +387,7 @@
   transition: background .1s, color .1s;
 }
 .gxd-ql:nth-child(2n) { border-right: none; }
-.gxd-ql:hover { background: var(--s1); color: var(--red); }
+.gxd-ql:hover { background: var(--s1); color: var(--purple); }
 .gxd-ql--add { color: #15803d; font-weight: 600; }
 .gxd-ql--add:hover { color: #14532d; background: #f0fdf4; }
 .gxd-ql--warn { color: #92400e; }
