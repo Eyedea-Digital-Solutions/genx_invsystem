@@ -51,7 +51,6 @@ def _get_or_create_customer(customer_id, customer_name, customer_phone, performe
 
     return None
 
-
 @login_required
 def dashboard(request):
     today = timezone.now().date()

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Sales Dashboard{% endblock %}
 
-{% block nav_dashboard %}active{% endblock %}
+{% block nav_sales %}active{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -152,8 +152,11 @@
   <div class="dashboard-header">
     <div class="section-header">
       <div class="section-title">
-        <div class="section-title-icon"><i class="bi bi-speedometer2"></i></div>
-        Dashboard
+        <div class="section-title-icon"><i class="bi bi-graph-up-arrow"></i></div>
+        <div>
+          <div>Sales Dashboard</div>
+          <div style="font-size: 12px; color: var(--text-muted); font-weight: 400; margin-top: 2px;">Real-time sales metrics & insights</div>
+        </div>
       </div>
     </div>
   </div>
