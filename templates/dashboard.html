@@ -5,52 +5,347 @@
 
 {% block extra_css %}
 <style>
-  .dashboard-container { padding: 24px; }
+  .dashboard-container { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  
+  .dashboard-header {
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .section-header { margin-bottom: 24px; }
+  .section-title { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 600; }
+  .section-title-icon { width: 32px; height: 32px; background: var(--accent); color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  
   .kpi-grid { 
     display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
-    gap: 20px; 
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); 
+    gap: 16px; 
     margin-bottom: 32px; 
+  }
+  
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  
+  .kpi-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(154,107,255,.15);
+    transform: translateY(-2px);
+  }
+  
+  .kpi-icon { font-size: 24px; color: var(--accent); margin-bottom: 8px; }
+  .kpi-label { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; margin-bottom: 6px; }
+  .kpi-value { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .kpi-sub { font-size: 12px; color: var(--text-muted); }
+  
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  
+  @media (max-width: 1024px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+  }
+  
+  .card-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .card-header {
+    background: linear-gradient(135deg, rgba(154,107,255,.08) 0%, rgba(124,58,237,.08) 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .card-title { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 16px; }
+  
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-2);
+  }
+  
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: var(--text-muted); font-size: 13px; }
+  .stat-value { font-weight: 600; color: var(--text); }
+  
+  .table-responsive {
+    overflow-x: auto;
+  }
+  
+  .mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  
+  .mini-table th {
+    background: var(--surface-2);
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .mini-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-2);
+    color: var(--text);
+  }
+  
+  .mini-table tr:hover {
+    background: var(--surface-2);
+  }
+  
+  .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .badge-warning { background: rgba(251,146,60,.15); color: #fb923c; }
+  .badge-danger { background: rgba(251,113,133,.15); color: #f43f5e; }
+  .badge-success { background: rgba(74,222,128,.15); color: #4ade80; }
+  
+  .branch-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .branch-info { flex: 1; }
+  .branch-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+  .branch-stats { font-size: 12px; color: var(--text-muted); }
+  .branch-metrics { display: flex; gap: 16px; align-items: center; }
+  .metric { text-align: right; }
+  .metric-label { font-size: 11px; color: var(--text-muted); }
+  .metric-value { font-weight: 700; font-size: 14px; }
+  
+  .empty-state {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-muted);
   }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
-  <div class="section-header">
-    <div class="section-title">
-      <div class="section-title-icon"><i class="bi bi-speedometer2"></i></div>
-      Dashboard
+  <!-- HEADER -->
+  <div class="dashboard-header">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-title-icon"><i class="bi bi-speedometer2"></i></div>
+        Dashboard
+      </div>
     </div>
   </div>
 
+  <!-- KPI CARDS -->
   <div class="kpi-grid">
     <div class="kpi-card">
       <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
       <div class="kpi-label">Today's Revenue</div>
       <div class="kpi-value">${{ today_total|floatformat:2 }}</div>
-      <div class="kpi-sub">{{ today_count }} sale{{ today_count|pluralize }}</div>
+      <div class="kpi-sub">{{ today_count }} transaction{{ today_count|pluralize }}</div>
     </div>
 
     <div class="kpi-card">
       <div class="kpi-icon"><i class="bi bi-graph-up"></i></div>
       <div class="kpi-label">Month Revenue</div>
       <div class="kpi-value">${{ month_total|floatformat:2 }}</div>
-      <div class="kpi-sub">{{ month_count }} sale{{ month_count|pluralize }}</div>
+      <div class="kpi-sub">{{ month_count }} transaction{{ month_count|pluralize }}</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon"><i class="bi bi-exclamation-triangle"></i></div>
+      <div class="kpi-label">Low Stock Items</div>
+      <div class="kpi-value">{{ low_stock_count }}</div>
+      <div class="kpi-sub">Requires attention</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon"><i class="bi bi-clock-history"></i></div>
+      <div class="kpi-label">Expiring Soon</div>
+      <div class="kpi-value">{{ expiring_soon|length }}</div>
+      <div class="kpi-sub">Within 30 days</div>
     </div>
   </div>
 
-  {% if low_stock %}
-  <div class="gx-card">
-    <div class="gx-card-head">
-      <div class="gx-card-title">Low Stock Alerts</div>
+  <!-- MAIN CONTENT GRID -->
+  <div class="dashboard-grid">
+    <!-- LEFT COLUMN -->
+    <div>
+      <!-- BRANCH PERFORMANCE -->
+      {% if joint_stats %}
+      <div class="card-section" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-diagram-3"></i> Branch Performance</div>
+        </div>
+        <div class="card-body">
+          {% for stat in joint_stats %}
+          <div class="branch-card">
+            <div class="branch-info">
+              <div class="branch-name">{{ stat.joint.name }}</div>
+              <div class="branch-stats">{{ stat.count }} sales today</div>
+            </div>
+            <div class="branch-metrics">
+              <div class="metric">
+                <div class="metric-label">Revenue</div>
+                <div class="metric-value" style="color: var(--green);">${{ stat.total|floatformat:2 }}</div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- LOW STOCK ALERTS -->
+      {% if low_stock %}
+      <div class="card-section">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-exclamation-circle"></i> Low Stock Alerts</div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Stock</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for product in low_stock|slice:":8" %}
+                <tr>
+                  <td>{{ product.name }}</td>
+                  <td>
+                    <span class="badge badge-danger">{{ product.stock.quantity }}</span>
+                  </td>
+                  <td>
+                    <a href="/inventory/" style="color: var(--accent); text-decoration: none; font-size: 11px; font-weight: 600;">
+                      Reorder
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="card-section">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-exclamation-circle"></i> Low Stock Alerts</div>
+        </div>
+        <div class="card-body">
+          <div class="empty-state">
+            <i class="bi bi-check-circle" style="font-size: 32px; color: var(--green); margin-bottom: 8px; display: block;"></i>
+            <p>All stock levels are healthy</p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
-    <div class="gx-card-body">
-      {% for product in low_stock|slice:":5" %}
-      <div>{{ product.name }} - {{ product.stock.quantity }} left</div>
-      {% endfor %}
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <!-- RECENT SALES -->
+      {% if recent_sales %}
+      <div class="card-section" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-receipt"></i> Recent Sales</div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Total</th>
+                  <th>Items</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for sale in recent_sales|slice:":8" %}
+                <tr>
+                  <td>{{ sale.sale_date|date:"H:i" }}</td>
+                  <td style="font-weight: 600; color: var(--green);">${{ sale.total_amount|floatformat:2 }}</td>
+                  <td>{{ sale.items.count }} item{{ sale.items.count|pluralize }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- EXPIRING SOON -->
+      {% if expiring_soon %}
+      <div class="card-section">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-calendar-x"></i> Expiring Soon</div>
+        </div>
+        <div class="card-body">
+          {% for product in expiring_soon|slice:":6" %}
+          <div class="stat-row">
+            <div>
+              <div class="stat-label">{{ product.name }}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">
+                Exp: {{ product.stock.expiry_date|date:"M d, Y" }}
+              </div>
+            </div>
+            <div class="stat-value" style="color: var(--rose);">
+              {{ product.stock.quantity }} left
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="card-section">
+        <div class="card-header">
+          <div class="card-title"><i class="bi bi-calendar-x"></i> Expiring Soon</div>
+        </div>
+        <div class="card-body">
+          <div class="empty-state">
+            <i class="bi bi-check-circle" style="font-size: 32px; color: var(--green); margin-bottom: 8px; display: block;"></i>
+            <p>No products expiring soon</p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
-  {% endif %}
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh dashboard every 60 seconds
+    setTimeout(function() {
+      location.reload();
+    }, 60000);
+  });
+</script>
 {% endblock %}
