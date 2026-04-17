@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>POS Terminal — GenX</title>
-  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <link rel="manifest" href="/manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
@@ -93,7 +93,7 @@
       left: 12px;
       top: 50%;
       transform: translateY(-50%);
-      color: var(--text-muted);
+      color: var(--text-3);
       font-size: 14px;
       pointer-events: none;
     }
@@ -111,7 +111,7 @@
     .pos-topbar-btn {
       background: var(--surface-2);
       border: 1px solid var(--border);
-      color: var(--text-muted);
+      color: var(--text-3);
       padding: 6px 12px;
       border-radius: 9px;
       font-size: 12px;
@@ -150,7 +150,7 @@
       border-radius: 10px;
       border: 1.5px solid var(--border);
       background: var(--surface-2);
-      color: var(--text-muted);
+      color: var(--text-3);
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
@@ -202,7 +202,7 @@
       border-radius: 20px;
       border: 1px solid var(--border);
       background: var(--surface-2);
-      color: var(--text-muted);
+      color: var(--text-3);
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
@@ -247,9 +247,8 @@
       box-shadow: 0 10px 28px rgba(154,107,255,.18);
     }
     .product-card:active { transform: scale(.96); }
-    .product-card.out-of-stock { opacity: .3; pointer-events: none; }
+    .product-card.out-of-stock { opacity: .35; pointer-events: none; }
 
-    /* ── IMAGE FIX ──────────────────────────────── */
     .product-img-wrap {
       width: 100%;
       aspect-ratio: 1;
@@ -267,8 +266,7 @@
       object-fit: cover;
       display: block;
     }
-    .product-img-wrap img.error,
-    .product-img-wrap .img-placeholder {
+    .img-placeholder {
       width: 100%;
       height: 100%;
       display: flex;
@@ -277,8 +275,6 @@
       font-size: 30px;
       background: var(--surface-2);
     }
-    .product-img-wrap img.error { display: none; }
-    .product-img-wrap .img-placeholder { display: flex; }
 
     .product-name {
       font-size: 12px;
@@ -297,10 +293,7 @@
       font-weight: 700;
       color: var(--accent);
     }
-    .product-stock {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
+    .product-stock { font-size: 11px; color: var(--text-3); }
     .product-stock.low { color: var(--amber); }
     .product-stock.out { color: var(--rose); }
     .product-badge {
@@ -323,7 +316,6 @@
       right: auto;
     }
 
-    /* ── NO PRODUCTS STATE ──────────────────────── */
     .pos-empty-state {
       grid-column: 1 / -1;
       display: flex;
@@ -332,7 +324,7 @@
       justify-content: center;
       gap: 12px;
       padding: 60px 20px;
-      color: var(--text-muted);
+      color: var(--text-3);
       text-align: center;
     }
     .pos-empty-state i { font-size: 48px; opacity: .2; }
@@ -373,7 +365,7 @@
     .cart-hbtn {
       background: var(--surface-2);
       border: 1px solid var(--border);
-      color: var(--text-muted);
+      color: var(--text-3);
       padding: 5px 10px;
       border-radius: 8px;
       font-size: 12px;
@@ -445,11 +437,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .cart-item-sub {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 1px;
-    }
+    .cart-item-sub { font-size: 10px; color: var(--text-3); margin-top: 1px; }
     .cart-item-sub.free-label { color: #7c3aed; font-weight: 600; }
     .cart-item-qty {
       display: flex;
@@ -491,7 +479,7 @@
     }
     .cart-item-price.free { color: #7c3aed; font-size: 11px; }
     .cart-item-remove {
-      color: var(--text-muted);
+      color: var(--text-3);
       cursor: pointer;
       padding: 4px;
       border-radius: 5px;
@@ -509,13 +497,12 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      color: var(--text-muted);
+      color: var(--text-3);
       padding: 32px;
       text-align: center;
     }
     .cart-empty i { font-size: 40px; opacity: .18; }
 
-    /* ── CART TOTALS ─────────────────────────────── */
     .cart-totals {
       padding: 12px 16px;
       border-top: 1px solid var(--border);
@@ -529,7 +516,7 @@
       justify-content: space-between;
       align-items: center;
       font-size: 12px;
-      color: var(--text-muted);
+      color: var(--text-3);
     }
     .total-row.grand {
       font-size: 18px;
@@ -542,7 +529,6 @@
     }
     .total-row.grand .label { color: var(--text); font-family: var(--font); font-size: 14px; }
 
-    /* ── PAYMENT ─────────────────────────────────── */
     .cart-payment {
       padding: 12px 16px;
       border-top: 1px solid var(--border);
@@ -561,7 +547,7 @@
       border-radius: 10px;
       border: 1.5px solid var(--border);
       background: var(--surface-2);
-      color: var(--text-muted);
+      color: var(--text-3);
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
@@ -616,7 +602,7 @@
       transition: all .18s;
     }
     .discount-row input:focus { border-color: var(--accent); }
-    .discount-row span { font-size: 12px; color: var(--text-muted); }
+    .discount-row span { font-size: 12px; color: var(--text-3); }
     .btn-checkout {
       width: 100%;
       padding: 13px;
@@ -647,7 +633,7 @@
       border-radius: 10px;
       background: var(--surface-2);
       border: 1px solid var(--border);
-      color: var(--text-muted);
+      color: var(--text-3);
       cursor: pointer;
       transition: all .15s;
     }
@@ -739,7 +725,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .5px;
-      color: var(--text-muted);
+      color: var(--text-3);
       margin-bottom: 5px;
     }
     .custom-field input {
@@ -767,7 +753,7 @@
     }
     .custom-btn-add { background: var(--accent); color: #fff; }
     .custom-btn-add:hover { background: #6d28d9; }
-    .custom-btn-cancel { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border) !important; }
+    .custom-btn-cancel { background: var(--surface-2); color: var(--text-3); border: 1px solid var(--border) !important; }
 
     /* ── FREE ACC TOAST ──────────────────────────── */
     .free-acc-toast {
@@ -810,7 +796,6 @@
       overflow-y: auto;
     }
 
-    /* ── TOAST STACK ─────────────────────────────── */
     #toast-stack {
       position: fixed;
       top: 72px;
@@ -886,6 +871,7 @@
     </div>
     <div class="pos-grid" id="product-grid">
       {% for product in products %}
+      {# FIX: removed broken .filter().exists template tag - use pre-computed flag from view instead #}
       <div class="product-card {% if product.current_stock <= 0 %}out-of-stock{% endif %}"
            data-id="{{ product.id }}"
            data-name="{{ product.name|escapejs }}"
@@ -894,19 +880,18 @@
            data-cat="{{ product.category_id|default:'' }}"
            data-joint="{{ product.joint_id }}"
            data-sku="{{ product.code|default:'' }}"
-           data-free-acc="{{ product.free_accessories.all|join:',' }}"
+           data-has-free="{% if product.has_free_accessories %}1{% else %}0{% endif %}"
            onclick="POS.addToCart(this)">
 
-        <!-- IMAGE with proper error handling -->
-        <div class="product-img-wrap" id="img-wrap-{{ product.id }}">
+        <div class="product-img-wrap">
           {% if product.image %}
           <img
             src="{{ product.image.url }}"
             alt="{{ product.name }}"
             loading="lazy"
-            onerror="this.style.display='none'; document.getElementById('ph-{{ product.id }}').style.display='flex';"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
           >
-          <div class="img-placeholder" id="ph-{{ product.id }}" style="display:none;">📦</div>
+          <div class="img-placeholder" style="display:none;">📦</div>
           {% else %}
           <div class="img-placeholder">📦</div>
           {% endif %}
@@ -915,7 +900,7 @@
         {% if product.current_stock <= 5 and product.current_stock > 0 %}
           <span class="product-badge">Low</span>
         {% endif %}
-        {% if product.free_accessories.filter(is_active=True).exists %}
+        {% if product.has_free_accessories %}
           <span class="product-badge free-acc" title="Includes free accessories">🎁</span>
         {% endif %}
 
@@ -1002,7 +987,15 @@
   <div class="numpad-box">
     <div class="numpad-display" id="numpad-display">0</div>
     <div class="numpad-grid">
-      {% for n in '789456123' %}<button class="numpad-key" onclick="POS.numpadPress('{{ n }}')">{{ n }}</button>{% endfor %}
+      <button class="numpad-key" onclick="POS.numpadPress('7')">7</button>
+      <button class="numpad-key" onclick="POS.numpadPress('8')">8</button>
+      <button class="numpad-key" onclick="POS.numpadPress('9')">9</button>
+      <button class="numpad-key" onclick="POS.numpadPress('4')">4</button>
+      <button class="numpad-key" onclick="POS.numpadPress('5')">5</button>
+      <button class="numpad-key" onclick="POS.numpadPress('6')">6</button>
+      <button class="numpad-key" onclick="POS.numpadPress('1')">1</button>
+      <button class="numpad-key" onclick="POS.numpadPress('2')">2</button>
+      <button class="numpad-key" onclick="POS.numpadPress('3')">3</button>
       <button class="numpad-key key-0" onclick="POS.numpadPress('0')">0</button>
       <button class="numpad-key" onclick="POS.numpadPress('.')">.</button>
       <button class="numpad-key key-del" onclick="POS.numpadDel()"><i class="bi bi-backspace"></i></button>
@@ -1020,7 +1013,7 @@
     <h3><i class="bi bi-plus-circle" style="color:var(--accent)"></i> Add Custom Item</h3>
     <div class="custom-field">
       <label>Item Description *</label>
-      <input type="text" id="custom-name" placeholder="e.g. Repair service, Labour charge…" autofocus>
+      <input type="text" id="custom-name" placeholder="e.g. Repair service, Labour charge…">
     </div>
     <div class="custom-field">
       <label>Unit Price ($) *</label>
@@ -1065,23 +1058,13 @@
 const CSRF_TOKEN = '{{ csrf_token }}';
 const TAX_RATE = {{ tax_rate|default:0 }};
 
-// ── FREE ACCESSORIES MAP ──────────────────────────────
-// Pre-load from Django template context
+// Pre-load free accessories from Django context
+// FIXED: removed broken .filter(is_active=True).exists template filter
+// The view should pass product.has_free_accessories and product.free_accessories_list
 const FREE_ACCESSORIES = {};
 {% for product in products %}
-  {% if product.free_accessories.all %}
-  FREE_ACCESSORIES['{{ product.id }}'] = [
-    {% for acc in product.free_accessories.all %}
-    {% if acc.is_active %}
-    {
-      accessory_id: '{{ acc.accessory_product.id }}',
-      accessory_name: '{{ acc.accessory_product.name|escapejs }}',
-      quantity: {{ acc.quantity }},
-      label: '{{ acc.get_label|escapejs }}',
-    },
-    {% endif %}
-    {% endfor %}
-  ];
+  {% if product.has_free_accessories %}
+  FREE_ACCESSORIES['{{ product.id }}'] = {{ product.free_accessories_json|default:'[]' }};
   {% endif %}
 {% endfor %}
 </script>
@@ -1128,14 +1111,12 @@ const POS = (() => {
       card.style.display = show ? '' : 'none';
       if (show) anyVisible = true;
     });
-    // Show/hide empty state
     let emptyEl = document.getElementById('pos-empty-dynamic');
     if (!anyVisible) {
       if (!emptyEl) {
         emptyEl = document.createElement('div');
         emptyEl.id = 'pos-empty-dynamic';
         emptyEl.className = 'pos-empty-state';
-        emptyEl.style.gridColumn = '1 / -1';
         emptyEl.innerHTML = '<i class="bi bi-search" style="font-size:40px;opacity:.2;"></i><p>No products found for this selection.</p>';
         document.getElementById('product-grid').appendChild(emptyEl);
       }
@@ -1145,7 +1126,6 @@ const POS = (() => {
   }
 
   function _refreshCategories() {
-    // Show only categories that have visible products for current joint
     document.querySelectorAll('.pos-cat-btn').forEach(btn => {
       if (!btn.dataset.cat) { btn.style.display = ''; return; }
       const hasProducts = Array.from(document.querySelectorAll(`.product-card[data-cat="${btn.dataset.cat}"]`))
@@ -1154,7 +1134,6 @@ const POS = (() => {
     });
   }
 
-  // ── SEARCH ──────────────────────────────────────
   function _initSearch() {
     document.getElementById('product-search')?.addEventListener('input', () => _applyFilters());
   }
@@ -1175,9 +1154,7 @@ const POS = (() => {
       cart.push({ id, name, price, qty: 1, stock, isCustom: false, isFree: false });
     }
 
-    // Check for free accessories
     _applyFreeAccessories(id, 1);
-
     renderCart();
     updateTotals();
   }
@@ -1188,22 +1165,22 @@ const POS = (() => {
 
     const added = [];
     accs.forEach(acc => {
-      const freeQty = acc.quantity * qty;
-      const existing = cart.find(i => i.id === acc.accessory_id && i.isFree);
+      const freeQty = (acc.quantity || 1) * qty;
+      const existing = cart.find(i => i.id === String(acc.accessory_id) && i.isFree);
       if (existing) {
         existing.qty += freeQty;
       } else {
         cart.push({
-          id: acc.accessory_id,
+          id: String(acc.accessory_id),
           name: acc.accessory_name,
           price: 0,
           qty: freeQty,
           stock: 9999,
           isCustom: false,
           isFree: true,
-          label: acc.label,
+          label: acc.label || 'Free Gift',
         });
-        added.push(acc.label);
+        added.push(acc.label || acc.accessory_name);
       }
     });
     if (added.length) _showFreeAccToast('🎁 Free: ' + added.join(', '));
@@ -1211,6 +1188,7 @@ const POS = (() => {
 
   function _showFreeAccToast(msg) {
     const el = document.getElementById('free-acc-toast');
+    if (!el) return;
     el.textContent = msg;
     el.classList.add('show');
     clearTimeout(el._t);
@@ -1250,18 +1228,16 @@ const POS = (() => {
     const item = cart.find(i => i.id === id);
     if (!item) return;
 
-    const oldQty = item.qty;
     item.qty += delta;
 
     if (item.qty <= 0) {
-      // When removing, also remove linked free accessories if they were added for this product
       cart = cart.filter(i => i.id !== id);
       if (!item.isCustom && !item.isFree && FREE_ACCESSORIES[id]) {
         FREE_ACCESSORIES[id].forEach(acc => {
-          const freeItem = cart.find(i => i.id === acc.accessory_id && i.isFree);
+          const freeItem = cart.find(i => i.id === String(acc.accessory_id) && i.isFree);
           if (freeItem) {
-            freeItem.qty -= acc.quantity;
-            if (freeItem.qty <= 0) cart = cart.filter(i => !(i.id === acc.accessory_id && i.isFree));
+            freeItem.qty -= (acc.quantity || 1);
+            if (freeItem.qty <= 0) cart = cart.filter(i => !(i.id === String(acc.accessory_id) && i.isFree));
           }
         });
       }
@@ -1270,19 +1246,15 @@ const POS = (() => {
       _toast('Not enough stock', 'warning');
       return;
     } else if (!item.isCustom && !item.isFree && delta > 0) {
-      // Increasing qty — add free accessories for delta
       _applyFreeAccessories(id, delta);
-    } else if (!item.isCustom && !item.isFree && delta < 0) {
-      // Decreasing qty — remove proportional free accessories
-      if (FREE_ACCESSORIES[id]) {
-        FREE_ACCESSORIES[id].forEach(acc => {
-          const freeItem = cart.find(i => i.id === acc.accessory_id && i.isFree);
-          if (freeItem) {
-            freeItem.qty += acc.quantity * delta; // delta is negative
-            if (freeItem.qty <= 0) cart = cart.filter(i => !(i.id === acc.accessory_id && i.isFree));
-          }
-        });
-      }
+    } else if (!item.isCustom && !item.isFree && delta < 0 && FREE_ACCESSORIES[id]) {
+      FREE_ACCESSORIES[id].forEach(acc => {
+        const freeItem = cart.find(i => i.id === String(acc.accessory_id) && i.isFree);
+        if (freeItem) {
+          freeItem.qty += (acc.quantity || 1) * delta;
+          if (freeItem.qty <= 0) cart = cart.filter(i => !(i.id === String(acc.accessory_id) && i.isFree));
+        }
+      });
     }
     renderCart();
     updateTotals();
@@ -1292,7 +1264,7 @@ const POS = (() => {
     const item = cart.find(i => i.id === id);
     if (item && !item.isCustom && !item.isFree && FREE_ACCESSORIES[id]) {
       FREE_ACCESSORIES[id].forEach(acc => {
-        cart = cart.filter(i => !(i.id === acc.accessory_id && i.isFree));
+        cart = cart.filter(i => !(i.id === String(acc.accessory_id) && i.isFree));
       });
     }
     cart = cart.filter(i => i.id !== id);
@@ -1318,18 +1290,18 @@ const POS = (() => {
 
     container.querySelectorAll('.cart-item').forEach(e => e.remove());
     if (!cart.length) {
-      empty && (empty.style.display = 'flex');
+      if (empty) empty.style.display = 'flex';
       return;
     }
-    empty && (empty.style.display = 'none');
+    if (empty) empty.style.display = 'none';
 
     cart.forEach(item => {
       const el = document.createElement('div');
       el.className = 'cart-item' + (item.isFree ? ' is-free' : '');
       el.innerHTML = `
         <div class="cart-item-info">
-          <div class="cart-item-name">${item.name}</div>
-          ${item.isFree ? `<div class="cart-item-sub free-label">🎁 ${item.label || 'FREE'}</div>` :
+          <div class="cart-item-name">${_esc(item.name)}</div>
+          ${item.isFree ? `<div class="cart-item-sub free-label">🎁 ${_esc(item.label || 'FREE')}</div>` :
             item.isCustom ? '<div class="cart-item-sub">Custom item</div>' : ''}
         </div>
         <div class="cart-item-qty">
@@ -1344,33 +1316,41 @@ const POS = (() => {
     });
   }
 
+  function _esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   // ── TOTALS ───────────────────────────────────────
   function updateTotals() {
     const subtotal  = cart.filter(i => !i.isFree).reduce((s, i) => s + i.price * i.qty, 0);
-    const discPct   = parseFloat(document.getElementById('discount-input')?.value || 0);
+    const discPct   = parseFloat(document.getElementById('discount-input')?.value || 0) || 0;
     const discount  = subtotal * (discPct / 100);
     const taxable   = subtotal - discount;
     const tax       = taxable * (TAX_RATE / 100);
     const total     = taxable + tax;
 
-    document.getElementById('subtotal').textContent       = '$' + subtotal.toFixed(2);
+    document.getElementById('subtotal').textContent        = '$' + subtotal.toFixed(2);
     document.getElementById('discount-display').textContent = '-$' + discount.toFixed(2);
-    document.getElementById('tax-display').textContent    = '$' + tax.toFixed(2);
-    document.getElementById('total').textContent          = '$' + total.toFixed(2);
-    document.getElementById('checkout-total').textContent = '$' + total.toFixed(2);
-    document.getElementById('checkout-btn').disabled      = cart.length === 0;
+    document.getElementById('tax-display').textContent     = '$' + tax.toFixed(2);
+    document.getElementById('total').textContent           = '$' + total.toFixed(2);
+    document.getElementById('checkout-total').textContent  = '$' + total.toFixed(2);
+    document.getElementById('checkout-btn').disabled       = cart.length === 0;
     _updateChange(total);
     return { subtotal, discount, tax, total };
   }
 
   function _updateChange(total) {
-    if (paymentMethod !== 'cash') { document.getElementById('change-display').style.display = 'none'; return; }
-    const tendered = parseFloat(document.getElementById('cash-tendered')?.value || 0);
+    if (paymentMethod !== 'cash') {
+      document.getElementById('change-display').style.display = 'none';
+      return;
+    }
+    const tendered = parseFloat(document.getElementById('cash-tendered')?.value || 0) || 0;
     const changeEl = document.getElementById('change-display');
     if (tendered > 0 && total > 0) {
       const change = tendered - total;
       changeEl.style.display = '';
       document.getElementById('change-amount').textContent = '$' + Math.max(0, change).toFixed(2);
+      changeEl.style.background = change < 0 ? 'rgba(251,113,133,.1)' : 'rgba(74,222,128,.1)';
       changeEl.style.color = change < 0 ? 'var(--rose)' : 'var(--green)';
     } else {
       changeEl.style.display = 'none';
@@ -1381,12 +1361,13 @@ const POS = (() => {
   async function checkout() {
     if (!cart.length) return;
     const { subtotal, discount, tax, total } = updateTotals();
-    const tendered   = parseFloat(document.getElementById('cash-tendered')?.value || total);
+    const tendered   = parseFloat(document.getElementById('cash-tendered')?.value || total) || total;
     const customerId = document.getElementById('cart-customer')?.value || '';
-    const discPct    = parseFloat(document.getElementById('discount-input')?.value || 0);
+    const discPct    = parseFloat(document.getElementById('discount-input')?.value || 0) || 0;
 
     if (paymentMethod === 'cash' && tendered < total) {
-      _toast('Cash tendered is less than total', 'danger'); return;
+      _toast('Cash tendered is less than total', 'danger');
+      return;
     }
 
     const payload = {
@@ -1430,7 +1411,7 @@ const POS = (() => {
         _showReceipt(data);
         _toast('Sale complete! #' + data.receipt_number, 'success');
       } else {
-        _toast(data.error || 'Sale failed', 'danger');
+        _toast(data.error || 'Sale failed — please try again', 'danger');
         _resetCheckoutBtn(total);
       }
     } catch (err) {
@@ -1438,7 +1419,7 @@ const POS = (() => {
         await OfflineManager.queueSale(payload, CSRF_TOKEN);
         _showOfflineReceipt(total);
       } else {
-        _toast('Network error', 'danger');
+        _toast('Network error — please check connection', 'danger');
       }
       _resetCheckoutBtn(total);
     }
@@ -1447,41 +1428,66 @@ const POS = (() => {
   function _resetCheckoutBtn(total) {
     const btn = document.getElementById('checkout-btn');
     btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-check-circle"></i> Charge $' + total.toFixed(2);
+    btn.innerHTML = '<i class="bi bi-check-circle"></i> Charge $' + (total || 0).toFixed(2);
   }
 
   function _showReceipt(data) {
-    const html = data.receipt_html || `<h5 style="text-align:center">RECEIPT</h5><p style="text-align:center">#${data.receipt_number}</p><hr>${cart.filter(i=>!i.isFree).map(i=>`<p>${i.name} ×${i.qty} — $${(i.price*i.qty).toFixed(2)}</p>`).join('')}${cart.filter(i=>i.isFree).map(i=>`<p style="color:green">${i.name} ×${i.qty} — FREE 🎁</p>`).join('')}<hr><p><strong>TOTAL: $${data.total_amount || cart.reduce((s,i)=>s+i.price*i.qty,0).toFixed(2)}</strong></p><p style="text-align:center;font-size:11px;">Thank you!</p>`;
+    const cartLines = cart.filter(i => !i.isFree).map(i =>
+      `<p>${_esc(i.name)} ×${i.qty} — $${(i.price * i.qty).toFixed(2)}</p>`
+    ).join('');
+    const freeLines = cart.filter(i => i.isFree).map(i =>
+      `<p style="color:green">${_esc(i.name)} ×${i.qty} — FREE 🎁</p>`
+    ).join('');
+    const html = data.receipt_html ||
+      `<h5 style="text-align:center">RECEIPT</h5>
+       <p style="text-align:center">#${_esc(data.receipt_number)}</p>
+       <hr>${cartLines}${freeLines}
+       <hr><p><strong>TOTAL: $${data.total_amount || '0.00'}</strong></p>
+       <p style="text-align:center;font-size:11px;">Thank you!</p>`;
     document.getElementById('receipt-content').innerHTML = html;
-    new bootstrap.Modal(document.getElementById('receiptModal')).show();
+    const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+    modal.show();
   }
 
   function _showOfflineReceipt(total) {
-    document.getElementById('receipt-content').innerHTML = `<h5 style="text-align:center">OFFLINE RECEIPT</h5><p style="text-align:center;color:#888"><em>Will sync when online</em></p><hr>${cart.filter(i=>!i.isFree).map(i=>`<p>${i.name} ×${i.qty} — $${(i.price*i.qty).toFixed(2)}</p>`).join('')}<hr><p><strong>TOTAL: $${total.toFixed(2)}</strong></p>`;
-    new bootstrap.Modal(document.getElementById('receiptModal')).show();
+    const cartLines = cart.filter(i => !i.isFree).map(i =>
+      `<p>${_esc(i.name)} ×${i.qty} — $${(i.price * i.qty).toFixed(2)}</p>`
+    ).join('');
+    document.getElementById('receipt-content').innerHTML =
+      `<h5 style="text-align:center">OFFLINE RECEIPT</h5>
+       <p style="text-align:center;color:#888"><em>Will sync when online</em></p>
+       <hr>${cartLines}
+       <hr><p><strong>TOTAL: $${total.toFixed(2)}</strong></p>`;
+    const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+    modal.show();
   }
 
   function newSale() {
     cart = [];
     renderCart();
     updateTotals();
-    document.getElementById('cash-tendered').value = '';
-    document.getElementById('discount-input').value = '';
-    document.getElementById('product-search').value = '';
+    const cashEl = document.getElementById('cash-tendered');
+    const discEl = document.getElementById('discount-input');
+    const searchEl = document.getElementById('product-search');
+    if (cashEl) cashEl.value = '';
+    if (discEl) discEl.value = '';
+    if (searchEl) { searchEl.value = ''; searchEl.focus(); }
     _applyFilters();
-    document.getElementById('product-search').focus();
   }
 
   function printReceipt() {
     const content = document.getElementById('receipt-content').innerHTML;
     const w = window.open('', '_blank', 'width=400,height=600');
-    w.document.write(`<html><head><title>Receipt</title><style>body{font-family:'Courier New',monospace;font-size:12px;padding:20px;}</style></head><body>${content}</body></html>`);
-    w.document.close(); w.print();
+    if (w) {
+      w.document.write(`<html><head><title>Receipt</title><style>body{font-family:'Courier New',monospace;font-size:12px;padding:20px;}</style></head><body>${content}</body></html>`);
+      w.document.close();
+      w.print();
+    }
   }
 
   // ── NUMPAD ───────────────────────────────────────
   function openNumpad() {
-    numpadVal = document.getElementById('cash-tendered').value || '';
+    numpadVal = document.getElementById('cash-tendered')?.value || '';
     document.getElementById('numpad-display').textContent = numpadVal || '0';
     document.getElementById('numpad-overlay').classList.add('show');
   }
@@ -1492,11 +1498,12 @@ const POS = (() => {
     document.getElementById('numpad-display').textContent = numpadVal || '0';
   }
   function numpadDel() {
-    numpadVal = numpadVal.slice(0,-1);
+    numpadVal = numpadVal.slice(0, -1);
     document.getElementById('numpad-display').textContent = numpadVal || '0';
   }
   function numpadOk() {
-    document.getElementById('cash-tendered').value = numpadVal;
+    const el = document.getElementById('cash-tendered');
+    if (el) el.value = numpadVal;
     updateTotals();
     closeNumpad();
   }
@@ -1508,7 +1515,8 @@ const POS = (() => {
         document.querySelectorAll('.pay-method-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         paymentMethod = btn.dataset.method;
-        document.getElementById('cash-section').style.display = paymentMethod === 'cash' ? 'flex' : 'none';
+        const cashSection = document.getElementById('cash-section');
+        if (cashSection) cashSection.style.display = paymentMethod === 'cash' ? 'flex' : 'none';
         updateTotals();
       });
     });
@@ -1520,10 +1528,16 @@ const POS = (() => {
     const stack = document.getElementById('toast-stack');
     if (!stack) return;
     const t = document.createElement('div');
-    t.style.cssText = `pointer-events:all;padding:10px 15px;border-radius:10px;font-size:12px;font-weight:600;background:var(--surface);border:1px solid var(--border);color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.25);backdrop-filter:blur(8px);transition:all .3s`;
+    const colors = {
+      success: 'rgba(74,222,128,.15)',
+      danger:  'rgba(251,113,133,.15)',
+      warning: 'rgba(251,191,36,.15)',
+      info:    'rgba(96,165,250,.15)',
+    };
+    t.style.cssText = `pointer-events:all;padding:10px 15px;border-radius:10px;font-size:12px;font-weight:600;background:${colors[type]||colors.info};border:1px solid var(--border);color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.25);backdrop-filter:blur(8px);transition:all .3s`;
     t.textContent = msg;
     stack.appendChild(t);
-    setTimeout(() => t.style.opacity = '0', 3500);
+    setTimeout(() => { t.style.opacity = '0'; }, 3500);
     setTimeout(() => t.remove(), 4000);
   }
 
@@ -1541,7 +1555,6 @@ const POS = (() => {
         openCustomItem();
       }
     });
-    // Enter in custom modal
     document.getElementById('custom-price')?.addEventListener('keydown', e => {
       if (e.key === 'Enter') addCustomItem();
     });
@@ -1557,11 +1570,12 @@ const POS = (() => {
     _initKeyboard();
     document.getElementById('cash-tendered')?.addEventListener('input', () => updateTotals());
     updateTotals();
-    // Default to user's primary joint if only one exists
+
+    // Auto-select single joint
     const jointBtns = document.querySelectorAll('.joint-btn[data-joint]');
-    if (jointBtns.length === 2) {
-      // Only one real joint + "All" — auto-select it
-      jointBtns[1].click();
+    if (jointBtns.length === 1) {
+      const onlyJoint = Array.from(jointBtns).find(b => b.dataset.joint !== '');
+      if (onlyJoint) onlyJoint.click();
     }
   }
 
@@ -1576,6 +1590,13 @@ const POS = (() => {
 })();
 
 window.POS = POS;
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('{% static "js/sw.js" %}', { scope: '/' })
+      .catch(function(err) { console.warn('SW registration failed:', err); });
+  }
 </script>
 </body>
 </html>

@@ -53,68 +53,116 @@ def _get_or_create_customer(customer_id, customer_name, customer_phone, performe
 
 @login_required
 def dashboard(request):
+    """
+    Main sales dashboard — /dashboard/
+    Gracefully handles missing models/data.
+    """
     today = timezone.now().date()
-
+    month_start = today.replace(day=1)
+ 
+    context = {
+        'today_total':    Decimal('0'),
+        'today_count':    0,
+        'month_total':    Decimal('0'),
+        'month_count':    0,
+        'low_stock_count': 0,
+        'low_stock':      [],
+        'expiring_soon':  [],
+        'recent_sales':   [],
+        'joint_stats':    [],
+    }
+ 
+    # Today's sales
     try:
-        today_sales = Sale.objects.filter(
-            sale_date__date=today, is_held=False
-        ).prefetch_related('items')
-        today_total = sum(sale.total_amount for sale in today_sales)
-        today_count = today_sales.count()
-
-        month_start = today.replace(day=1)
-        month_sales = Sale.objects.filter(
-            sale_date__date__gte=month_start, is_held=False
-        ).prefetch_related('items')
-        month_total = sum(sale.total_amount for sale in month_sales)
-
-        low_stock = Product.objects.select_related('stock', 'joint').filter(
-            is_active=True,
-            stock__quantity__lte=settings.LOW_STOCK_THRESHOLD
+        from django.db.models import Sum
+        from sales.models import Sale, SaleItem
+ 
+        today_qs = Sale.objects.filter(sale_date__date=today, is_held=False)
+        context['today_count'] = today_qs.count()
+ 
+        today_total = (
+            SaleItem.objects
+            .filter(sale__sale_date__date=today, sale__is_held=False)
+            .aggregate(t=Sum('line_total'))['t']
         )
-
-        expiring_soon = Product.objects.select_related('stock', 'joint').filter(
-            is_active=True,
-            stock__expiry_date__isnull=False,
-            stock__expiry_date__lte=timezone.now().date() + timezone.timedelta(days=30)
+        if today_total is None:
+            today_total = today_qs.aggregate(t=Sum('total_amount'))['t']
+        context['today_total'] = today_total or Decimal('0')
+ 
+        # Month
+        month_qs = Sale.objects.filter(sale_date__date__gte=month_start, is_held=False)
+        context['month_count'] = month_qs.count()
+        month_total = (
+            SaleItem.objects
+            .filter(sale__sale_date__date__gte=month_start, sale__is_held=False)
+            .aggregate(t=Sum('line_total'))['t']
         )
-
-        recent_sales = Sale.objects.select_related('joint', 'sold_by').prefetch_related('items').filter(
-            is_held=False
-        ).order_by('-created_at')[:10]
-
+        if month_total is None:
+            month_total = month_qs.aggregate(t=Sum('total_amount'))['t']
+        context['month_total'] = month_total or Decimal('0')
+ 
+        # Recent sales
+        context['recent_sales'] = (
+            Sale.objects
+            .filter(is_held=False)
+            .select_related('customer', 'sold_by', 'joint')
+            .order_by('-sale_date')[:10]
+        )
+ 
+        # Joint breakdown today
+        from django.db.models import Count
+        from inventory.models import Joint
+ 
         joint_stats = []
-        for joint in Joint.objects.all():
-            joint_today_sales = [s for s in today_sales if s.joint_id == joint.pk]
-            joint_today_total = sum(sale.total_amount for sale in joint_today_sales)
+        for joint in Joint.objects.filter(is_active=True):
+            jqs = today_qs.filter(joint=joint)
+            jrev = jqs.aggregate(t=Sum('total_amount'))['t'] or Decimal('0')
             joint_stats.append({
                 'joint': joint,
-                'count': len(joint_today_sales),
-                'total': joint_today_total,
+                'count': jqs.count(),
+                'total': jrev,
             })
-    except Exception as e:
-        # Handle empty database or missing relationships gracefully
-        today_total = 0
-        today_count = 0
-        month_total = 0
-        low_stock = []
-        expiring_soon = []
-        recent_sales = []
-        joint_stats = []
-
-    context = {
-        'today_total': today_total,
-        'today_count': today_count,
-        'month_total': month_total,
-        'month_count': month_sales.count() if 'month_sales' in locals() else 0,
-        'low_stock': low_stock,
-        'low_stock_count': len(low_stock),
-        'expiring_soon': expiring_soon,
-        'recent_sales': recent_sales,
-        'joint_stats': joint_stats,
-    }
+        context['joint_stats'] = joint_stats
+ 
+    except Exception:
+        pass
+ 
+    # Low stock
+    try:
+        from django.conf import settings as django_settings
+        from inventory.models import Product
+ 
+        threshold = getattr(django_settings, 'LOW_STOCK_THRESHOLD', 3)
+        low = list(
+            Product.objects
+            .filter(is_active=True)
+            .select_related('stock')
+            .filter(stock__quantity__lte=threshold)
+            .order_by('stock__quantity')[:20]
+        )
+        context['low_stock'] = low
+        context['low_stock_count'] = len(low)
+    except Exception:
+        pass
+ 
+    # Expiring soon
+    try:
+        from django.conf import settings as django_settings
+        from inventory.models import Product
+ 
+        warn_days = getattr(django_settings, 'EXPIRY_WARNING_DAYS', 30)
+        expiry_cutoff = timezone.now().date() + timezone.timedelta(days=warn_days)
+        context['expiring_soon'] = list(
+            Product.objects
+            .filter(is_active=True, stock__expiry_date__lte=expiry_cutoff)
+            .select_related('stock')
+            .order_by('stock__expiry_date')[:20]
+        )
+    except Exception:
+        pass
+ 
     return render(request, 'dashboard.html', context)
-
+ 
 
 @login_required
 def pos(request):

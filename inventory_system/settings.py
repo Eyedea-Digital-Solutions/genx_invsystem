@@ -3,24 +3,23 @@ import os
 from dotenv import load_dotenv
 try:
     import dj_database_url
-except ImportError:  # pragma: no cover - optional for local SQLite fallback
+except ImportError:
     dj_database_url = None
 
-load_dotenv()  # loads .env when running locally; ignored on Render
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-insecure-secret-key')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS =[
+ALLOWED_HOSTS = [
     'hub.eyedentity.co.zw',
     'genx-pos-kf0k.onrender.com',
     'localhost',
     '127.0.0.1',
 ]
 
-# --- Installed Apps ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -41,7 +40,6 @@ INSTALLED_APPS = [
     'employees',
 ]
 
-# --- Middleware ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -53,7 +51,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# 4. Messages framework tags (maps 'error' -> Bootstrap 'danger')
 from django.contrib.messages import constants as messages_constants
 MESSAGE_TAGS = {
     messages_constants.DEBUG:   'debug',
@@ -63,15 +60,13 @@ MESSAGE_TAGS = {
     messages_constants.ERROR:   'danger',
 }
 
-SESSION_COOKIE_AGE = 43200          # 12 hours
+SESSION_COOKIE_AGE = 43200
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = True
 
-# 7. Default pagination
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 8. Optional: Tax rate used by POS (exposed to template as context variable)
-POS_TAX_RATE = 0  # Set to e.g. 15 for 15% VAT
+POS_TAX_RATE = 0
 
 ROOT_URLCONF = 'inventory_system.urls'
 
@@ -94,10 +89,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'inventory_system.wsgi.application'
 
-# --- Database (Supabase via connection pooler) ---
-# Set DATABASE_URL in Render env vars using Supabase's
-# "Transaction" pooler string (port 6543), e.g.:
-# postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL and dj_database_url is not None:
@@ -117,7 +108,6 @@ else:
         }
     }
 
-# --- Auth ---
 AUTH_USER_MODEL = 'users.User'
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -127,13 +117,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# --- Localisation ---
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Harare'
 USE_I18N = True
 USE_TZ = True
 
-# --- Static files (WhiteNoise on Render) ---
 STATIC_URL = '/static/'
 _STATIC_SRC = BASE_DIR / 'static'
 STATICFILES_DIRS = [_STATIC_SRC] if _STATIC_SRC.exists() else []
@@ -155,19 +143,14 @@ STORAGES = {
     },
 }
 
-# --- Media ---
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 os.makedirs(MEDIA_ROOT, exist_ok=True)
-
-# --- Misc ---
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/users/login/'
 LOGIN_REDIRECT_URL = '/analytics/dashboard/'
 LOGOUT_REDIRECT_URL = '/users/login/'
 
-# --- Business logic ---
 LOW_STOCK_THRESHOLD = int(os.environ.get('LOW_STOCK_THRESHOLD', '3'))
 EXPIRY_WARNING_DAYS = int(os.environ.get('EXPIRY_WARNING_DAYS', '30'))
 
@@ -204,6 +187,11 @@ STORE_INFO = {
     },
 }
 
-# --- CSRF (add your Render service URL here) ---
+# --- CSRF Trusted Origins ---
 _render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '')
-CSRF_TRUSTED_ORIGINS = [f'https://{_render_host}'] if _render_host else []
+CSRF_TRUSTED_ORIGINS = [
+    'https://hub.eyedentity.co.zw',
+    'https://genx-pos-kf0k.onrender.com',
+]
+if _render_host and f'https://{_render_host}' not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_render_host}')
