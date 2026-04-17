@@ -743,27 +743,50 @@ def pos_complete(request):
                               'unit_price': '0.00', 'is_free_gift': True})
 
         # Custom items (no stock deduction — these are ad-hoc services/items)
-        for item in custom_items:
-            price    = Decimal(str(item.get('unit_price', '0')))
-            qty      = int(item.get('qty', 1))
-            is_free  = price == Decimal('0')
-            SaleItem.objects.create(
-                sale=sale,
-                product=None,
-                custom_item_name=item.get('name', 'Custom Item'),
-                quantity=qty,
-                unit_price=price,
-                is_free_gift=is_free,
-                promotion_label=item.get('promo_label', ''),
-                item_note=item.get('item_note', ''),
-            )
-            snapshot.append({
-                'custom_item_name': item.get('name', 'Custom Item'),
-                'quantity':         qty,
-                'unit_price':       str(price),
-                'is_free_gift':     is_free,
-                'item_note':        item.get('item_note', ''),
-            })
+        # In pos_complete, replace the custom_items handling section:
+
+    # ── Custom items — deduct stock if linked to a real product ──────────
+    for item in custom_items:
+        price    = Decimal(str(item.get('unit_price', '0')))
+        qty      = int(item.get('qty', 1))
+        is_free  = price == Decimal('0')
+        
+        # If a product_id is supplied, link the sale item and deduct stock
+        linked_product = None
+        if item.get('product_id'):
+            try:
+                linked_product = Product.objects.select_related('stock').get(
+                    pk=item['product_id']
+                )
+            except Product.DoesNotExist:
+                pass
+        
+        SaleItem.objects.create(
+            sale=sale,
+            product=linked_product,                            # linked or None
+            custom_item_name=item.get('name', 'Custom Item'),  # always store name
+            quantity=qty,
+            unit_price=price,
+            is_free_gift=is_free,
+            promotion_label=item.get('promo_label', ''),
+            item_note=item.get('item_note', ''),
+        )
+        
+        # Deduct stock only if linked to a real product
+        if linked_product:
+            try:
+                linked_product.stock.deduct(qty)
+            except ValueError as e:
+                return JsonResponse({'success': False, 'error': str(e)})
+        
+        snapshot.append({
+            'custom_item_name': item.get('name', 'Custom Item'),
+            'product_id': linked_product.pk if linked_product else None,
+            'quantity': qty,
+            'unit_price': str(price),
+            'is_free_gift': is_free,
+            'item_note': item.get('item_note', ''),
+        })
 
         # Bundles — expand to individual SaleItems
         for bi in bundle_items:

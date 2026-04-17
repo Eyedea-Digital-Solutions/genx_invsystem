@@ -1023,6 +1023,16 @@
       <label>Quantity</label>
       <input type="number" id="custom-qty" placeholder="1" min="1" value="1">
     </div>
+    <div class="custom-field">
+      <label>Link to product (optional — for stock tracking)</label>
+      <input type="hidden" id="custom-product-id">
+      <select id="custom-product-select" 
+              style="width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:10px 12px;font-size:13px;outline:none;"
+              onchange="document.getElementById('custom-product-id').value=this.value">
+          <option value="">— No product link (service/misc) —</option>
+          <!-- populated dynamically based on selected joint -->
+      </select>
+  </div>
     <div class="custom-actions">
       <button class="custom-btn-cancel" onclick="POS.closeCustomItem()">Cancel</button>
       <button class="custom-btn-add" onclick="POS.addCustomItem()"><i class="bi bi-plus"></i> Add to Cart</button>
@@ -1195,13 +1205,47 @@ const POS = (() => {
     el._t = setTimeout(() => el.classList.remove('show'), 2800);
   }
 
-  // ── CUSTOM ITEM ──────────────────────────────────
+  // In openCustomItem(), add a product_id hidden field:
   function openCustomItem() {
-    document.getElementById('custom-name').value = '';
-    document.getElementById('custom-price').value = '';
-    document.getElementById('custom-qty').value = '1';
-    document.getElementById('custom-modal').classList.add('show');
-    setTimeout(() => document.getElementById('custom-name').focus(), 100);
+      document.getElementById('custom-name').value = '';
+      document.getElementById('custom-price').value = '';
+      document.getElementById('custom-qty').value = '1';
+      document.getElementById('custom-product-id').value = '';  // ← add this
+      document.getElementById('custom-modal').classList.add('show');
+      setTimeout(() => document.getElementById('custom-name').focus(), 100);
+      const sel = document.getElementById('custom-product-select');
+      sel.innerHTML = '<option value="">— No product link (service/misc) —</option>';
+      document.querySelectorAll('.product-card').forEach(card => {
+          if (card.style.display === 'none') return;
+          const opt = document.createElement('option');
+          opt.value = card.dataset.id;
+          opt.textContent = card.dataset.name + ' (stock: ' + card.dataset.stock + ')';
+          sel.appendChild(opt);
+      });
+  }
+
+  // In addCustomItem():
+  function addCustomItem() {
+      const name      = document.getElementById('custom-name').value.trim();
+      const price     = parseFloat(document.getElementById('custom-price').value);
+      const qty       = parseInt(document.getElementById('custom-qty').value) || 1;
+      const productId = document.getElementById('custom-product-id').value || null;
+      
+      if (!name) { document.getElementById('custom-name').focus(); return; }
+      if (isNaN(price) || price < 0) { document.getElementById('custom-price').focus(); return; }
+
+      const id = 'custom-' + (++customItemCounter);
+      cart.push({ 
+          id, name, price, qty, 
+          stock: productId ? 99999 : 99999,   // server validates real stock
+          isCustom: true, 
+          isFree: false,
+          product_id: productId              // ← pass through to server
+      });
+      renderCart();
+      updateTotals();
+      closeCustomItem();
+      _toast('Custom item added', 'success');
   }
 
   function closeCustomItem() {
