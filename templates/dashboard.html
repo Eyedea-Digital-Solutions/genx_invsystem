@@ -1,12 +1,11 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+
+{% block nav_dashboard %}active{% endblock %}
 
 {% block extra_css %}
 <style>
   .dashboard-container { padding: 24px; }
-  .dashboard-row { margin-bottom: 32px; }
-  
   .kpi-grid { 
     display: grid; 
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
@@ -18,282 +17,40 @@
 
 {% block content %}
 <div class="dashboard-container">
-  <!-- HEADER -->
   <div class="section-header">
     <div class="section-title">
       <div class="section-title-icon"><i class="bi bi-speedometer2"></i></div>
       Dashboard
     </div>
-    <div style="font-size:13px;color:var(--text-muted);">
-      Last updated: <span id="last-update">now</span>
-    </div>
   </div>
 
-  <!-- KPI ROW -->
   <div class="kpi-grid">
-    <a href="{% url 'admin:sales_sale_changelist' %}?is_held__exact=0" class="kpi-card">
+    <div class="kpi-card">
       <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
       <div class="kpi-label">Today's Revenue</div>
-      <div class="kpi-value" data-value="{{ today_total }}">
-        ${{ today_total|floatformat:2 }}
-      </div>
+      <div class="kpi-value">${{ today_total|floatformat:2 }}</div>
       <div class="kpi-sub">{{ today_count }} sale{{ today_count|pluralize }}</div>
-      <div class="kpi-trend trend-up">
-        <i class="bi bi-arrow-up"></i> vs yesterday
-      </div>
-    </a>
+    </div>
 
-    <a href="{% url 'admin:sales_sale_changelist' %}?is_held__exact=0" class="kpi-card">
+    <div class="kpi-card">
       <div class="kpi-icon"><i class="bi bi-graph-up"></i></div>
       <div class="kpi-label">Month Revenue</div>
       <div class="kpi-value">${{ month_total|floatformat:2 }}</div>
       <div class="kpi-sub">{{ month_count }} sale{{ month_count|pluralize }}</div>
-    </a>
-
-    <a href="{% url 'admin:ecocash_ecocashtransaction_changelist' %}?status__exact=pending" class="kpi-card">
-      <div class="kpi-icon"><i class="bi bi-phone"></i></div>
-      <div class="kpi-label">Pending EcoCash</div>
-      <div class="kpi-value">{{ pending_ecocash }}</div>
-      <div class="kpi-sub">awaiting confirmation</div>
-    </a>
-
-    <a href="{% url 'admin:inventory_stock_changelist' %}" class="kpi-card">
-      <div class="kpi-icon" style="background:rgba(251,113,133,0.12);color:var(--rose);"><i class="bi bi-exclamation-triangle"></i></div>
-      <div class="kpi-label">Low Stock</div>
-      <div class="kpi-value">{{ low_stock_count }}</div>
-      <div class="kpi-sub">items need restocking</div>
-    </a>
-
-    {% if held_count %}
-    <a href="{% url 'admin:sales_sale_changelist' %}?is_held__exact=1" class="kpi-card">
-      <div class="kpi-icon" style="background:rgba(139,92,246,0.12);color:#8b5cf6;"><i class="bi bi-pause-circle"></i></div>
-      <div class="kpi-label">Held Transactions</div>
-      <div class="kpi-value">{{ held_count }}</div>
-      <div class="kpi-sub">on hold</div>
-    </a>
-    {% endif %}
-
-    <a href="{% url 'promotions:dashboard' %}" class="kpi-card">
-      <div class="kpi-icon"><i class="bi bi-tag"></i></div>
-      <div class="kpi-label">Active Promos</div>
-      <div class="kpi-value">{{ active_promos }}</div>
-      <div class="kpi-sub">currently running</div>
-    </a>
-  </div>
-
-  <!-- JOINT STATS -->
-  {% if joint_stats %}
-  <div class="section-header">
-    <div class="section-title">
-      <div class="section-title-icon"><i class="bi bi-diagram-2"></i></div>
-      Branch Performance
     </div>
   </div>
-  
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:32px;">
-    {% for stat in joint_stats %}
-    <div class="premium-card">
-      <div style="font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">{{ stat.joint.display_name }}</div>
-      <div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;margin-bottom:8px;">${{ stat.total|floatformat:2 }}</div>
-      <div style="font-size:13px;color:var(--text-muted);">{{ stat.count }} sale{{ stat.count|pluralize }} today</div>
-      <div class="metric-bar" style="margin-top:12px;">
-        <div class="metric-bar-fill" style="width:{% widthratio stat.total month_total 100 %}%"></div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
-  <!-- LOW STOCK ALERTS -->
   {% if low_stock %}
-  <div class="section-header">
-    <div class="section-title">
-      <div class="section-title-icon"><i class="bi bi-exclamation-triangle"></i></div>
-      Stock Alerts
+  <div class="gx-card">
+    <div class="gx-card-head">
+      <div class="gx-card-title">Low Stock Alerts</div>
     </div>
-  </div>
-
-  <div class="premium-card" style="margin-bottom:32px;">
-    <div style="overflow-x:auto;">
-      <table class="premium-table">
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Current Stock</th>
-            <th>Min. Level</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for product in low_stock|slice:":10" %}
-          <tr>
-            <td style="font-weight:600;">{{ product.name }}</td>
-            <td>{{ product.current_stock }}</td>
-            <td>{{ product.stock.min_quantity }}</td>
-            <td>
-              <span class="badge-status badge-status-error">
-                <i class="bi bi-dot"></i> Critical
-              </span>
-            </td>
-            <td>
-              <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn-premium btn-premium-secondary" style="padding:6px 12px;font-size:12px;">
-                <i class="bi bi-plus"></i> Restock
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="gx-card-body">
+      {% for product in low_stock|slice:":5" %}
+      <div>{{ product.name }} - {{ product.stock.quantity }} left</div>
+      {% endfor %}
     </div>
   </div>
   {% endif %}
-
-  <!-- RECENT SALES -->
-  {% if recent_sales %}
-  <div class="section-header">
-    <div class="section-title">
-      <div class="section-title-icon"><i class="bi bi-receipt"></i></div>
-      Recent Sales
-    </div>
-    <a href="{% url 'admin:sales_sale_changelist' %}" style="font-size:13px;color:var(--accent);text-decoration:none;">View all →</a>
-  </div>
-
-  <div class="premium-card" style="overflow-x:auto;margin-bottom:32px;">
-    <table class="premium-table">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Amount</th>
-          <th>Items</th>
-          <th>Branch</th>
-          <th>Cashier</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for sale in recent_sales|slice:":8" %}
-        <tr>
-          <td>{{ sale.created_at|date:"M d, H:i" }}</td>
-          <td style="font-weight:700;color:var(--accent);">${{ sale.total_amount|floatformat:2 }}</td>
-          <td>{{ sale.items.count }} item{{ sale.items.count|pluralize }}</td>
-          <td>{{ sale.joint.display_name }}</td>
-          <td>{{ sale.sold_by.first_name|default:"System" }}</td>
-          <td>
-            <span class="badge-status {% if sale.is_held %}badge-status-pending{% else %}badge-status-success{% endif %}">
-              <i class="bi bi-dot"></i>
-              {% if sale.is_held %}On Hold{% else %}Complete{% endif %}
-            </span>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-
-  <!-- EXPIRING SOON -->
-  {% if expiring_soon %}
-  <div class="section-header">
-    <div class="section-title">
-      <div class="section-title-icon"><i class="bi bi-calendar-x"></i></div>
-      Expiring Soon
-    </div>
-  </div>
-
-  <div class="grid-responsive grid-responsive-3" style="margin-bottom:32px;">
-    {% for product in expiring_soon|slice:":6" %}
-    <div class="premium-card">
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">{{ product.stock.expiry_date|date:"b d, Y" }}</div>
-      <div style="font-weight:600;margin-bottom:6px;display:line-clamp:2;">{{ product.name }}</div>
-      <div style="font-size:14px;font-weight:700;color:var(--rose);">
-        {{ product.current_stock }} units
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-</div>
-
-<script>
-  // Auto-update last update time
-  function updateLastUpdate() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString();
-    document.getElementById('last-update').textContent = timeStr;
-  }
-  updateLastUpdate();
-  setInterval(updateLastUpdate, 30000);
-</script>
-{% endblock %}
-    {% endfor %}
-</div>
-{% endif %}
-
-<div class="section-grid">
-    <!-- LOW STOCK -->
-    {% if low_stock %}
-    <div class="gx-card">
-        <div class="gx-card-head">
-            <div class="gx-card-title"><i class="bi bi-exclamation-triangle"></i>Low Stock Alerts</div>
-            <a href="{% url 'inventory:inventory_dashboard' %}" class="btn-gx btn-gx-ghost btn-gx-sm">View All</a>
-        </div>
-        <div style="overflow:auto;max-height:280px;">
-            <table class="gx-table">
-                <thead><tr><th>Product</th><th>Joint</th><th>Stock</th><th></th></tr></thead>
-                <tbody>
-                    {% for product in low_stock %}
-                    <tr>
-                        <td class="fw-semibold" style="font-size:13px;">{{ product.name }}</td>
-                        <td><span class="gx-badge gx-badge-neutral">{{ product.joint.display_name }}</span></td>
-                        <td>
-                            {% if product.current_stock == 0 %}
-                            <span class="badge-out">Out of stock</span>
-                            {% else %}
-                            <span class="badge-low-stock">{{ product.current_stock }} left</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if user.is_manager_role %}
-                            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs">Restock</a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- RECENT SALES -->
-    <div class="gx-card">
-        <div class="gx-card-head">
-            <div class="gx-card-title"><i class="bi bi-receipt"></i>Recent Sales</div>
-            <a href="{% url 'sales:sale_list' %}" class="btn-gx btn-gx-ghost btn-gx-sm">View All</a>
-        </div>
-        <div style="overflow:auto;max-height:280px;">
-            <table class="gx-table">
-                <thead><tr><th>Receipt</th><th>Joint</th><th>Method</th><th class="text-end">Total</th><th></th></tr></thead>
-                <tbody>
-                    {% for sale in recent_sales %}
-                    <tr>
-                        <td style="font-family:var(--mono);font-size:12px;font-weight:600;">{{ sale.receipt_number }}</td>
-                        <td style="font-size:12px;color:#888;">{{ sale.joint.display_name }}</td>
-                        <td><span class="gx-badge gx-badge-neutral">{{ sale.get_payment_method_display }}</span></td>
-                        <td class="text-end fw-bold" style="font-size:13px;">${{ sale.total_amount|floatformat:2 }}</td>
-                        <td>
-                            <a href="{% url 'sales:sale_receipt_thermal' sale.pk %}" target="_blank" class="btn-gx btn-gx-ghost btn-gx-xs">
-                                <i class="bi bi-printer"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" style="text-align:center;color:#bbb;padding:32px;">No sales yet today</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
 </div>
 {% endblock %}
