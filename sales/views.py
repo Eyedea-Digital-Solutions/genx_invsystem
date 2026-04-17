@@ -163,44 +163,47 @@ def pos_search(request):
     if not joint_id:
         return JsonResponse({'products': [], 'bundles': []})
 
-    products = Product.objects.select_related(
-        'stock', 'category', 'brand'
-    ).filter(joint_id=joint_id, is_active=True)
+    try:
+        products = Product.objects.select_related(
+            'stock', 'category', 'brand'
+        ).filter(joint_id=joint_id, is_active=True)
 
-    if q:
-        products = products.filter(
-            Q(name__icontains=q) |
-            Q(code__icontains=q) |
-            Q(barcode__icontains=q) |
-            Q(brand__name__icontains=q) |
-            Q(category__name__icontains=q)
-        )
-
-    if category_id:
-        products = products.filter(category_id=category_id)
-
-    if filter_type == 'clearance':
-        products = products.filter(is_clearance=True)
-    elif filter_type == 'sale':
-        products = products.filter(sale_price__isnull=False)
-    elif filter_type == 'low_stock':
-        products = products.filter(stock__quantity__lte=settings.LOW_STOCK_THRESHOLD)
-    elif filter_type == 'in_stock':
-        products = products.filter(stock__quantity__gt=0)
-
-    # Bundles (cross-branch aware) — only on 'all' filter with no category restriction
-    bundles_data = []
-    if filter_type == 'all' and not category_id:
-        from promotions.models import Bundle
-        bqs = Bundle.objects.prefetch_related('items__product__stock', 'joints').filter(is_active=True)
         if q:
-            bqs = bqs.filter(Q(name__icontains=q) | Q(sku__icontains=q))
-        for bundle in bqs[:20]:
-            if bundle.is_available_in(joint_id):
-                bundles_data.append(_bundle_to_dict(bundle, joint_id))
+            products = products.filter(
+                Q(name__icontains=q) |
+                Q(code__icontains=q) |
+                Q(barcode__icontains=q) |
+                Q(brand__name__icontains=q) |
+                Q(category__name__icontains=q)
+            )
 
-    data = [_product_to_dict(p) for p in products[:60]]
-    return JsonResponse({'products': data, 'bundles': bundles_data})
+        if category_id:
+            products = products.filter(category_id=category_id)
+
+        if filter_type == 'clearance':
+            products = products.filter(is_clearance=True)
+        elif filter_type == 'sale':
+            products = products.filter(sale_price__isnull=False)
+        elif filter_type == 'low_stock':
+            products = products.filter(stock__isnull=False, stock__quantity__lte=settings.LOW_STOCK_THRESHOLD)
+        elif filter_type == 'in_stock':
+            products = products.filter(stock__isnull=False, stock__quantity__gt=0)
+
+        # Bundles (cross-branch aware) — only on 'all' filter with no category restriction
+        bundles_data = []
+        if filter_type == 'all' and not category_id:
+            from promotions.models import Bundle
+            bqs = Bundle.objects.prefetch_related('items__product__stock', 'joints').filter(is_active=True)
+            if q:
+                bqs = bqs.filter(Q(name__icontains=q) | Q(sku__icontains=q))
+            for bundle in bqs[:20]:
+                if bundle.is_available_in(joint_id):
+                    bundles_data.append(_bundle_to_dict(bundle, joint_id))
+
+        data = [_product_to_dict(p) for p in products[:60]]
+        return JsonResponse({'products': data, 'bundles': bundles_data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 
 @login_required

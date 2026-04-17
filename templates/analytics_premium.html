@@ -1,0 +1,210 @@
+<!-- Premium Analytics & Insights Template -->
+{% extends 'base.html' %}
+{% block title %}Analytics & Insights{% endblock %}
+{% block page_title %}Analytics & Insights{% endblock %}
+
+{% block nav_analytics %}active{% endblock %}
+
+{% block content %}
+<div style="padding:24px;">
+  <!-- HEADER -->
+  <div class="section-header">
+    <div class="section-title">
+      <div class="section-title-icon"><i class="bi bi-graph-up"></i></div>
+      Advanced Analytics
+    </div>
+    <div style="display:flex;gap:12px;">
+      <select class="premium-select" style="width:150px;" id="period-select">
+        <option value="today">Today</option>
+        <option value="week" selected>This Week</option>
+        <option value="month">This Month</option>
+        <option value="quarter">This Quarter</option>
+        <option value="year">This Year</option>
+      </select>
+      <button class="btn-premium btn-premium-secondary">
+        <i class="bi bi-download"></i> Export
+      </button>
+    </div>
+  </div>
+
+  <!-- KEY METRICS -->
+  <div class="grid-responsive grid-responsive-3" style="margin-bottom:32px;">
+    <div class="metric-box">
+      <div class="metric-label">Total Revenue</div>
+      <div class="metric-value">$24,580.50</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:75%"></div></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+        <i class="bi bi-arrow-up" style="color:var(--green);"></i> +12.5% vs last period
+      </div>
+    </div>
+
+    <div class="metric-box">
+      <div class="metric-label">Total Transactions</div>
+      <div class="metric-value">342</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:68%"></div></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+        Avg: $71.82 per transaction
+      </div>
+    </div>
+
+    <div class="metric-box">
+      <div class="metric-label">Avg. Transaction Value</div>
+      <div class="metric-value">$71.82</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:82%"></div></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+        <i class="bi bi-arrow-down" style="color:var(--rose);"></i> -3.2% vs last period
+      </div>
+    </div>
+
+    <div class="metric-box">
+      <div class="metric-label">Inventory Turnover</div>
+      <div class="metric-value">3.4x</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:85%"></div></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+        Industry avg: 2.8x
+      </div>
+    </div>
+
+    <div class="metric-box">
+      <div class="metric-label">Customer Retention</div>
+      <div class="metric-value">68%</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:68%"></div></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+        Returning customers
+      </div>
+    </div>
+
+    <div class="metric-box">
+      <div class="metric-label">Discount Efficiency</div>
+      <div class="metric-value">12.3%</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:45%"></div></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+        Of total revenue
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP PERFORMING PRODUCTS -->
+  <div class="section-header">
+    <div class="section-title">
+      <div class="section-title-icon"><i class="bi bi-star"></i></div>
+      Top Performing Products
+    </div>
+  </div>
+
+  <div class="premium-card" style="margin-bottom:32px;">
+    <table class="premium-table">
+      <thead>
+        <tr>
+          <th style="width:40%">Product</th>
+          <th style="width:15%">Units Sold</th>
+          <th style="width:15%">Revenue</th>
+          <th style="width:15%">Margin</th>
+          <th style="width:15%">Growth</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:600;">Premium Eye Frames - Black</td>
+          <td>245</td>
+          <td style="color:var(--accent);font-weight:700;">$6,372.50</td>
+          <td>35.2%</td>
+          <td><span class="badge-status trend-up"><i class="bi bi-arrow-up"></i> 8.3%</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Lens Solution 500ml</td>
+          <td>189</td>
+          <td style="color:var(--accent);font-weight:700;">$3,402.00</td>
+          <td>42.1%</td>
+          <td><span class="badge-status trend-up"><i class="bi bi-arrow-up"></i> 5.1%</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Designer Sunglasses</td>
+          <td>156</td>
+          <td style="color:var(--accent);font-weight:700;">$5,928.00</td>
+          <td>28.9%</td>
+          <td><span class="badge-status trend-down"><i class="bi bi-arrow-down"></i> -2.4%</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Contact Lens Solution</td>
+          <td>134</td>
+          <td style="color:var(--accent);font-weight:700;">$2,144.00</td>
+          <td>51.2%</td>
+          <td><span class="badge-status trend-up"><i class="bi bi-arrow-up"></i> 12.7%</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600;">Eye Care Kit</td>
+          <td>98</td>
+          <td style="color:var(--accent);font-weight:700;">$1,960.00</td>
+          <td>39.8%</td>
+          <td><span class="badge-status trend-up"><i class="bi bi-arrow-up"></i> 3.5%</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- BRANCH PERFORMANCE COMPARISON -->
+  <div class="section-header">
+    <div class="section-title">
+      <div class="section-title-icon"><i class="bi bi-diagram-2"></i></div>
+      Branch Performance Comparison
+    </div>
+  </div>
+
+  <div class="grid-responsive grid-responsive-2" style="margin-bottom:32px;">
+    {% for branch in branches %}
+    <div class="premium-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-size:15px;font-weight:700;">{{ branch.name }}</div>
+        <span class="badge-status badge-status-success">
+          <i class="bi bi-dot"></i> Active
+        </span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Revenue Today</div>
+          <div style="font-size:20px;font-weight:700;">${{ branch.revenue_today }}</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Transactions</div>
+          <div style="font-size:20px;font-weight:700;">{{ branch.transactions }}</div>
+        </div>
+      </div>
+
+      <div class="metric-bar">
+        <div class="metric-bar-fill" style="width:{{ branch.performance_pct }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- INVENTORY INSIGHTS -->
+  <div class="section-header">
+    <div class="section-title">
+      <div class="section-title-icon"><i class="bi bi-boxes"></i></div>
+      Inventory Insights
+    </div>
+  </div>
+
+  <div class="grid-responsive grid-responsive-3" style="margin-bottom:32px;">
+    <div class="premium-card">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Inventory Value</div>
+      <div style="font-size:28px;font-weight:800;margin-bottom:8px;">$45,230.50</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:78%"></div></div>
+    </div>
+
+    <div class="premium-card">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Dead Stock</div>
+      <div style="font-size:28px;font-weight:800;color:var(--rose);margin-bottom:8px;">18 Items</div>
+      <div style="font-size:12px;color:var(--text-muted);">Worth $3,240</div>
+    </div>
+
+    <div class="premium-card">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Fast Movers</div>
+      <div style="font-size:28px;font-weight:800;color:var(--green);margin-bottom:8px;">24 Products</div>
+      <div style="font-size:12px;color:var(--text-muted);">High velocity items</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

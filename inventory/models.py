@@ -201,10 +201,10 @@ class StockTakeItem(models.Model):
     system_count = models.IntegerField()
     actual_count = models.IntegerField()
     variance    = models.IntegerField(default=0)
-    
-    @property
-    def variance(self):
-        return self.actual_count - self.system_count
+
+    def save(self, *args, **kwargs):
+        self.variance = (self.actual_count or 0) - (self.system_count or 0)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.product.name}: System={self.system_count}, Actual={self.actual_count}"

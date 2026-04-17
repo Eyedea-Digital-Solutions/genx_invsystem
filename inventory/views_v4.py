@@ -137,7 +137,7 @@ def stock_take_wizard(request):
 @login_required
 def stock_take_list(request):
     """List of completed/in-progress stock takes."""
-    takes = StockTake.objects.select_related('joint', 'conducted_by').order_by('-created_at')
+    takes = StockTake.objects.select_related('joint', 'conducted_by').order_by('-conducted_at')
     if not request.user.is_admin_role:
         if hasattr(request.user, 'primary_joint') and request.user.primary_joint:
             takes = takes.filter(joint=request.user.primary_joint)
