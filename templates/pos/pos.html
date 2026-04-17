@@ -58,6 +58,16 @@
       background: rgba(251,113,133,.15); color: var(--rose); 
       border-color: rgba(251,113,133,.3);
     }
+    .pos-topbar-btn {
+      background: var(--surface-2); border: 1px solid var(--border); 
+      color: var(--text-muted); padding: 7px 12px; border-radius: 10px; 
+      font-size: 12px; display: flex; align-items: center; gap: 6px; 
+      transition: all .2s; text-decoration: none; cursor: pointer;
+    }
+    .pos-topbar-btn:hover {
+      background: var(--accent); border-color: var(--accent); 
+      color: #fff; transform: translateY(-1px);
+    }
 
     /* ─── MAIN LAYOUT ──────────────────────────────────────────────── */
     .pos-layout { display: flex; flex: 1; overflow: hidden; gap: 0; }
@@ -350,8 +360,8 @@
   </div>
   <div class="pos-topbar-actions">
     <span id="pwa-status" class="pos-pwa-status">● ONLINE</span>
-    <a href="/sales/" class="btn btn-sm" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);padding:7px 12px;border-radius:10px;font-size:12px;display:flex;align-items:center;gap:6px;transition:all .2s;"><i class="bi bi-receipt"></i><span>History</span></a>
-    <a href="/dashboard/" class="btn btn-sm" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);padding:7px 12px;border-radius:10px;font-size:12px;display:flex;align-items:center;gap:6px;transition:all .2s;"><i class="bi bi-grid-3x3-gap"></i><span>Dashboard</span></a>
+    <a href="/sales/" class="pos-topbar-btn"><i class="bi bi-receipt"></i><span>History</span></a>
+    <a href="/dashboard/" class="pos-topbar-btn"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a>
   </div>
 </div>
 

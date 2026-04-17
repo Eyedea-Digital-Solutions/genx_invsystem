@@ -4,6 +4,7 @@ from django.conf.urls.static import static
 from django.http import JsonResponse
 from django.views.generic import RedirectView
 from sales.analytics_views import analytics_dashboard
+from sales.views import dashboard
 from inventory_system.admin_site import genx_admin_site
 
 
@@ -27,7 +28,8 @@ def manifest_view(request):
 
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/analytics/dashboard/', permanent=False)),
+    path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
+    path('dashboard/', dashboard, name='main_dashboard'),
     path('admin/', genx_admin_site.urls),
 
     path('inventory/', include('inventory.urls')),
