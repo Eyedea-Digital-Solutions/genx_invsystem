@@ -18,6 +18,68 @@
   <link rel="stylesheet" href="{% static 'css/genx-design-system.css' %}">
   <link rel="stylesheet" href="{% static 'css/premium-features.css' %}">
   {% block extra_css %}{% endblock %}
+
+  <style>
+    /* ── Image containers & fallbacks ───────────────────────────── */
+    img { max-width: 100%; height: auto; }
+
+    /* Broken / error state — JS sets data-img-fixed="1" */
+    img[data-img-fixed="1"] {
+      object-fit: contain !important;
+      opacity: 0.45 !important;
+      background: var(--surface-2) !important;
+    }
+
+    /* Product thumbnail — table view in product_list.html */
+    .prod-thumb {
+      width: 44px; height: 44px;
+      border-radius: 8px; object-fit: cover; display: block;
+      background: var(--surface-2); border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .prod-thumb-placeholder {
+      width: 44px; height: 44px;
+      border-radius: 8px; background: var(--surface-2);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-4, rgba(164,151,197,.36));
+      font-size: 18px; flex-shrink: 0;
+    }
+
+    /* Product grid card (pgv) */
+    .pgv-img {
+      width: 100%; aspect-ratio: 1/1;
+      object-fit: cover; display: block;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .pgv-img-ph {
+      width: 100%; aspect-ratio: 1/1;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-4, rgba(164,151,197,.36));
+      font-size: 32px;
+    }
+
+    /* Employee / staff photo */
+    .staff-avatar img,
+    .sidebar-logo-img {
+      width: 100%; height: 100%;
+      object-fit: cover; border-radius: inherit;
+    }
+
+    /* Skeleton shimmer for images still loading */
+    img:not([src]), img[src=""] {
+      background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @media (max-width: 576px) {
+      .prod-thumb, .prod-thumb-placeholder { width: 36px; height: 36px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -31,7 +93,10 @@
 
 <aside id="sidebar" class="sidebar">
   <div class="sidebar-brand">
-    <img src="{% static 'icons/icon-96.png' %}" alt="G" class="sidebar-logo">
+    <img src="{% static 'icons/icon-96.png' %}"
+         alt="G"
+         class="sidebar-logo"
+         onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\'sidebar-logo\' style=\'background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-mono);font-weight:700;font-size:13px;\'>GX</div>')">
     <div class="sidebar-brand-text">
       <span class="brand-name">GenX POS</span>
       <span class="brand-sub">PRO</span>
@@ -63,11 +128,11 @@
       <i class="bi bi-boxes"></i><span>Inventory</span>
     </a>
 
-    <div style="padding-left: 20px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;">
-      <a href="/inventory/products/add/" style="font-size: 12px; color: var(--text-3); text-decoration: none; display: flex; align-items: center; gap: 6px; padding: 6px 0; transition: all 0.2s;">
+    <div style="padding-left:20px;display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+      <a href="/inventory/products/add/" style="font-size:12px;color:var(--text-3);text-decoration:none;display:flex;align-items:center;gap:6px;padding:6px 0;transition:all 0.2s;">
         <i class="bi bi-plus-circle"></i><span>Add Product</span>
       </a>
-      <a href="/inventory/categories/add/" style="font-size: 12px; color: var(--text-3); text-decoration: none; display: flex; align-items: center; gap: 6px; padding: 6px 0; transition: all 0.2s;">
+      <a href="/inventory/categories/add/" style="font-size:12px;color:var(--text-3);text-decoration:none;display:flex;align-items:center;gap:6px;padding:6px 0;transition:all 0.2s;">
         <i class="bi bi-plus-circle"></i><span>Add Category</span>
       </a>
     </div>
@@ -219,6 +284,51 @@
 {% block extra_js %}{% endblock %}
 
 <script>
+  /* ── Global image error handler ─────────────────────────────── */
+  (function () {
+    var PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' fill='%232a2340' rx='8'/%3E%3Cpath d='M38 42h44a4 4 0 0 1 4 4v28a4 4 0 0 1-4 4H38a4 4 0 0 1-4-4V46a4 4 0 0 1 4-4z' fill='none' stroke='%236b7280' stroke-width='2'/%3E%3Ccircle cx='50' cy='54' r='5' fill='%236b7280'/%3E%3Cpath d='M34 70l16-14 10 10 8-8 18 18' fill='none' stroke='%236b7280' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E";
+
+    function fixImg(img) {
+      if (img.dataset.imgFixed) return;
+      img.dataset.imgFixed = '1';
+      // Don't replace icons or inline SVG data URIs
+      if (!img.src || img.src.startsWith('data:') || img.src === window.location.href) return;
+      img.src = PLACEHOLDER;
+    }
+
+    function attachListener(img) {
+      img.addEventListener('error', function () { fixImg(this); }, { once: true });
+      // Already broken
+      if (img.complete && img.naturalWidth === 0 && img.src && !img.src.startsWith('data:')) {
+        fixImg(img);
+      }
+    }
+
+    function scanAll() {
+      document.querySelectorAll('img').forEach(attachListener);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', scanAll);
+    } else {
+      scanAll();
+    }
+
+    // Watch for dynamically injected images (POS grid, AJAX)
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+          m.addedNodes.forEach(function (node) {
+            if (!node || node.nodeType !== 1) return;
+            if (node.tagName === 'IMG') attachListener(node);
+            if (node.querySelectorAll) node.querySelectorAll('img').forEach(attachListener);
+          });
+        });
+      }).observe(document.body, { childList: true, subtree: true });
+    }
+  }());
+
+  /* ── Service Worker ─────────────────────────────────────────── */
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('{% static "js/sw.js" %}', { scope: '/' })
       .catch(function(err) { console.warn('SW registration failed:', err); });
