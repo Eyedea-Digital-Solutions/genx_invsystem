@@ -986,7 +986,7 @@ def pos_recall(request, pk):
                 'promo_label':  label,
                 'item_note':    item.item_note or '',
                 'stock':        item.product.current_stock if item.product else 0,
-                'image_url':    item.product.image.url if item.product and item.product.image else '',
+                'image_url':    item.product.image_url if item.product else '',
                 'promotion_label_badge': item.product.promotion_label if item.product else '',
             })
 
@@ -1271,7 +1271,7 @@ def _product_to_dict(product):
         'category':        product.category.name if product.category else '',
         'category_id':     product.category_id or '',
         'brand':           product.brand.name if product.brand else '',
-        'image_url':       product.image.url if product.image else '',
+        'image_url':       product.image_url,
     }
 
 
@@ -1284,7 +1284,7 @@ def _bundle_to_dict(bundle, joint_id):
         'description': bundle.description,
         'price':       str(bundle.price),
         'stock':       bundle.effective_stock(joint_id),
-        'image_url':   bundle.image.url if bundle.image else '',
+        'image_url':   bundle.image_url,
         'is_bundle':   True,
         'components':  [
             {'name': c.product.name, 'quantity': c.quantity, 'is_free': c.is_free}

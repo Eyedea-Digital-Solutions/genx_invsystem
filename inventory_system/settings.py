@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import importlib.util
 from dotenv import load_dotenv
 
 try:
@@ -10,6 +11,8 @@ except ImportError:
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+STORAGES_AVAILABLE = importlib.util.find_spec('storages') is not None
+BOTO3_AVAILABLE = importlib.util.find_spec('boto3') is not None
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-insecure-secret-key')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
@@ -28,7 +31,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'storages',
     'inventory',
     'users',
     'sales',
@@ -41,6 +43,9 @@ INSTALLED_APPS = [
     'purchasing',
     'employees',
 ]
+
+if STORAGES_AVAILABLE:
+    INSTALLED_APPS.append('storages')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -146,27 +151,43 @@ if DEBUG:
         },
     }
 else:
-    STORAGES = {
-        "default": {
-            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-        },
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if WHITENOISE_AVAILABLE else "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
-        },
-    }
-    
     AWS_ACCESS_KEY_ID = os.environ.get('SUPABASE_S3_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.environ.get('SUPABASE_S3_SECRET')
     AWS_STORAGE_BUCKET_NAME = os.environ.get('SUPABASE_BUCKET_NAME')
-    AWS_S3_REGION_NAME = os.environ.get('SUPABASE_REGION', 'us-west-2') 
-    
+    AWS_S3_REGION_NAME = os.environ.get('SUPABASE_REGION', 'us-west-2')
     _supabase_ref = os.environ.get('SUPABASE_PROJECT_REF')
-    if _supabase_ref:
+    USE_S3_STORAGE = all([
+        STORAGES_AVAILABLE,
+        BOTO3_AVAILABLE,
+        AWS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY,
+        AWS_STORAGE_BUCKET_NAME,
+        _supabase_ref,
+    ])
+
+    if USE_S3_STORAGE:
         AWS_S3_ENDPOINT_URL = f'https://{_supabase_ref}.supabase.co/storage/v1/s3'
-    
-    AWS_S3_FILE_OVERWRITE = False
-    AWS_DEFAULT_ACL = 'public-read'
-    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+        AWS_S3_FILE_OVERWRITE = False
+        AWS_DEFAULT_ACL = 'public-read'
+        AWS_QUERYSTRING_AUTH = False
+        AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+        STORAGES = {
+            "default": {
+                "BACKEND": "storages.backends.s3.S3Storage",
+            },
+            "staticfiles": {
+                "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if WHITENOISE_AVAILABLE else "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+            },
+        }
+    else:
+        STORAGES = {
+            "default": {
+                "BACKEND": "django.core.files.storage.FileSystemStorage",
+            },
+            "staticfiles": {
+                "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if WHITENOISE_AVAILABLE else "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+            },
+        }
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

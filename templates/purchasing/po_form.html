@@ -240,8 +240,8 @@ function addLineItem() {
 function onProductChange(idx) {
   const sel  = document.querySelector(`[name="product_${idx}"]`);
   const prod = productsCache[sel.value];
-  if (prod && prod.cost_price) {
-    document.querySelector(`[name="cost_${idx}"]`).value = parseFloat(prod.cost_price).toFixed(2);
+  if (prod && prod.price) {
+    document.querySelector(`[name="cost_${idx}"]`).value = parseFloat(prod.price).toFixed(2);
   }
   updateLineTotal(idx);
 }

@@ -1,38 +1,182 @@
 {% extends 'base.html' %}
 {% block title %}Restock {{ product.name }}{% endblock %}
-{% block page_title %}Restock: {{ product.name }}{% endblock %}
+{% block nav_inventory %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="/dashboard/">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item"><a href="/inventory/">Inventory</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item"><a href="{% url 'inventory:product_list' %}">Products</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Restock</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.stock-adjust-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    gap: 18px;
+}
+.stock-adjust-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.stock-adjust-stat {
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--surface-2);
+}
+.stock-adjust-label {
+    color: var(--text-3);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-family: var(--mono);
+}
+.stock-adjust-value {
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 800;
+    margin-top: 6px;
+}
+.stock-adjust-fields {
+    display: grid;
+    gap: 14px;
+}
+.stock-adjust-image {
+    width: 100%;
+    min-height: 240px;
+    border-radius: var(--r-lg);
+    border: 1px dashed var(--border-2);
+    background:
+        radial-gradient(circle at top, rgba(154,107,255,0.22), transparent 46%),
+        var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.stock-adjust-image img {
+    width: 100%;
+    height: 100%;
+    max-height: 280px;
+    object-fit: contain;
+}
+.stock-adjust-empty {
+    text-align: center;
+    color: var(--text-3);
+    padding: 24px;
+}
+.stock-adjust-empty i {
+    display: block;
+    font-size: 42px;
+    margin-bottom: 10px;
+    color: var(--text-4);
+}
+.stock-adjust-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+@media (max-width: 960px) {
+    .stock-adjust-shell {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 720px) {
+    .stock-adjust-meta {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-5">
-        <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
-            <div class="card-body p-4">
-                <div class="row mb-3">
-                    <div class="col"><div class="text-muted" style="font-size:12px;">Joint</div><div class="fw-bold">{{ product.joint.display_name }}</div></div>
-                    <div class="col"><div class="text-muted" style="font-size:12px;">Current Stock</div><div class="fw-bold" style="font-size:20px;">{{ product.current_stock }}</div></div>
-                    <div class="col"><div class="text-muted" style="font-size:12px;">Price</div><div class="fw-bold">${{ product.effective_price }}</div></div>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Restock {{ product.name }}</h1>
+        <p class="page-sub">Increase on-hand stock and update reorder settings in one step.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'inventory:product_list' %}" class="gx-btn gx-btn-ghost">
+            <i class="bi bi-arrow-left"></i>
+            <span>Back to Products</span>
+        </a>
+    </div>
+</div>
+
+<div class="stock-adjust-shell">
+    <div class="gx-card">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-box-arrow-in-down"></i> Stock Update</div>
+        </div>
+        <div class="gx-card-body">
+            <div class="stock-adjust-meta">
+                <div class="stock-adjust-stat">
+                    <div class="stock-adjust-label">Joint</div>
+                    <div class="stock-adjust-value">{{ product.joint.display_name }}</div>
                 </div>
-                <form method="post">
-                    {% csrf_token %}
+                <div class="stock-adjust-stat">
+                    <div class="stock-adjust-label">Current Stock</div>
+                    <div class="stock-adjust-value">{{ product.current_stock }}</div>
+                </div>
+                <div class="stock-adjust-stat">
+                    <div class="stock-adjust-label">Effective Price</div>
+                    <div class="stock-adjust-value">${{ product.effective_price }}</div>
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="stock-adjust-fields">
                     {% for field in form %}
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
+                    <div>
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
-                        {% if field.errors %}<div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>{% endif %}
+                        {% if field.errors %}{{ field.errors }}{% endif %}
                     </div>
                     {% endfor %}
-                    <h6 class="fw-bold mt-4 mb-3">Stock Details</h6>
+
                     {% for field in stock_form %}
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold" style="font-size:13px;">{{ field.label }}</label>
+                    <div>
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
+                        {% if field.errors %}{{ field.errors }}{% endif %}
                     </div>
                     {% endfor %}
-                    <div class="d-flex gap-2 mt-3">
-                        <button type="submit" class="btn btn-dark px-4">Add Stock</button>
-                        <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
-                    </div>
-                </form>
+                </div>
+
+                <div class="stock-adjust-actions">
+                    <button type="submit" class="gx-btn gx-btn-primary">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Add Stock</span>
+                    </button>
+                    <a href="{% url 'inventory:product_list' %}" class="gx-btn gx-btn-ghost">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="gx-card">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-image"></i> Product Preview</div>
+        </div>
+        <div class="gx-card-body">
+            <div class="stock-adjust-image">
+                {% if product.image_url %}
+                <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                {% else %}
+                <div class="stock-adjust-empty">
+                    <i class="bi bi-box-seam"></i>
+                    <div>No product image available</div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

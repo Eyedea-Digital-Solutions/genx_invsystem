@@ -1,205 +1,551 @@
 {% extends 'base.html' %}
 {% block title %}Products{% endblock %}
-{% block page_title %}Products{% endblock %}
+{% block nav_inventory %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="/dashboard/">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item"><a href="/inventory/">Inventory</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Products</span>
+{% endblock %}
 
 {% block extra_css %}
 <style>
-.view-toggle { display:flex;gap:4px;background:var(--surf-alt);border:1px solid var(--border-l);border-radius:8px;padding:3px; }
-.view-btn { padding:5px 10px;border-radius:6px;border:none;background:none;cursor:pointer;color:#888;font-size:14px;transition:all 0.15s; }
-.view-btn.active { background:var(--surface);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,0.08); }
-
-/* GRID VIEW */
-.prod-grid-view { display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px; }
-.pgv-card {
-    background:var(--surface);border:1px solid var(--border-l);border-radius:var(--radius);
-    overflow:hidden;transition:box-shadow 0.2s,transform 0.2s;
+.products-shell {
+    display: grid;
+    gap: 18px;
 }
-.pgv-card:hover { box-shadow:0 8px 28px rgba(0,0,0,0.1);transform:translateY(-2px); }
-
-/* Image wrapper keeps a fixed 1:1 ratio and never shows broken icon */
-.pgv-img-wrap {
-    width:100%;aspect-ratio:1/1;overflow:hidden;
-    background:var(--surface-2);border-bottom:1px solid var(--border-l);
-    display:flex;align-items:center;justify-content:center;position:relative;
+.products-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
 }
-.pgv-img {
-    width:100%;height:100%;object-fit:cover;display:block;
+.products-stat {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px;
+    min-width: 0;
 }
-.pgv-img-ph {
-    width:100%;height:100%;
-    display:flex;align-items:center;justify-content:center;
-    color:rgba(164,151,197,.36);font-size:36px;
+.products-stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+    color: var(--text-3);
 }
-
-.pgv-body { padding:12px; }
-.pgv-name { font-weight:700;font-size:13px;line-height:1.3;margin-bottom:6px;color:var(--ink); }
-.pgv-price { font-size:16px;font-weight:800;letter-spacing:-0.3px; }
-.pgv-stock { font-size:11px;color:#aaa;margin-top:3px; }
-.pgv-actions { padding:10px 12px;border-top:1px solid var(--border-l);display:flex;gap:6px;background:var(--surf-alt); }
+.products-stat-value {
+    margin-top: 8px;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text);
+}
+.products-stat-sub {
+    margin-top: 8px;
+    color: var(--text-3);
+    font-size: 12px;
+}
+.products-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.products-result-copy {
+    color: var(--text-3);
+    font-size: 12px;
+}
+.view-toggle {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--r);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+}
+.view-btn {
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: var(--r-sm);
+    background: transparent;
+    color: var(--text-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--t-fast);
+}
+.view-btn:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+}
+.view-btn.active {
+    color: #fff;
+    background: var(--accent);
+    box-shadow: 0 8px 24px rgba(154,107,255,0.28);
+}
+.products-filter-form {
+    display: grid;
+    grid-template-columns: minmax(180px, 220px) minmax(240px, 1fr) minmax(170px, 210px) auto auto;
+    gap: 10px;
+    width: 100%;
+}
+.products-list-card {
+    overflow: hidden;
+}
+.products-table-wrap {
+    overflow-x: auto;
+}
+.products-table {
+    min-width: 980px;
+}
+.products-cell-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.products-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.products-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.products-thumb-placeholder {
+    color: var(--text-4);
+    font-size: 18px;
+}
+.products-meta {
+    min-width: 0;
+}
+.products-name {
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+    word-break: break-word;
+}
+.products-code {
+    margin-top: 4px;
+    font-family: var(--mono);
+    color: var(--text-3);
+    font-size: 11px;
+}
+.products-price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.products-price-main {
+    font-weight: 800;
+    color: var(--text);
+}
+.products-price-old {
+    color: var(--text-3);
+    text-decoration: line-through;
+    font-size: 12px;
+}
+.products-flags,
+.products-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+.product-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    transition: var(--t);
+}
+.product-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-2);
+    box-shadow: var(--shadow-purple);
+}
+.product-card-media {
+    aspect-ratio: 1 / 1;
+    background:
+        radial-gradient(circle at top right, rgba(154,107,255,0.28), transparent 42%),
+        linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)),
+        var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.product-card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.product-card-placeholder {
+    font-size: 42px;
+    color: var(--text-4);
+}
+.product-card-body {
+    padding: 16px;
+}
+.product-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.product-card-joint {
+    max-width: 100%;
+}
+.product-card-category {
+    color: var(--text-3);
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+.product-card-stock {
+    margin-top: 10px;
+    color: var(--text-3);
+    font-size: 12px;
+}
+.product-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+.product-card-actions .gx-btn {
+    flex: 1;
+    justify-content: center;
+}
+.products-empty {
+    padding: 64px 24px;
+}
+@media (max-width: 1100px) {
+    .products-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .products-filter-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 720px) {
+    .products-stats {
+        grid-template-columns: 1fr;
+    }
+    .products-filter-form {
+        grid-template-columns: 1fr;
+    }
+    .products-toolbar {
+        align-items: stretch;
+    }
+    .products-toolbar > div:last-child {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .view-toggle {
+        width: max-content;
+    }
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="page-header-left">
-        <h1>Products</h1>
-        <p>Manage your product catalogue and stock</p>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-        <div class="view-toggle">
-            <button class="view-btn active" id="btnTable" onclick="setView('table')" title="Table view"><i class="bi bi-list-ul"></i></button>
-            <button class="view-btn" id="btnGrid" onclick="setView('grid')" title="Grid view"><i class="bi bi-grid"></i></button>
+<div class="products-shell">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Products</h1>
+            <p class="page-sub">Manage product pricing, stock levels, and catalogue visibility across joints.</p>
         </div>
-        {% if user.is_manager_role %}
-        <a href="{% url 'inventory:product_create' %}" class="btn-gx btn-gx-primary">
-            <i class="bi bi-plus-lg"></i> Add Product
-        </a>
-        {% endif %}
-    </div>
-</div>
-
-<!-- FILTER -->
-<div class="filter-bar">
-    <form method="get" style="display:contents;">
-        <select name="joint" class="gx-select" onchange="this.form.submit()">
-            <option value="">All Joints</option>
-            {% for j in joints %}<option value="{{ j.pk }}" {% if selected_joint == j.pk|stringformat:"s" %}selected{% endif %}>{{ j.display_name }}</option>{% endfor %}
-        </select>
-        <input type="text" name="q" value="{{ search }}" class="gx-input" placeholder="Search products…" style="min-width:200px;">
-        <select name="filter" class="gx-select" onchange="this.form.submit()">
-            <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All Products</option>
-            <option value="clearance" {% if filter_type == 'clearance' %}selected{% endif %}>Clearance</option>
-            <option value="sale" {% if filter_type == 'sale' %}selected{% endif %}>On Sale</option>
-            <option value="low_stock" {% if filter_type == 'low_stock' %}selected{% endif %}>Low Stock</option>
-        </select>
-        <button type="submit" class="btn-gx btn-gx-dark">Search</button>
-        <a href="{% url 'inventory:product_list' %}" class="btn-gx btn-gx-ghost">Clear</a>
-    </form>
-</div>
-
-<!-- TABLE VIEW -->
-<div id="tableView" class="gx-card">
-    <div style="overflow-x:auto;">
-        <table class="gx-table">
-            <thead>
-                <tr>
-                    <th style="width:56px;"></th>
-                    <th>Product</th>
-                    <th>Code</th>
-                    <th>Joint</th>
-                    <th>Category</th>
-                    <th>Price</th>
-                    <th>Stock</th>
-                    <th>Flags</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for product in products %}
-                <tr>
-                    <td style="padding:8px 12px;">
-                        {% if product.image %}
-                        <img src="{{ product.image.url }}"
-                             alt="{{ product.name }}"
-                             class="prod-thumb"
-                             loading="lazy"
-                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                        <div class="prod-thumb-placeholder" style="display:none;"><i class="bi bi-image"></i></div>
-                        {% else %}
-                        <div class="prod-thumb-placeholder"><i class="bi bi-image"></i></div>
-                        {% endif %}
-                    </td>
-                    <td style="font-weight:600;">{{ product.name }}</td>
-                    <td style="font-family:var(--mono);font-size:11px;color:#aaa;">{{ product.code|default:"—" }}</td>
-                    <td><span class="gx-badge gx-badge-neutral">{{ product.joint.display_name }}</span></td>
-                    <td style="color:#888;font-size:12px;">{{ product.category.name|default:"—" }}</td>
-                    <td>
-                        <span style="font-weight:700;">${{ product.effective_price }}</span>
-                        {% if product.price != product.effective_price %}
-                        <span style="text-decoration:line-through;color:#bbb;font-size:11px;margin-left:4px;">${{ product.price }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if product.current_stock == 0 %}
-                        <span class="badge-out">Out of stock</span>
-                        {% elif product.is_low_stock %}
-                        <span class="badge-low-stock">{{ product.current_stock }} low</span>
-                        {% else %}
-                        <span style="font-weight:600;">{{ product.current_stock }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if product.is_clearance %}<span class="badge-clearance me-1">CLR</span>{% endif %}
-                        {% if product.promotion_label == 'SALE' %}<span class="badge-sale">SALE</span>{% endif %}
-                    </td>
-                    <td>
-                        {% if user.is_manager_role %}
-                        <div style="display:flex;gap:5px;">
-                            <a href="{% url 'inventory:product_edit' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs">Edit</a>
-                            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs"><i class="bi bi-plus"></i></a>
-                        </div>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="9" style="text-align:center;color:#bbb;padding:48px;font-size:14px;">
-                    <i class="bi bi-tag" style="font-size:32px;display:block;margin-bottom:10px;"></i>No products found
-                </td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- GRID VIEW -->
-<div id="gridView" class="prod-grid-view" style="display:none;">
-    {% for product in products %}
-    <div class="pgv-card">
-        <div class="pgv-img-wrap">
-            {% if product.image %}
-            <img src="{{ product.image.url }}"
-                 alt="{{ product.name }}"
-                 class="pgv-img"
-                 loading="lazy"
-                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-            <div class="pgv-img-ph" style="display:none;"><i class="bi bi-image"></i></div>
-            {% else %}
-            <div class="pgv-img-ph"><i class="bi bi-image"></i></div>
+        <div class="page-actions">
+            <div class="view-toggle" aria-label="View toggle">
+                <button type="button" class="view-btn active" id="btnTable" onclick="setView('table')" title="Table view">
+                    <i class="bi bi-list-ul"></i>
+                </button>
+                <button type="button" class="view-btn" id="btnGrid" onclick="setView('grid')" title="Grid view">
+                    <i class="bi bi-grid"></i>
+                </button>
+            </div>
+            {% if user.is_manager_role %}
+            <a href="{% url 'inventory:product_create' %}" class="gx-btn gx-btn-primary">
+                <i class="bi bi-plus-lg"></i>
+                <span>Add Product</span>
+            </a>
             {% endif %}
         </div>
-        <div class="pgv-body">
-            {% if product.is_clearance %}<span class="badge-clearance" style="margin-bottom:5px;display:inline-block;">CLR</span>{% endif %}
-            <div class="pgv-name">{{ product.name }}</div>
-            <div class="pgv-price">${{ product.effective_price }}</div>
-            <div class="pgv-stock">
-                {% if product.current_stock == 0 %}<span class="badge-out">Out</span>
-                {% elif product.is_low_stock %}<span class="badge-low-stock">{{ product.current_stock }} left</span>
-                {% else %}{{ product.current_stock }} in stock{% endif %}
-            </div>
+    </div>
+
+    <div class="products-stats">
+        <div class="products-stat">
+            <div class="products-stat-label">Active Products</div>
+            <div class="products-stat-value">{{ total_products }}</div>
+            <div class="products-stat-sub">Visible in inventory</div>
         </div>
-        {% if user.is_manager_role %}
-        <div class="pgv-actions">
-            <a href="{% url 'inventory:product_edit' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs" style="flex:1;justify-content:center;">Edit</a>
-            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="btn-gx btn-gx-ghost btn-gx-xs" title="Add stock"><i class="bi bi-plus"></i></a>
+        <div class="products-stat">
+            <div class="products-stat-label">On Sale</div>
+            <div class="products-stat-value">{{ sale_count }}</div>
+            <div class="products-stat-sub">Promotional pricing active</div>
+        </div>
+        <div class="products-stat">
+            <div class="products-stat-label">Clearance</div>
+            <div class="products-stat-value">{{ clearance_count }}</div>
+            <div class="products-stat-sub">Markdown stock lines</div>
+        </div>
+        <div class="products-stat">
+            <div class="products-stat-label">Low Stock</div>
+            <div class="products-stat-value">{{ low_stock_count }}</div>
+            <div class="products-stat-sub">At or below threshold</div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <form method="get" class="products-filter-form">
+            <select name="joint" class="gx-select" onchange="this.form.submit()">
+                <option value="">All Joints</option>
+                {% for j in joints %}
+                <option value="{{ j.pk }}" {% if selected_joint == j.pk|stringformat:"s" %}selected{% endif %}>{{ j.display_name }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="q" value="{{ search }}" class="gx-input" placeholder="Search by product name, code, or barcode">
+            <select name="filter" class="gx-select" onchange="this.form.submit()">
+                <option value="all" {% if filter_type == 'all' %}selected{% endif %}>All Products</option>
+                <option value="clearance" {% if filter_type == 'clearance' %}selected{% endif %}>Clearance</option>
+                <option value="sale" {% if filter_type == 'sale' %}selected{% endif %}>On Sale</option>
+                <option value="low_stock" {% if filter_type == 'low_stock' %}selected{% endif %}>Low Stock</option>
+            </select>
+            <button type="submit" class="gx-btn gx-btn-dark">
+                <i class="bi bi-search"></i>
+                <span>Search</span>
+            </button>
+            <a href="{% url 'inventory:product_list' %}" class="gx-btn gx-btn-ghost">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                <span>Clear</span>
+            </a>
+        </form>
+    </div>
+
+    <div class="products-toolbar">
+        <div class="products-result-copy">
+            Showing {{ products|length }} product{{ products|length|pluralize }}{% if selected_joint or search or filter_type != 'all' %} for the current filter{% endif %}.
+        </div>
+        <div class="products-flags">
+            {% if filter_type == 'clearance' %}
+            <span class="badge-clearance">Clearance Filter</span>
+            {% elif filter_type == 'sale' %}
+            <span class="badge-sale">Sale Filter</span>
+            {% elif filter_type == 'low_stock' %}
+            <span class="badge-low-stock">Low Stock Filter</span>
+            {% endif %}
+            {% if selected_joint %}
+            <span class="gx-badge gx-badge-neutral">Joint Filter Active</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="tableView" class="gx-card products-list-card">
+        {% if products %}
+        <div class="products-table-wrap">
+            <table class="gx-table products-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Joint</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Flags</th>
+                        {% if user.is_manager_role %}
+                        <th style="text-align:right;">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>
+                            <div class="products-cell-main">
+                                <div class="products-thumb">
+                                    {% if product.image_url %}
+                                    <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                                    {% else %}
+                                    <div class="products-thumb-placeholder"><i class="bi bi-box-seam"></i></div>
+                                    {% endif %}
+                                </div>
+                                <div class="products-meta">
+                                    <div class="products-name">{{ product.name }}</div>
+                                    <div class="products-code">{{ product.code|default:product.barcode|default:"No code" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="gx-badge gx-badge-neutral">{{ product.joint.display_name }}</span></td>
+                        <td>{{ product.category.name|default:"—" }}</td>
+                        <td>
+                            <div class="products-price">
+                                <span class="products-price-main">${{ product.effective_price }}</span>
+                                {% if product.price != product.effective_price %}
+                                <span class="products-price-old">${{ product.price }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if product.current_stock == 0 %}
+                            <span class="badge-out">Out of stock</span>
+                            {% elif product.is_low_stock %}
+                            <span class="badge-low-stock">{{ product.current_stock }} left</span>
+                            {% else %}
+                            <span class="gx-badge gx-badge-success">{{ product.current_stock }} in stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="products-flags">
+                                {% if product.is_clearance %}
+                                <span class="badge-clearance">CLR</span>
+                                {% endif %}
+                                {% if product.promotion_label == 'SALE' %}
+                                <span class="badge-sale">SALE</span>
+                                {% endif %}
+                                {% if not product.is_clearance and product.promotion_label != 'SALE' %}
+                                <span class="gx-badge gx-badge-neutral">Standard</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% if user.is_manager_role %}
+                        <td>
+                            <div class="products-actions" style="justify-content:flex-end;">
+                                <a href="{% url 'inventory:product_edit' product.pk %}" class="gx-btn gx-btn-ghost gx-btn-xs">Edit</a>
+                                <a href="{% url 'inventory:stock_adjust' product.pk %}" class="gx-btn gx-btn-dark gx-btn-xs">Stock</a>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="gx-empty products-empty">
+            <i class="bi bi-box-seam empty-icon"></i>
+            <div class="empty-title">No products found</div>
+            <div class="empty-sub">Try changing the selected joint, clearing filters, or creating a new product.</div>
         </div>
         {% endif %}
     </div>
-    {% empty %}
-    <div style="grid-column:1/-1;text-align:center;color:#bbb;padding:48px;">No products found</div>
-    {% endfor %}
+
+    <div id="gridView" class="products-grid" style="display:none;">
+        {% for product in products %}
+        <article class="product-card">
+            <div class="product-card-media">
+                {% if product.image_url %}
+                <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy">
+                {% else %}
+                <div class="product-card-placeholder"><i class="bi bi-box-seam"></i></div>
+                {% endif %}
+            </div>
+            <div class="product-card-body">
+                <div class="product-card-top">
+                    <span class="gx-badge gx-badge-neutral product-card-joint">{{ product.joint.display_name }}</span>
+                    <div class="products-flags">
+                        {% if product.is_clearance %}
+                        <span class="badge-clearance">CLR</span>
+                        {% endif %}
+                        {% if product.promotion_label == 'SALE' %}
+                        <span class="badge-sale">SALE</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="products-name">{{ product.name }}</div>
+                <div class="products-code">{{ product.code|default:product.barcode|default:"No code" }}</div>
+                <div class="product-card-category">{{ product.category.name|default:"Uncategorized" }}</div>
+                <div class="products-price">
+                    <span class="products-price-main">${{ product.effective_price }}</span>
+                    {% if product.price != product.effective_price %}
+                    <span class="products-price-old">${{ product.price }}</span>
+                    {% endif %}
+                </div>
+                <div class="product-card-stock">
+                    {% if product.current_stock == 0 %}
+                    <span class="badge-out">Out of stock</span>
+                    {% elif product.is_low_stock %}
+                    <span class="badge-low-stock">{{ product.current_stock }} left</span>
+                    {% else %}
+                    <span class="gx-badge gx-badge-success">{{ product.current_stock }} in stock</span>
+                    {% endif %}
+                </div>
+                {% if user.is_manager_role %}
+                <div class="product-card-actions">
+                    <a href="{% url 'inventory:product_edit' product.pk %}" class="gx-btn gx-btn-ghost gx-btn-xs">Edit</a>
+                    <a href="{% url 'inventory:stock_adjust' product.pk %}" class="gx-btn gx-btn-dark gx-btn-xs">Adjust Stock</a>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+        {% empty %}
+        <div class="gx-card">
+            <div class="gx-empty products-empty">
+                <i class="bi bi-grid empty-icon"></i>
+                <div class="empty-title">No products available</div>
+                <div class="empty-sub">The grid will appear here once your current filters return items.</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function setView(v) {
-    document.getElementById('tableView').style.display = v === 'table' ? '' : 'none';
-    document.getElementById('gridView').style.display  = v === 'grid'  ? 'grid' : 'none';
-    document.getElementById('btnTable').classList.toggle('active', v === 'table');
-    document.getElementById('btnGrid').classList.toggle('active', v === 'grid');
-    localStorage.setItem('prodView', v);
+function setView(view) {
+    const tableView = document.getElementById('tableView');
+    const gridView = document.getElementById('gridView');
+    const btnTable = document.getElementById('btnTable');
+    const btnGrid = document.getElementById('btnGrid');
+
+    if (!tableView || !gridView || !btnTable || !btnGrid) {
+        return;
+    }
+
+    const isGrid = view === 'grid';
+    tableView.style.display = isGrid ? 'none' : '';
+    gridView.style.display = isGrid ? 'grid' : 'none';
+    btnTable.classList.toggle('active', !isGrid);
+    btnGrid.classList.toggle('active', isGrid);
+
+    try {
+        localStorage.setItem('productListView', view);
+    } catch (error) {
+    }
 }
-const saved = localStorage.getItem('prodView');
-if (saved) setView(saved);
+
+document.addEventListener('DOMContentLoaded', function () {
+    let savedView = 'table';
+
+    try {
+        savedView = localStorage.getItem('productListView') || 'table';
+    } catch (error) {
+    }
+
+    setView(savedView === 'grid' ? 'grid' : 'table');
+});
 </script>
 {% endblock %}

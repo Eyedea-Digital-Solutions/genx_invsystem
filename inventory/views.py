@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import F, Q
 from django.conf import settings
 from django.http import JsonResponse
 
@@ -42,17 +43,37 @@ def inventory_dashboard(request):
 
 
 @login_required
+def low_stock_report(request):
+    products = (
+        Product.objects
+        .select_related('stock', 'joint', 'category')
+        .filter(is_active=True, stock__quantity__lte=F('stock__min_quantity'))
+        .order_by('stock__quantity', 'name')
+    )
+
+    out_of_stock = products.filter(stock__quantity=0).count()
+
+    return render(request, 'inventory/low_stock.html', {
+        'products': products,
+        'out_of_stock': out_of_stock,
+    })
+
+
+@login_required
 def product_list(request):
     joint_id = request.GET.get('joint')
     search = request.GET.get('q', '').strip()
     filter_type = request.GET.get('filter', 'all')
 
-    products = Product.objects.select_related('joint', 'stock', 'category', 'brand').filter(is_active=True)
+    products = (
+        Product.objects
+        .select_related('joint', 'stock', 'category', 'brand')
+        .filter(is_active=True)
+    )
 
     if joint_id:
         products = products.filter(joint_id=joint_id)
     if search:
-        from django.db.models import Q
         products = products.filter(
             Q(name__icontains=search) | Q(code__icontains=search) | Q(barcode__icontains=search)
         )
@@ -63,13 +84,28 @@ def product_list(request):
     elif filter_type == 'low_stock':
         products = products.filter(stock__quantity__lte=settings.LOW_STOCK_THRESHOLD)
 
+    products = products.order_by('name')
     joints = Joint.objects.all()
+    summary_qs = Product.objects.select_related('stock').filter(is_active=True)
+
+    if joint_id:
+        summary_qs = summary_qs.filter(joint_id=joint_id)
+
+    total_products = summary_qs.count()
+    clearance_count = summary_qs.filter(is_clearance=True).count()
+    sale_count = summary_qs.filter(sale_price__isnull=False).count()
+    low_stock_count = summary_qs.filter(stock__quantity__lte=settings.LOW_STOCK_THRESHOLD).count()
+
     context = {
         'products': products,
         'joints': joints,
         'selected_joint': joint_id,
         'search': search,
         'filter_type': filter_type,
+        'total_products': total_products,
+        'clearance_count': clearance_count,
+        'sale_count': sale_count,
+        'low_stock_count': low_stock_count,
     }
     return render(request, 'product_list.html', context)
 
@@ -265,18 +301,23 @@ def transfer_create(request):
 def get_products_by_joint(request):
     joint_id = request.GET.get('joint_id')
     if joint_id:
-        products = Product.objects.select_related('stock').filter(
+        products = Product.objects.select_related('stock', 'category', 'brand').filter(
             joint_id=joint_id, is_active=True
-        ).values('id', 'name', 'code', 'price', 'stock__quantity', 'barcode', 'is_clearance', 'image')
+        ).order_by('name')
 
-        result = []
-        for p in products:
-            image_url = None
-            if p['image']:
-                image_url = request.build_absolute_uri(settings.MEDIA_URL + p['image'])
-            p['image_url'] = image_url
-            del p['image']
-            result.append(p)
+        result = [
+            {
+                'id': p.id,
+                'name': p.name,
+                'code': p.code,
+                'price': str(p.price),
+                'stock__quantity': p.current_stock,
+                'barcode': p.barcode,
+                'is_clearance': p.is_clearance,
+                'image_url': p.image_url,
+            }
+            for p in products
+        ]
 
         return JsonResponse({'products': result})
     return JsonResponse({'products': []})

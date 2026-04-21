@@ -1,165 +1,288 @@
 {% extends "base.html" %}
-{% load static %}
-
 {% block title %}Inventory{% endblock %}
 {% block nav_inventory %}active{% endblock %}
 
 {% block breadcrumb %}
-<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-item"><a href="/dashboard/">Home</a></span>
 <span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
 <span class="breadcrumb-item active">Inventory</span>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+.inventory-shell {
+  display: grid;
+  gap: 18px;
+}
+.inventory-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+.inventory-stat {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+.inventory-stat-label {
+  font-family: var(--mono);
+  color: var(--text-3);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+}
+.inventory-stat-value {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+.inventory-stat-sub {
+  margin-top: 8px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.inventory-filters-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) repeat(4, minmax(140px, 0.8fr)) auto auto;
+  gap: 10px;
+  width: 100%;
+}
+.inventory-table-wrap {
+  overflow-x: auto;
+}
+.inventory-table {
+  min-width: 1100px;
+}
+.inventory-product {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.inventory-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.inventory-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.inventory-thumb-placeholder {
+  color: var(--text-4);
+  font-size: 17px;
+}
+.inventory-product-name {
+  font-weight: 700;
+  color: var(--text);
+}
+.inventory-product-meta {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+.inventory-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.inventory-empty {
+  padding: 64px 24px;
+}
+@media (max-width: 1200px) {
+  .inventory-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .inventory-filters-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .inventory-stats,
+  .inventory-filters-form {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1 class="page-title">Inventory</h1>
-    <p class="page-sub">{{ total_products|default:0 }} products across {{ total_categories|default:0 }} categories</p>
-  </div>
-  <div class="page-actions">
-    <a href="/inventory/product/add/" class="btn btn-primary"><i class="bi bi-plus me-1"></i>Add Product</a>
-    <a href="/inventory/import/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-upload me-1"></i>Import</a>
-    <a href="/inventory/export/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-download me-1"></i>Export</a>
-  </div>
-</div>
-
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px">
-  <div class="stat-card">
-    <div class="stat-icon" style="background:rgba(124,58,237,.15);color:var(--accent)"><i class="bi bi-boxes"></i></div>
-    <div class="stat-body"><div class="stat-label">Total Products</div><div class="stat-value">{{ total_products|default:0 }}</div></div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon" style="background:rgba(229,25,58,.15);color:var(--rose)"><i class="bi bi-exclamation-triangle"></i></div>
-    <div class="stat-body"><div class="stat-label">Low Stock</div><div class="stat-value">{{ low_stock_count|default:0 }}</div></div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="bi bi-x-circle"></i></div>
-    <div class="stat-body"><div class="stat-label">Out of Stock</div><div class="stat-value">{{ out_of_stock_count|default:0 }}</div></div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon" style="background:rgba(0,214,143,.15);color:var(--green)"><i class="bi bi-currency-dollar"></i></div>
-    <div class="stat-body"><div class="stat-label">Stock Value</div><div class="stat-value">${{ total_stock_value|floatformat:0|default:"0" }}</div></div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">Products</h3>
-    <div class="card-actions">
-      <div class="filter-bar">
-        <div class="search-box">
-          <i class="bi bi-search"></i>
-          <input type="text" id="product-search" placeholder="Search products…" data-table-search="#products-table" class="search-input">
-        </div>
-        <select id="category-filter" class="filter-select" onchange="filterProducts()">
-          <option value="">All Categories</option>
-          {% for cat in categories %}
-          <option value="{{ cat.name }}" {% if selected_cat == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
-          {% endfor %}
-        </select>
-        <select id="stock-filter" class="filter-select" onchange="filterProducts()">
-          <option value="">All Stock</option>
-          <option value="low">Low Stock</option>
-          <option value="out">Out of Stock</option>
-          <option value="ok">In Stock</option>
-        </select>
-      </div>
+<div class="inventory-shell">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Inventory</h1>
+      <p class="page-sub">{{ total_products|default:0 }} active products monitored across all branches.</p>
+    </div>
+    <div class="page-actions">
+      <a href="{% url 'inventory:product_create' %}" class="gx-btn gx-btn-primary"><i class="bi bi-plus-lg"></i><span>Add Product</span></a>
+      <a href="{% url 'inventory:bulk_import' %}" class="gx-btn gx-btn-ghost"><i class="bi bi-upload"></i><span>Import</span></a>
+      <a href="{% url 'inventory:export_csv' %}" class="gx-btn gx-btn-dark"><i class="bi bi-download"></i><span>Export</span></a>
     </div>
   </div>
-  <div class="card-body p-0">
-    <table class="table table-hover mb-0" id="products-table">
-      <thead>
-        <tr>
-          <th>Product</th>
-          <th>SKU</th>
-          <th>Category</th>
-          <th class="text-end">Cost</th>
-          <th class="text-end">Price</th>
-          <th class="text-center">Stock</th>
-          <th class="text-center">Status</th>
-          <th class="text-end">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for product in products %}
-        <tr>
-          <td>
-            <div style="display:flex;align-items:center;gap:10px">
-              {% if product.image %}
-              <img src="{{ product.image.url }}" style="width:36px;height:36px;border-radius:8px;object-fit:cover">
-              {% else %}
-              <div style="width:36px;height:36px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>
-              {% endif %}
-              <div>
-                <div style="font-weight:600">{{ product.name }}</div>
-                {% if product.brand %}<div style="font-size:11px;color:var(--text-muted)">{{ product.brand }}</div>{% endif %}
-              </div>
-            </div>
-          </td>
-          <td class="font-mono" style="font-size:12px;color:var(--text-muted)">{{ product.sku|default:"—" }}</td>
-          <td>{{ product.category|default:"—" }}</td>
-          <td class="text-end font-mono">${{ product.cost_price|floatformat:2|default:"0.00" }}</td>
-          <td class="text-end font-mono" style="color:var(--accent)">${{ product.selling_price|floatformat:2 }}</td>
-          <td class="text-center">
-            <span class="font-mono" style="font-size:13px;font-weight:600;color:{% if product.quantity <= 0 %}var(--rose){% elif product.quantity <= product.reorder_level|default:5 %}var(--amber){% else %}var(--green){% endif %}">
-              {{ product.quantity }}
-            </span>
-          </td>
-          <td class="text-center">
-            {% if product.quantity <= 0 %}
-            <span class="badge badge-danger">Out</span>
-            {% elif product.quantity <= product.reorder_level|default:5 %}
-            <span class="badge badge-warning">Low</span>
-            {% else %}
-            <span class="badge badge-success">OK</span>
-            {% endif %}
-          </td>
-          <td class="text-end">
-            <div style="display:flex;gap:6px;justify-content:flex-end">
-              <a href="/inventory/product/{{ product.id }}/edit/" class="btn btn-xs"><i class="bi bi-pencil"></i></a>
-              <a href="/inventory/product/{{ product.id }}/adjust/" class="btn btn-xs"><i class="bi bi-plus-minus"></i></a>
-              <a href="/inventory/product/{{ product.id }}/" class="btn btn-xs"><i class="bi bi-eye"></i></a>
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="8" class="text-center text-muted py-5">
-          <i class="bi bi-boxes" style="font-size:40px;display:block;margin-bottom:12px;opacity:.3"></i>
-          No products found. <a href="/inventory/product/add/" class="text-accent">Add your first product</a>
-        </td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+  <div class="inventory-stats">
+    <div class="inventory-stat">
+      <div class="inventory-stat-label">Products</div>
+      <div class="inventory-stat-value">{{ total_products|default:0 }}</div>
+      <div class="inventory-stat-sub">Active catalogue lines</div>
+    </div>
+    <div class="inventory-stat">
+      <div class="inventory-stat-label">Low Stock</div>
+      <div class="inventory-stat-value">{{ low_stock_count|default:0 }}</div>
+      <div class="inventory-stat-sub">Needs replenishment soon</div>
+    </div>
+    <div class="inventory-stat">
+      <div class="inventory-stat-label">Out Of Stock</div>
+      <div class="inventory-stat-value">{{ out_of_stock|default:0 }}</div>
+      <div class="inventory-stat-sub">Currently unavailable</div>
+    </div>
+    <div class="inventory-stat">
+      <div class="inventory-stat-label">Stock Value</div>
+      <div class="inventory-stat-value">${{ total_value|floatformat:0 }}</div>
+      <div class="inventory-stat-sub">Based on selling price</div>
+    </div>
+    <div class="inventory-stat">
+      <div class="inventory-stat-label">Pending Transfers</div>
+      <div class="inventory-stat-value">{{ pending_transfers|default:0 }}</div>
+      <div class="inventory-stat-sub">Awaiting completion</div>
+    </div>
   </div>
-  {% if is_paginated %}
-  <div class="card-footer">
-    <nav>
-      <ul class="pagination pagination-sm mb-0">
-        {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>{% endif %}
-        <li class="page-item disabled"><a class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</a></li>
-        {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>{% endif %}
-      </ul>
-    </nav>
+
+  <div class="filter-bar">
+    <form method="get" class="inventory-filters-form">
+      <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="gx-input" placeholder="Search by name, code, or barcode">
+      <select name="joint" class="gx-select" onchange="this.form.submit()">
+        <option value="">All Joints</option>
+        {% for item in joints %}
+        <option value="{{ item.pk }}" {% if request.GET.joint == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.display_name }}</option>
+        {% endfor %}
+      </select>
+      <select name="category" class="gx-select" onchange="this.form.submit()">
+        <option value="">All Categories</option>
+        {% for item in categories %}
+        <option value="{{ item.pk }}" {% if request.GET.category == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="brand" class="gx-select" onchange="this.form.submit()">
+        <option value="">All Brands</option>
+        {% for item in brands %}
+        <option value="{{ item.pk }}" {% if request.GET.brand == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="stock" class="gx-select" onchange="this.form.submit()">
+        <option value="">All Stock</option>
+        <option value="out" {% if request.GET.stock == 'out' %}selected{% endif %}>Out of Stock</option>
+        <option value="low" {% if request.GET.stock == 'low' %}selected{% endif %}>Low Stock</option>
+        <option value="ok" {% if request.GET.stock == 'ok' %}selected{% endif %}>Healthy Stock</option>
+      </select>
+      <select name="sort" class="gx-select" onchange="this.form.submit()">
+        <option value="name" {% if sort == 'name' %}selected{% endif %}>Sort: Name</option>
+        <option value="stock" {% if sort == 'stock' %}selected{% endif %}>Sort: Stock</option>
+        <option value="price" {% if sort == 'price' %}selected{% endif %}>Sort: Price</option>
+        <option value="value" {% if sort == 'value' %}selected{% endif %}>Sort: Value</option>
+      </select>
+      <button type="submit" class="gx-btn gx-btn-dark"><i class="bi bi-search"></i><span>Filter</span></button>
+      <a href="{% url 'inventory:inventory_dashboard' %}" class="gx-btn gx-btn-ghost"><i class="bi bi-arrow-counterclockwise"></i><span>Clear</span></a>
+    </form>
+  </div>
+
+  <div class="gx-card">
+    <div class="gx-card-head">
+      <div class="gx-card-title"><i class="bi bi-table"></i> Stock Overview</div>
+      <div class="products-result-copy">
+        {% if joint %}Showing {{ joint.display_name }} only.{% else %}Showing all branches.{% endif %}
+      </div>
+    </div>
+    {% if page_obj.object_list %}
+    <div class="inventory-table-wrap">
+      <table class="gx-table inventory-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Joint</th>
+            <th>Category</th>
+            <th>Brand</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Value</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in page_obj.object_list %}
+          <tr>
+            <td>
+              <div class="inventory-product">
+                <div class="inventory-thumb">
+                  {% if row.product.image_url %}
+                  <img src="{{ row.product.image_url }}" alt="{{ row.product.name }}">
+                  {% else %}
+                  <div class="inventory-thumb-placeholder"><i class="bi bi-box-seam"></i></div>
+                  {% endif %}
+                </div>
+                <div>
+                  <div class="inventory-product-name">{{ row.product.name }}</div>
+                  <div class="inventory-product-meta">{{ row.product.code|default:row.product.barcode|default:"No code" }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="gx-badge gx-badge-neutral">{{ row.product.joint.display_name }}</span></td>
+            <td>{{ row.product.category.name|default:"—" }}</td>
+            <td>{{ row.product.brand.name|default:"—" }}</td>
+            <td>${{ row.product.effective_price }}</td>
+            <td>
+              {% if row.product.current_stock == 0 %}
+              <span class="badge-out">Out of stock</span>
+              {% elif row.product.is_low_stock %}
+              <span class="badge-low-stock">{{ row.product.current_stock }} left</span>
+              {% else %}
+              <span class="gx-badge gx-badge-success">{{ row.product.current_stock }} in stock</span>
+              {% endif %}
+            </td>
+            <td>${{ row.line_value|floatformat:2 }}</td>
+            <td>
+              <div class="inventory-actions">
+                <a href="{% url 'inventory:product_edit' row.product.pk %}" class="gx-btn gx-btn-ghost gx-btn-xs">Edit</a>
+                <a href="{% url 'inventory:stock_adjust' row.product.pk %}" class="gx-btn gx-btn-dark gx-btn-xs">Stock</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="gx-empty inventory-empty">
+      <i class="bi bi-boxes empty-icon"></i>
+      <div class="empty-title">No inventory records matched your filters</div>
+      <div class="empty-sub">Try clearing filters or add a new product to begin tracking stock.</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div style="display:flex;justify-content:flex-end;">
+    <ul class="pagination">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q|urlencode }}&{% endif %}{% if request.GET.joint %}joint={{ request.GET.joint }}&{% endif %}{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.brand %}brand={{ request.GET.brand }}&{% endif %}{% if request.GET.stock %}stock={{ request.GET.stock }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.previous_page_number }}">Prev</a></li>
+      {% endif %}
+      <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q|urlencode }}&{% endif %}{% if request.GET.joint %}joint={{ request.GET.joint }}&{% endif %}{% if request.GET.category %}category={{ request.GET.category }}&{% endif %}{% if request.GET.brand %}brand={{ request.GET.brand }}&{% endif %}{% if request.GET.stock %}stock={{ request.GET.stock }}&{% endif %}{% if request.GET.sort %}sort={{ request.GET.sort }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a></li>
+      {% endif %}
+    </ul>
   </div>
   {% endif %}
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function filterProducts() {
-  const cat = document.getElementById('category-filter').value.toLowerCase();
-  const stock = document.getElementById('stock-filter').value;
-  document.querySelectorAll('#products-table tbody tr').forEach(row => {
-    const rowCat = row.cells[2]?.textContent.toLowerCase() || '';
-    const qty = parseInt(row.cells[5]?.textContent || '0');
-    let show = true;
-    if (cat && !rowCat.includes(cat)) show = false;
-    if (stock === 'out' && qty > 0) show = false;
-    if (stock === 'low' && (qty <= 0 || qty > 5)) show = false;
-    if (stock === 'ok' && qty <= 5) show = false;
-    row.style.display = show ? '' : 'none';
-  });
-}
-</script>
 {% endblock %}

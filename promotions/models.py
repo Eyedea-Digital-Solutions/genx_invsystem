@@ -183,6 +183,15 @@ class Bundle(models.Model):
     def __str__(self):
         return f'{self.name} (${self.price})'
 
+    @property
+    def image_url(self):
+        if not self.image:
+            return ''
+        try:
+            return self.image.url
+        except Exception:
+            return ''
+
     def is_available_in(self, joint_id):
         """True if this bundle is available in the given joint."""
         if not self.joints.exists():

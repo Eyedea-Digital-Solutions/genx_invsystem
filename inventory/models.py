@@ -126,6 +126,15 @@ class Product(models.Model):
             return 0
 
     @property
+    def image_url(self):
+        if not self.image:
+            return ''
+        try:
+            return self.image.url
+        except Exception:
+            return ''
+
+    @property
     def is_low_stock(self):
         try:
             threshold = self.stock.min_quantity

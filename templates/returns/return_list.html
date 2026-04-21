@@ -1,129 +1,101 @@
 {% extends 'base.html' %}
+{% block title %}Returns{% endblock %}
+{% block nav_returns %}active{% endblock %}
 
-{% block title %}Returns History{% endblock %}
-{% block page_title %}Returns{% endblock %}
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="/dashboard/">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Returns</span>
+{% endblock %}
 
 {% block content %}
-<div class="gx-breadcrumb">
-    <a href="/">Home</a>
-    <span class="sep">/</span>
-    <span>Returns</span>
-</div>
-
 <div class="page-header">
-    <div class="page-header-left">
-        <h1><i class="bi bi-arrow-return-left" style="color:var(--accent2);margin-right:8px;"></i>Returns History</h1>
-        <p>All processed returns and refunds</p>
+    <div>
+        <h1 class="page-title">Returns</h1>
+        <p class="page-sub">Review processed and pending return records.</p>
     </div>
-    <a href="/returns/" class="btn-gx btn-gx-danger">
-        <i class="bi bi-plus-lg"></i> New Return
-    </a>
+    <div class="page-actions">
+        <a href="{% url 'returns:return_search' %}" class="gx-btn gx-btn-danger"><i class="bi bi-plus-lg"></i><span>New Return</span></a>
+    </div>
 </div>
 
-<!-- FILTER BAR -->
 <div class="filter-bar">
     <form method="get" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;width:100%;">
         <div>
-            <label class="gx-form-label">Date From</label>
-            <input type="date" name="date_from" class="gx-input" value="{{ request.GET.date_from }}">
-        </div>
-        <div>
-            <label class="gx-form-label">Date To</label>
-            <input type="date" name="date_to" class="gx-input" value="{{ request.GET.date_to }}">
-        </div>
-        <div>
-            <label class="gx-form-label">Reason</label>
-            <select name="reason" class="gx-select">
-                <option value="">All Reasons</option>
-                <option value="defective" {% if request.GET.reason == 'defective' %}selected{% endif %}>Defective</option>
-                <option value="wrong_item" {% if request.GET.reason == 'wrong_item' %}selected{% endif %}>Wrong Item</option>
-                <option value="changed_mind" {% if request.GET.reason == 'changed_mind' %}selected{% endif %}>Changed Mind</option>
-                <option value="size_exchange" {% if request.GET.reason == 'size_exchange' %}selected{% endif %}>Size Exchange</option>
-                <option value="other" {% if request.GET.reason == 'other' %}selected{% endif %}>Other</option>
-            </select>
-        </div>
-        <div>
-            <label class="gx-form-label">Joint</label>
-            <select name="joint" class="gx-select">
-                <option value="">All Joints</option>
-                {% for joint in joints %}
-                <option value="{{ joint.id }}" {% if request.GET.joint == joint.id|stringformat:"s" %}selected{% endif %}>{{ joint.display_name }}</option>
+            <label class="form-label">Status</label>
+            <select name="status" class="gx-select">
+                <option value="">All Statuses</option>
+                {% for key, label in status_choices %}
+                <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
         </div>
+        <div>
+            <label class="form-label">Date From</label>
+            <input type="date" name="date_from" class="gx-input" value="{{ date_from }}">
+        </div>
+        <div>
+            <label class="form-label">Date To</label>
+            <input type="date" name="date_to" class="gx-input" value="{{ date_to }}">
+        </div>
         <div style="margin-left:auto;display:flex;gap:8px;">
-            <button type="submit" class="btn-gx btn-gx-primary btn-gx-sm">
-                <i class="bi bi-funnel"></i> Filter
-            </button>
-            <a href="/returns/list/" class="btn-gx btn-gx-ghost btn-gx-sm">Clear</a>
+            <button type="submit" class="gx-btn gx-btn-primary gx-btn-sm"><i class="bi bi-funnel"></i><span>Filter</span></button>
+            <a href="{% url 'returns:return_list' %}" class="gx-btn gx-btn-ghost gx-btn-sm">Clear</a>
         </div>
     </form>
 </div>
 
-<!-- RETURNS TABLE -->
 <div class="gx-card">
     <div class="gx-card-head">
-        <div class="gx-card-title"><i class="bi bi-list-ul"></i> Returns</div>
-        <span style="font-size:12px;color:#888;">{{ returns|length }} record{{ returns|length|pluralize }}</span>
+        <div class="gx-card-title"><i class="bi bi-list-ul"></i> Return Records</div>
+        <span style="font-size:12px;color:var(--text-3);">{{ returns|length }} record{{ returns|length|pluralize }}</span>
     </div>
     <div style="overflow-x:auto;">
         <table class="gx-table">
             <thead>
                 <tr>
-                    <th>Return #</th>
+                    <th>Return</th>
                     <th>Original Sale</th>
                     <th>Date</th>
-                    <th>Cashier</th>
+                    <th>Processed By</th>
                     <th>Joint</th>
                     <th>Reason</th>
-                    <th>Refund Method</th>
-                    <th class="text-end">Refund Amount</th>
-                    <th></th>
+                    <th>Refund Type</th>
+                    <th>Status</th>
+                    <th>Amount</th>
+                    <th style="text-align:right;">Action</th>
                 </tr>
             </thead>
             <tbody>
                 {% for ret in returns %}
                 <tr>
+                    <td class="mono" style="font-weight:700;">{{ ret.return_number }}</td>
+                    <td><a href="{% url 'sales:sale_detail' ret.original_sale.pk %}" class="mono">{{ ret.original_sale.receipt_number }}</a></td>
+                    <td>{{ ret.created_at|date:"d M Y, H:i" }}</td>
+                    <td>{{ ret.processed_by.get_full_name|default:ret.processed_by.username }}</td>
+                    <td><span class="gx-badge gx-badge-neutral">{{ ret.original_sale.joint.display_name }}</span></td>
+                    <td>{{ ret.reason }}</td>
+                    <td>{{ ret.get_refund_type_display }}</td>
                     <td>
-                        <span style="font-family:var(--mono);font-weight:600;font-size:12px;">
-                            #{{ ret.id }}
-                        </span>
+                        {% if ret.status == 'completed' %}
+                        <span class="gx-badge gx-badge-success">Completed</span>
+                        {% elif ret.status == 'pending' %}
+                        <span class="gx-badge gx-badge-warning">Pending</span>
+                        {% else %}
+                        <span class="gx-badge gx-badge-danger">Cancelled</span>
+                        {% endif %}
                     </td>
-                    <td>
-                        <a href="/sales/{{ ret.sale.id }}/"
-                           style="color:var(--accent);font-weight:600;text-decoration:none;font-size:12px;font-family:var(--mono);">
-                            {{ ret.sale.receipt_number|default:ret.sale.id }}
-                        </a>
-                    </td>
-                    <td style="font-size:12px;">{{ ret.created_at|date:"d M Y, H:i" }}</td>
-                    <td style="font-size:12px;">{{ ret.processed_by.get_full_name|default:ret.processed_by.username }}</td>
-                    <td>
-                        <span class="gx-badge gx-badge-neutral">{{ ret.sale.joint.display_name|default:ret.sale.joint }}</span>
-                    </td>
-                    <td>
-                        <span class="gx-badge {% if ret.reason == 'defective' %}gx-badge-danger{% elif ret.reason == 'changed_mind' %}gx-badge-warning{% else %}gx-badge-info{% endif %}">
-                            {{ ret.get_reason_display|default:ret.reason }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="gx-badge {% if ret.refund_method == 'cash' %}gx-badge-success{% elif ret.refund_method == 'ecocash' %}gx-badge-info{% elif ret.refund_method == 'store_credit' %}gx-badge-purple{% else %}gx-badge-neutral{% endif %}">
-                            {{ ret.get_refund_method_display|default:ret.refund_method }}
-                        </span>
-                    </td>
-                    <td class="text-end" style="font-weight:700;color:var(--accent2);">
-                        ${{ ret.refund_amount|floatformat:2 }}
-                    </td>
-                    <td>
-                        <a href="/returns/{{ ret.id }}/" class="btn-gx btn-gx-ghost btn-gx-xs">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                    </td>
+                    <td style="font-weight:700;color:var(--rose);">${{ ret.total_refund_amount|floatformat:2 }}</td>
+                    <td style="text-align:right;"><a href="{% url 'returns:return_detail' ret.pk %}" class="gx-btn gx-btn-ghost gx-btn-xs">View</a></td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9" style="text-align:center;padding:40px;color:#aaa;">
-                        <i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:8px;opacity:0.4;"></i>
-                        No returns found
+                    <td colspan="10">
+                        <div class="gx-empty">
+                            <i class="bi bi-inbox empty-icon"></i>
+                            <div class="empty-title">No returns found</div>
+                            <div class="empty-sub">Create a return or widen the filters to see more records.</div>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}

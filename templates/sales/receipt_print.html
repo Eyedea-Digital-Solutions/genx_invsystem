@@ -38,9 +38,9 @@
 
 <div class="receipt-no">RECEIPT: {{ sale.receipt_number }}</div>
 <table>
-  <tr><td>Date:</td><td style="text-align:right">{{ sale.created_at|date:"d/m/Y H:i" }}</td></tr>
-  <tr><td>Cashier:</td><td style="text-align:right">{{ sale.cashier__username|default:"—" }}</td></tr>
-  {% if sale.customer__name %}<tr><td>Customer:</td><td style="text-align:right">{{ sale.customer__name }}</td></tr>{% endif %}
+  <tr><td>Date:</td><td style="text-align:right">{{ sale.sale_date|date:"d/m/Y H:i" }}</td></tr>
+  <tr><td>Cashier:</td><td style="text-align:right">{{ sale.sold_by.get_full_name|default:sale.sold_by.username|default:"—" }}</td></tr>
+  {% if sale.customer_name %}<tr><td>Customer:</td><td style="text-align:right">{{ sale.customer_name }}</td></tr>{% endif %}
 </table>
 
 <div class="divider"></div>
@@ -56,9 +56,9 @@
   <tbody>
     {% for item in sale.items.all %}
     <tr>
-      <td style="padding-right:4px">{{ item.product__name|truncatechars:20 }}</td>
+      <td style="padding-right:4px">{% if item.product %}{{ item.product.name|truncatechars:20 }}{% elif item.custom_item_name %}{{ item.custom_item_name|truncatechars:20 }}{% else %}(item){% endif %}</td>
       <td style="text-align:center">{{ item.quantity }}</td>
-      <td style="text-align:right">${{ item.total_price|floatformat:2 }}</td>
+      <td style="text-align:right">${{ item.line_total|floatformat:2 }}</td>
     </tr>
     <tr>
       <td style="font-size:9px;color:#555;padding-left:4px" colspan="3">@ ${{ item.unit_price|floatformat:2 }} each</td>
@@ -72,10 +72,7 @@
 <table>
   <tr><td>Subtotal:</td><td>${{ sale.subtotal|floatformat:2 }}</td></tr>
   {% if sale.discount_amount and sale.discount_amount > 0 %}
-  <tr><td>Discount {% if sale.discount_percentage %}({{ sale.discount_percentage }}%){% endif %}:</td><td>-${{ sale.discount_amount|floatformat:2 }}</td></tr>
-  {% endif %}
-  {% if sale.tax_amount and sale.tax_amount > 0 %}
-  <tr><td>Tax:</td><td>${{ sale.tax_amount|floatformat:2 }}</td></tr>
+  <tr><td>{{ sale.discount_label|default:"Discount" }}:</td><td>-${{ sale.discount_amount|floatformat:2 }}</td></tr>
   {% endif %}
   <tr class="grand-total"><td><b>TOTAL:</b></td><td><b>${{ sale.total_amount|floatformat:2 }}</b></td></tr>
 </table>
@@ -84,9 +81,8 @@
 
 <table>
   <tr><td>Payment:</td><td style="text-align:right;text-transform:capitalize">{{ sale.payment_method }}</td></tr>
-  {% if sale.cash_tendered %}
-  <tr><td>Cash Tendered:</td><td style="text-align:right">${{ sale.cash_tendered|floatformat:2 }}</td></tr>
-  <tr><td>Change:</td><td style="text-align:right">${{ sale.change_given|floatformat:2 }}</td></tr>
+  {% if sale.payment_method == 'mixed' and sale.cash_amount %}
+  <tr><td>Cash Portion:</td><td style="text-align:right">${{ sale.cash_amount|floatformat:2 }}</td></tr>
   {% endif %}
 </table>
 

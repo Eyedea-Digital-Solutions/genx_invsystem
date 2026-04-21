@@ -15,6 +15,9 @@
     <p>{{ sale.sale_date|date:"l, d F Y · H:i" }} &nbsp;·&nbsp; {{ sale.joint.display_name }}</p>
   </div>
   <div class="ph-right">
+    <a href="{% url 'returns:return_create' sale.pk %}" class="gx-btn gx-btn-danger">
+      <i class="bi bi-arrow-return-left"></i> Return
+    </a>
     <a href="{% url 'sales:sale_receipt_thermal' sale.pk %}" target="_blank" class="gx-btn gx-btn-dark">
       <i class="bi bi-printer"></i> Print Receipt
     </a>
@@ -39,7 +42,7 @@
         </div>
         <div style="padding:14px 18px;border-right:1px solid var(--border);">
           <div class="stat-label">Cashier</div>
-          <div style="font-weight:600;font-size:13px;margin-top:4px;">{{ sale.sold_by.get_full_name|default:sale.sold_by.username }}</div>
+          <div style="font-weight:600;font-size:13px;margin-top:4px;">{{ sale.sold_by.get_full_name|default:sale.sold_by.username|default:"—" }}</div>
         </div>
         <div style="padding:14px 18px;">
           <div class="stat-label">Payment</div>
@@ -81,13 +84,14 @@
             <tr>
               <td>
                 <div style="font-weight:600;">
-                  {% if item.product %}{{ item.product.name }}{% else %}<span style="color:var(--ink-4);font-style:italic;">(deleted product)</span>{% endif %}
+                  {% if item.product %}{{ item.product.name }}{% elif item.custom_item_name %}{{ item.custom_item_name }}{% else %}<span style="color:var(--ink-4);font-style:italic;">(deleted product)</span>{% endif %}
                 </div>
                 {% if item.is_free_gift %}<span class="gx-badge gx-badge-success" style="margin-top:3px;font-size:9px;">FREE GIFT</span>{% endif %}
                 {% if item.promotion_label %}<div style="font-size:11px;color:var(--ink-3);margin-top:2px;">{{ item.promotion_label }}</div>{% endif %}
+                {% if item.item_note %}<div style="font-size:11px;color:var(--ink-3);margin-top:2px;">{{ item.item_note }}</div>{% endif %}
               </td>
               <td class="text-center mono">{{ item.quantity }}</td>
-              <td class="text-end mono">{% if item.is_free_gift %}—{% else %} ${{ item.unit_price }}{% endif %}</td>
+              <td class="text-end mono">{% if item.is_free_gift %}—{% else %}${{ item.unit_price|floatformat:2 }}{% endif %}</td>
               <td class="text-end mono" style="font-weight:600;">{% if item.is_free_gift %}$0.00{% else %}${{ item.line_total|floatformat:2 }}{% endif %}</td>
             </tr>
             {% endfor %}
@@ -129,7 +133,26 @@
       </div>
     </div>
 
-    <!-- Audit trail -->
+    {% if sale.returns.exists %}
+    <div class="gx-card" style="margin-bottom:16px;">
+      <div class="gx-card-head">
+        <div class="gx-card-title"><i class="bi bi-arrow-return-left"></i> Returns</div>
+      </div>
+      <div style="padding:4px 0;">
+        {% for ret in sale.returns.all %}
+        <div style="padding:11px 18px;{% if not forloop.last %}border-bottom:1px solid var(--border);{% endif %}">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+            <div style="font-size:12px;font-weight:600;">{{ ret.return_number }}</div>
+            <div class="mono" style="font-size:12px;color:var(--red);">${{ ret.total_refund_amount|floatformat:2 }}</div>
+          </div>
+          <div style="font-size:11px;color:var(--ink-3);margin-top:3px;">{{ ret.return_date|date:"d M Y H:i" }} · {{ ret.get_status_display }}</div>
+          <div style="font-size:12px;margin-top:4px;">{{ ret.reason }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     {% with logs=sale.audit_logs.all %}
     {% if logs %}
     <div class="gx-card">

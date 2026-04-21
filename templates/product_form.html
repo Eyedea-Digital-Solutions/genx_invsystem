@@ -1,55 +1,285 @@
 {% extends 'base.html' %}
 {% block title %}{{ title }}{% endblock %}
-{% block page_title %}{{ title }}{% endblock %}
+{% block nav_inventory %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="/dashboard/">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item"><a href="/inventory/">Inventory</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item"><a href="{% url 'inventory:product_list' %}">Products</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">{{ title }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.product-form-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.9fr);
+    gap: 18px;
+}
+.product-form-main,
+.product-form-side {
+    display: grid;
+    gap: 18px;
+}
+.product-panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+}
+.product-panel .gx-card-head {
+    padding: 16px 18px;
+}
+.product-panel .gx-card-body {
+    padding: 18px;
+}
+.product-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+.product-field-wide {
+    grid-column: 1 / -1;
+}
+.product-field {
+    min-width: 0;
+}
+.product-field .form-control,
+.product-field .form-select,
+.product-field .form-check-input {
+    width: 100%;
+}
+.product-field .errorlist {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--rose-2);
+    font-size: 11px;
+}
+.product-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--surface-2);
+}
+.product-check label {
+    margin: 0;
+    color: var(--text);
+    font-weight: 600;
+}
+.product-image-stage {
+    border: 1px dashed var(--border-2);
+    border-radius: var(--r-lg);
+    background:
+        radial-gradient(circle at top, rgba(154,107,255,0.22), transparent 46%),
+        var(--surface-2);
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.product-image-stage img {
+    width: 100%;
+    height: 100%;
+    max-height: 320px;
+    object-fit: contain;
+}
+.product-image-empty {
+    text-align: center;
+    color: var(--text-3);
+    padding: 24px;
+}
+.product-image-empty i {
+    display: block;
+    font-size: 44px;
+    margin-bottom: 10px;
+    color: var(--text-4);
+}
+.product-status-card {
+    display: grid;
+    gap: 12px;
+}
+.product-status-item {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--surface-2);
+}
+.product-status-label {
+    color: var(--text-3);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-family: var(--mono);
+}
+.product-status-value {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+.product-form-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+@media (max-width: 980px) {
+    .product-form-shell {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 720px) {
+    .product-fields {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-7">
-        <div class="card border-0 shadow-sm" style="border-radius:14px;">
-            <div class="card-body p-4">
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <div class="row g-3">
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ title }}</h1>
+        <p class="page-sub">Maintain pricing, promotions, product identity, and image availability in one place.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'inventory:product_list' %}" class="gx-btn gx-btn-ghost">
+            <i class="bi bi-arrow-left"></i>
+            <span>Back to Products</span>
+        </a>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    <div class="product-form-shell">
+        <div class="product-form-main">
+            <div class="gx-card product-panel">
+                <div class="gx-card-head">
+                    <div class="gx-card-title"><i class="bi bi-box-seam"></i> Product Details</div>
+                </div>
+                <div class="gx-card-body">
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <div class="product-fields">
                         {% for field in form %}
-                        <div class="col-md-{% if field.name in 'name,notes' %}12{% else %}6{% endif %}">
-                            <label class="form-label fw-semibold" style="font-size:13px;">
-                                {{ field.label }}{% if field.field.required %}<span class="text-danger ms-1">*</span>{% endif %}
-                            </label>
-
-                            {% if field.name == 'image' %}
-                                {# Show current image preview when editing #}
-                                {% if product.image %}
-                                <div class="mb-2 d-flex align-items-center gap-3"
-                                     style="background:#f8f7f5;border:1px solid #e5e3de;border-radius:10px;padding:10px;">
-                                    <img src="{{ product.image.url }}"
-                                         alt="Current image"
-                                         style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e3de;">
-                                    <div>
-                                        <div style="font-size:12px;font-weight:600;color:#333;">Current image</div>
-                                        <div style="font-size:11px;color:#888;margin-top:2px;">
-                                            Upload a new file below to replace it
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
+                        <div class="product-field {% if field.name == 'name' or field.name == 'image' %}product-field-wide{% endif %}">
+                            {% if field.field.widget.input_type == 'checkbox' %}
+                            <div class="product-check">
                                 {{ field }}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            </div>
                             {% else %}
-                                {{ field }}
+                            <label class="form-label" for="{{ field.id_for_label }}">
+                                {{ field.label }}{% if field.field.required %}<span style="color:var(--rose)"> *</span>{% endif %}
+                            </label>
+                            {{ field }}
                             {% endif %}
-
+                            {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                            {% endif %}
                             {% if field.errors %}
-                            <div class="text-danger" style="font-size:12px;">{{ field.errors }}</div>
+                            {{ field.errors }}
                             {% endif %}
                         </div>
                         {% endfor %}
                     </div>
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-dark px-4">Save</button>
-                        <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+                </div>
+            </div>
+
+            <div class="product-form-actions">
+                <button type="submit" class="gx-btn gx-btn-primary">
+                    <i class="bi bi-check2-circle"></i>
+                    <span>Save Product</span>
+                </button>
+                <a href="{% url 'inventory:product_list' %}" class="gx-btn gx-btn-ghost">Cancel</a>
+            </div>
+        </div>
+
+        <div class="product-form-side">
+            <div class="gx-card product-panel">
+                <div class="gx-card-head">
+                    <div class="gx-card-title"><i class="bi bi-image"></i> Image Preview</div>
+                </div>
+                <div class="gx-card-body">
+                    <div class="product-image-stage" id="imagePreviewStage">
+                        {% if product and product.image_url %}
+                        <img src="{{ product.image_url }}" alt="{{ product.name }}" id="imagePreview">
+                        {% else %}
+                        <div class="product-image-empty" id="imagePreviewEmpty">
+                            <i class="bi bi-card-image"></i>
+                            <div>No image uploaded</div>
+                        </div>
+                        <img src="" alt="Preview" id="imagePreview" style="display:none;">
+                        {% endif %}
                     </div>
-                </form>
+                </div>
+            </div>
+
+            <div class="gx-card product-panel">
+                <div class="gx-card-head">
+                    <div class="gx-card-title"><i class="bi bi-lightning-charge"></i> Quick Summary</div>
+                </div>
+                <div class="gx-card-body product-status-card">
+                    <div class="product-status-item">
+                        <div class="product-status-label">Joint</div>
+                        <div class="product-status-value">{{ product.joint.display_name|default:"Set when saving" }}</div>
+                    </div>
+                    <div class="product-status-item">
+                        <div class="product-status-label">Current Stock</div>
+                        <div class="product-status-value">{{ product.current_stock|default:"0" }}</div>
+                    </div>
+                    <div class="product-status-item">
+                        <div class="product-status-label">Current Price</div>
+                        <div class="product-status-value">${{ product.effective_price|default:"0.00" }}</div>
+                    </div>
+                    <div class="product-status-item">
+                        <div class="product-status-label">Visibility</div>
+                        <div class="product-status-value">{% if product and product.is_active %}Active{% else %}Draft or inactive{% endif %}</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('id_image');
+    const preview = document.getElementById('imagePreview');
+    const empty = document.getElementById('imagePreviewEmpty');
+
+    if (!input || !preview) {
+        return;
+    }
+
+    input.addEventListener('change', function () {
+        const file = input.files && input.files[0];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            preview.src = event.target.result;
+            preview.style.display = 'block';
+            if (empty) {
+                empty.style.display = 'none';
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+});
+</script>
 {% endblock %}

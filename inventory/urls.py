@@ -16,13 +16,16 @@ from inventory.views_v4 import (
 )
 
 urlpatterns = [
-    path('', views.inventory_dashboard, name='inventory_dashboard'),
+    path('', inventory_dashboard, name='inventory_dashboard'),
     path('products/', views.product_list, name='product_list'),
     path('products/add/', views.product_create, name='product_create'),
     path('products/<int:pk>/edit/', views.product_edit, name='product_edit'),
     path('products/<int:pk>/stock-adjust/', views.stock_adjust, name='stock_adjust'),
-    path('stock-takes/', views.stock_take_list, name='stock_take_list'),
-    path('stock-takes/new/', views.stock_take_create, name='stock_take_create'),
+    path('low-stock/', views.low_stock_report, name='low_stock_report'),
+    path('stock-takes/', stock_take_list, name='stock_take_list'),
+    path('stock-takes/new/', stock_take_wizard, name='stock_take_create'),
+    path('stock-take/', stock_take_list),
+    path('stock-take/new/', stock_take_wizard, name='stock_take_wizard'),
     path('stock-takes/<int:pk>/', views.stock_take_detail, name='stock_take_detail'),
     path('transfers/new/', views.transfer_create, name='transfer_create'),
     path('categories/', views.category_list, name='category_list'),
@@ -31,14 +34,8 @@ urlpatterns = [
     path('suppliers/add/', views.supplier_create, name='supplier_create'),
     path('api/products/', views.get_products_by_joint, name='get_products_by_joint'),
 
-    # --- New API-driven stock take routes ---
-      path('export/',              export_csv,                name='export_csv'),
+    path('export/',              export_csv,                name='export_csv'),
     path('import/',              bulk_import,               name='bulk_import'),
-    path('stock-take/',          stock_take_list,           name='stock_take_list'),
-    path('stock-take/new/',      stock_take_wizard,         name='stock_take_wizard'),
-    path('stock-take/new/',      stock_take_wizard,         name='stock_take_create'),  # alias
- 
-    # ── JSON APIs ────────────────────────────────────────────────────────
     path('api/products-for-count/', api_products_for_count, name='api_products_for_count'),
     path('api/stock-take/submit/',  api_stock_take_submit,  name='api_stock_take_submit'),
     path('api/stock-adjust/',       api_stock_adjust,       name='api_stock_adjust'),

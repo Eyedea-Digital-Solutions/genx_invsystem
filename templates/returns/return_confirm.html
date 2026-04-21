@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Confirm Return{% endblock %}
+{% block nav_returns %}active{% endblock %}
+
+{% block breadcrumb %}
+<span class="breadcrumb-item"><a href="/dashboard/">Home</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item"><a href="{% url 'returns:return_search' %}">Returns</a></span>
+<span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
+<span class="breadcrumb-item active">Confirm</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Confirm Return</h1>
+        <p class="page-sub">{{ ret.return_number }} for {{ ret.original_sale.receipt_number }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{% url 'returns:return_search' %}" class="gx-btn gx-btn-ghost"><i class="bi bi-arrow-left"></i><span>Returns</span></a>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,0.8fr);gap:18px;">
+    <div class="gx-card">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-check2-square"></i> Items To Refund</div>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="gx-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>Restock</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in ret.items.all %}
+                    <tr>
+                        <td>{{ item.original_item.product.name|default:"(deleted product)" }}</td>
+                        <td>{{ item.quantity_returned }}</td>
+                        <td>{% if item.restock %}Yes{% else %}No{% endif %}</td>
+                        <td>${{ item.total_refund|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="gx-card">
+        <div class="gx-card-head">
+            <div class="gx-card-title"><i class="bi bi-receipt-cutoff"></i> Summary</div>
+        </div>
+        <div class="gx-card-body">
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="color:var(--text-3);">Refund Type</span><span>{{ ret.get_refund_type_display }}</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="color:var(--text-3);">Reason</span><span>{{ ret.reason }}</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;"><span style="color:var(--text-3);">Status</span><span>{{ ret.get_status_display }}</span></div>
+            <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px;margin-top:14px;"><span style="font-weight:700;">Total Refund</span><span style="font-weight:800;color:var(--rose);">${{ total|floatformat:2 }}</span></div>
+
+            <form method="post" style="display:flex;gap:10px;margin-top:18px;">
+                {% csrf_token %}
+                <button type="submit" name="action" value="confirm" class="gx-btn gx-btn-primary" style="flex:1;justify-content:center;">Confirm</button>
+                <button type="submit" name="action" value="cancel" class="gx-btn gx-btn-danger" style="flex:1;justify-content:center;">Cancel Return</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

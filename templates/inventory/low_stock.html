@@ -1,13 +1,11 @@
 {% extends "base.html" %}
-{% load static %}
-
 {% block title %}Low Stock{% endblock %}
 {% block nav_lowstock %}active{% endblock %}
 
 {% block breadcrumb %}
-<span class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></span>
+<span class="breadcrumb-item"><a href="/dashboard/">Home</a></span>
 <span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
-<span class="breadcrumb-item"><a href="/inventory/">Inventory</a></span>
+<span class="breadcrumb-item"><a href="{% url 'inventory:inventory_dashboard' %}">Inventory</a></span>
 <span class="breadcrumb-sep"><i class="bi bi-chevron-right"></i></span>
 <span class="breadcrumb-item active">Low Stock</span>
 {% endblock %}
@@ -15,76 +13,93 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <h1 class="page-title">Low Stock Report</h1>
-    <p class="page-sub">{{ products|length }} product{{ products|length|pluralize }} need{{ products|length|pluralize:"s," }} restocking</p>
+    <h1 class="page-title">Low Stock</h1>
+    <p class="page-sub">{{ products|length }} product{{ products|length|pluralize }} currently need restocking.</p>
   </div>
   <div class="page-actions">
-    <a href="/purchasing/new/" class="btn btn-primary"><i class="bi bi-truck me-1"></i>Create Purchase Order</a>
-    <a href="/inventory/low-stock/export/" class="btn btn-sm" style="background:var(--surface-2);border-color:var(--border);color:var(--text-muted)"><i class="bi bi-download me-1"></i>Export</a>
+    <a href="{% url 'inventory:inventory_dashboard' %}" class="gx-btn gx-btn-ghost"><i class="bi bi-arrow-left"></i><span>Inventory</span></a>
+    <a href="{% url 'inventory:export_csv' %}" class="gx-btn gx-btn-dark"><i class="bi bi-download"></i><span>Export</span></a>
   </div>
 </div>
 
 {% if products %}
-<div class="card" style="border-color:rgba(229,25,58,.2);background:rgba(229,25,58,.03);margin-bottom:16px">
-  <div class="card-body" style="padding:14px 20px">
-    <div style="color:var(--rose);font-weight:600;font-size:14px"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ out_of_stock|default:0 }} item{{ out_of_stock|default:0|pluralize }} completely out of stock — immediate action needed</div>
+<div class="gx-card" style="margin-bottom:16px;border-left:3px solid var(--rose);">
+  <div class="gx-card-body" style="padding:14px 18px;">
+    <div style="color:var(--rose-2);font-weight:700;font-size:13px;">
+      <i class="bi bi-exclamation-triangle-fill" style="margin-right:8px;"></i>{{ out_of_stock }} item{{ out_of_stock|pluralize }} out of stock right now
+    </div>
   </div>
 </div>
 {% endif %}
 
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">Products Requiring Restock</h3>
-    <div class="card-actions">
-      <div class="search-box">
-        <i class="bi bi-search"></i>
-        <input type="text" placeholder="Search…" data-table-search="#lowstock-table" class="search-input">
-      </div>
-    </div>
+<div class="gx-card">
+  <div class="gx-card-head">
+    <div class="gx-card-title"><i class="bi bi-exclamation-circle"></i> Restock Queue</div>
   </div>
-  <div class="card-body p-0">
-    <table class="table table-hover mb-0" id="lowstock-table">
+  <div style="overflow-x:auto;">
+    <table class="gx-table">
       <thead>
-        <tr><th>Product</th><th>Category</th><th class="text-center">Current Stock</th><th class="text-center">Reorder Level</th><th class="text-center">Reorder Qty</th><th>Supplier</th><th>Status</th><th></th></tr>
+        <tr>
+          <th>Product</th>
+          <th>Joint</th>
+          <th>Category</th>
+          <th>Current Stock</th>
+          <th>Min Level</th>
+          <th>Reorder Level</th>
+          <th>Supplier</th>
+          <th>Status</th>
+          <th style="text-align:right;">Action</th>
+        </tr>
       </thead>
       <tbody>
         {% for product in products %}
         <tr>
           <td>
-            <div style="display:flex;align-items:center;gap:10px">
-              {% if product.image %}<img src="{{ product.image.url }}" style="width:32px;height:32px;border-radius:6px;object-fit:cover">
-              {% else %}<div style="width:32px;height:32px;border-radius:6px;background:var(--surface-2);display:flex;align-items:center;justify-content:center">📦</div>{% endif %}
+            <div style="display:flex;align-items:center;gap:10px;">
+              {% if product.image_url %}
+              <img src="{{ product.image_url }}" alt="{{ product.name }}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;">
+              {% else %}
+              <div style="width:34px;height:34px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--text-4);"><i class="bi bi-box-seam"></i></div>
+              {% endif %}
               <div>
-                <div style="font-weight:600">{{ product.name }}</div>
-                <div class="font-mono" style="font-size:11px;color:var(--text-muted)">{{ product.sku|default:"" }}</div>
+                <div style="font-weight:700;">{{ product.name }}</div>
+                <div class="mono" style="font-size:11px;color:var(--text-3);">{{ product.code|default:product.barcode|default:"No code" }}</div>
               </div>
             </div>
           </td>
-          <td style="font-size:13px">{{ product.category|default:"—" }}</td>
-          <td class="text-center">
-            <span class="font-mono" style="font-weight:700;font-size:15px;color:{% if product.quantity <= 0 %}var(--rose){% else %}var(--amber){% endif %}">
-              {{ product.quantity }}
-            </span>
-          </td>
-          <td class="text-center font-mono" style="color:var(--text-muted)">{{ product.reorder_level|default:5 }}</td>
-          <td class="text-center font-mono">{{ product.reorder_quantity|default:"—" }}</td>
-          <td style="font-size:13px">{{ product.supplier|default:"—" }}</td>
+          <td><span class="gx-badge gx-badge-neutral">{{ product.joint.display_name }}</span></td>
+          <td>{{ product.category.name|default:"—" }}</td>
           <td>
-            {% if product.quantity <= 0 %}<span class="badge badge-danger">Out of Stock</span>
-            {% else %}<span class="badge badge-warning">Low Stock</span>{% endif %}
+            {% if product.current_stock == 0 %}
+            <span class="badge-out">Out of stock</span>
+            {% else %}
+            <span class="badge-low-stock">{{ product.current_stock }} left</span>
+            {% endif %}
           </td>
+          <td>{{ product.stock.min_quantity }}</td>
+          <td>{{ product.stock.reorder_level }}</td>
+          <td>{{ product.stock.supplier.name|default:"—" }}</td>
           <td>
-            <div style="display:flex;gap:4px">
-              <a href="/inventory/product/{{ product.id }}/adjust/" class="btn btn-xs" title="Adjust stock"><i class="bi bi-plus-minus"></i></a>
-              <a href="/inventory/product/{{ product.id }}/edit/" class="btn btn-xs"><i class="bi bi-pencil"></i></a>
-            </div>
+            {% if product.current_stock == 0 %}
+            <span class="gx-badge gx-badge-danger">Urgent</span>
+            {% else %}
+            <span class="gx-badge gx-badge-warning">Restock Soon</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right;">
+            <a href="{% url 'inventory:stock_adjust' product.pk %}" class="gx-btn gx-btn-primary gx-btn-xs">Restock</a>
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="8" class="text-center py-5" style="color:var(--green)">
-          <i class="bi bi-check-circle" style="font-size:40px;display:block;margin-bottom:12px"></i>
-          All products are well-stocked!
-        </td></tr>
+        <tr>
+          <td colspan="9">
+            <div class="gx-empty">
+              <i class="bi bi-check-circle empty-icon"></i>
+              <div class="empty-title">Everything is well stocked</div>
+              <div class="empty-sub">No active products are currently below their minimum stock level.</div>
+            </div>
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>

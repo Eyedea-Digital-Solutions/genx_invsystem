@@ -36,27 +36,27 @@
 </div>
 
 <!-- Summary stats -->
-{% if summary %}
+{% if totals %}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;">
   <div class="stat-card">
-    <div class="stat-label">Total</div>
-    <div class="stat-value">{{ summary.count }}</div>
-    <div class="stat-sub">cash-ups</div>
+    <div class="stat-label">Cash-Ups</div>
+    <div class="stat-value">{{ totals.count|default:0 }}</div>
+    <div class="stat-sub">matching records</div>
   </div>
   <div class="stat-card" style="border-top:2px solid var(--green);">
-    <div class="stat-label">Approved</div>
-    <div class="stat-value text-green">{{ summary.approved }}</div>
-    <div class="stat-sub">sign-offs</div>
+    <div class="stat-label">Cash</div>
+    <div class="stat-value text-green">${{ totals.total_cash|default:0|floatformat:2 }}</div>
+    <div class="stat-sub">actual counted</div>
   </div>
-  <div class="stat-card" style="border-top:2px solid var(--red);">
-    <div class="stat-label">Disputed</div>
-    <div class="stat-value text-red">{{ summary.disputed }}</div>
-    <div class="stat-sub">issues</div>
+  <div class="stat-card" style="border-top:2px solid var(--blue);">
+    <div class="stat-label">EcoCash</div>
+    <div class="stat-value text-blue">${{ totals.total_ecocash|default:0|floatformat:2 }}</div>
+    <div class="stat-sub">actual counted</div>
   </div>
   <div class="stat-card" style="border-top:2px solid var(--amber);">
-    <div class="stat-label">Pending</div>
-    <div class="stat-value" style="color:var(--amber);">{{ summary.pending }}</div>
-    <div class="stat-sub">to review</div>
+    <div class="stat-label">Card</div>
+    <div class="stat-value" style="color:var(--amber);">${{ totals.total_card|default:0|floatformat:2 }}</div>
+    <div class="stat-sub">actual counted</div>
   </div>
 </div>
 {% endif %}
@@ -73,7 +73,7 @@
         <th></th>
       </tr></thead>
       <tbody>
-        {% for cu in cashups %}
+        {% for cu in cash_ups %}
         <tr>
           <td style="font-size:12px;white-space:nowrap;">{{ cu.shift_date|date:"d M Y" }}</td>
           <td><span class="gx-badge gx-badge-neutral">{{ cu.joint.display_name }}</span></td>

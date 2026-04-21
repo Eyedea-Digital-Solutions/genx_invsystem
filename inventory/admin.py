@@ -218,10 +218,10 @@ class ProductAdmin(admin.ModelAdmin):
 
     @admin.display(description='Image Preview')
     def image_preview(self, obj):
-        if obj.image:
+        if obj.image_url:
             return format_html(
                 '<img src="{}" style="max-height:130px;max-width:220px;border-radius:7px;border:1px solid #e5e7eb;" />',
-                obj.image.url
+                obj.image_url
             )
         return '—'
 
