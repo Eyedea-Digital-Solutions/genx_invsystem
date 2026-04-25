@@ -184,19 +184,20 @@ def api_stock_take_submit(request):
         data     = json.loads(request.body)
         joint_id = data['joint_id']
         notes    = data.get('notes', '')
+        setup_notes = data.get('setup_notes', '')
         counts   = data.get('counts', [])  # [{product_id, counted_qty}]
     except (KeyError, json.JSONDecodeError):
         return _json_error('Invalid payload')
 
     joint = get_object_or_404(Joint, pk=joint_id)
+    combined_notes = "\n\n".join(part for part in [setup_notes.strip(), notes.strip()] if part.strip())
 
     with transaction.atomic():
         take = StockTake.objects.create(
             joint        = joint,
             conducted_by = request.user,
-            notes        = notes,
+            notes        = combined_notes,
             status       = 'completed',
-            completed_at = timezone.now(),
         )
         for entry in counts:
             pid        = entry['product_id']
@@ -213,8 +214,8 @@ def api_stock_take_submit(request):
             StockTakeItem.objects.create(
                 stock_take    = take,
                 product       = product,
-                system_qty    = system_qty,
-                counted_qty   = counted_qty,
+                system_count  = system_qty,
+                actual_count  = counted_qty,
                 variance      = variance,
             )
 
@@ -224,14 +225,15 @@ def api_stock_take_submit(request):
 
                 # Log movement
                 StockMovement.objects.create(
-                    product    = product,
-                    joint      = joint,
-                    qty_before = system_qty,
-                    qty_after  = counted_qty,
-                    delta      = variance,
-                    reason     = 'stock_take',
-                    reference  = f'ST-{take.pk}',
+                    product       = product,
+                    joint         = joint,
+                    movement_type = StockMovement.TYPE_STOCK_TAKE,
+                    quantity      = variance,
+                    reference_id  = f'ST-{take.pk}',
                     performed_by = request.user,
+                    stock_before  = system_qty,
+                    stock_after   = counted_qty,
+                    notes         = combined_notes,
                 )
 
     return JsonResponse({'ok': True, 'stock_take_id': take.pk})
@@ -262,14 +264,15 @@ def api_stock_adjust(request):
             stock.save(update_fields=['quantity'])
 
             StockMovement.objects.create(
-                product      = product,
-                joint        = product.joint,
-                qty_before   = old_qty,
-                qty_after    = new_qty,
-                delta        = delta,
-                reason       = reason,
-                reference    = note[:100] if note else '',
+                product       = product,
+                joint         = product.joint,
+                movement_type = StockMovement.TYPE_ADJUSTMENT,
+                quantity      = delta,
+                reference_id  = note[:100] if note else '',
                 performed_by = request.user,
+                stock_before  = old_qty,
+                stock_after   = new_qty,
+                notes         = reason,
             )
     except (Product.DoesNotExist, Stock.DoesNotExist):
         return _json_error('Product not found', 404)
@@ -326,9 +329,15 @@ def api_bulk_action(request):
                 stock.quantity += qty
                 stock.save(update_fields=['quantity'])
                 StockMovement.objects.create(
-                    product=p, joint=p.joint,
-                    qty_before=old, qty_after=stock.quantity, delta=qty,
-                    reason='bulk_restock', performed_by=request.user,
+                    product=p,
+                    joint=p.joint,
+                    movement_type=StockMovement.TYPE_PURCHASE,
+                    quantity=qty,
+                    reference_id='bulk-restock',
+                    performed_by=request.user,
+                    stock_before=old,
+                    stock_after=stock.quantity,
+                    notes='Bulk restock',
                 )
             msg = f'Added {qty} units to {len(product_ids)} products'
 

@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import importlib.util
+import secrets
 from dotenv import load_dotenv
 
 try:
@@ -14,8 +15,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 STORAGES_AVAILABLE = importlib.util.find_spec('storages') is not None
 BOTO3_AVAILABLE = importlib.util.find_spec('boto3') is not None
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-insecure-secret-key')
+SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
+def _secret_key_is_weak(value):
+    return (
+        not value
+        or len(value) < 50
+        or len(set(value)) < 5
+        or value.startswith('django-insecure-')
+        or value == 'dev-insecure-secret-key'
+    )
+
+
+_secret_file = BASE_DIR / '.django_secret_key'
+if _secret_key_is_weak(SECRET_KEY):
+    if _secret_file.exists():
+        SECRET_KEY = _secret_file.read_text().strip()
+    else:
+        SECRET_KEY = secrets.token_urlsafe(64)
+        _secret_file.write_text(SECRET_KEY)
 
 ALLOWED_HOSTS = [
     'hub.eyedentity.co.zw',
@@ -240,3 +259,11 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 if _render_host and f'https://{_render_host}' not in CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS.append(f'https://{_render_host}')
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False' if DEBUG else 'True') == 'True'
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False' if DEBUG else 'True') == 'True'
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False' if DEBUG else 'True') == 'True'
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0' if DEBUG else '31536000'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False' if DEBUG else 'True') == 'True'
+SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'False' if DEBUG else 'True') == 'True'

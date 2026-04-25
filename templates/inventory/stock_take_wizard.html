@@ -265,6 +265,10 @@ let _products = [];     // {id, name, sku, price, system_qty}
 let _counts   = {};     // productId → counted qty
 let _stNotes  = '';
 
+function stockTakeCacheKey(joint, category) {
+    return `stock-take:${joint || 'all'}:${category || 'all'}`;
+}
+
 /* ── STEP NAVIGATION ───────────────────────────────────────────── */
 function setStep(n) {
     [1,2,3].forEach(i => {
@@ -293,16 +297,49 @@ async function startCount() {
 
     if (!joint) { showToast('Please select a joint', 'warning'); return; }
 
+    const cacheKey = stockTakeCacheKey(joint, cat);
+
     try {
-        const url = `{% url 'inventory:api_products_for_count' %}?joint=${joint}&category=${cat}`;
-        const r   = await fetch(url);
-        const d   = await r.json();
-        if (!d.products?.length) { showToast('No products found for this selection', 'warning'); return; }
-        _products = d.products;
+        let products = [];
+
+        if (typeof OfflineManager !== 'undefined' && !OfflineManager.isOnline()) {
+            const cached = await OfflineManager.getCachedProductsForCount(cacheKey);
+            products = cached?.products || [];
+            if (products.length) {
+                showToast('Loaded stock take products from offline cache.', 'info');
+            }
+        } else {
+            const url = `{% url 'inventory:api_products_for_count' %}?joint=${joint}&category=${cat}`;
+            const r   = await fetch(url);
+            const d   = await r.json();
+            products = d.products || [];
+            if (products.length && typeof OfflineManager !== 'undefined') {
+                await OfflineManager.cacheProductsForCount(cacheKey, products);
+            }
+        }
+
+        if (!products.length) {
+            showToast('No cached products found for this selection. Open this joint online once to use it offline later.', 'warning');
+            return;
+        }
+        _products = products;
         _counts   = {};
         buildCountTable();
         setStep(2);
-    } catch(e) { showToast('Failed to load products', 'danger'); }
+    } catch(e) {
+        const cached = typeof OfflineManager !== 'undefined'
+            ? await OfflineManager.getCachedProductsForCount(cacheKey)
+            : null;
+        if (cached?.products?.length) {
+            _products = cached.products;
+            _counts = {};
+            buildCountTable();
+            setStep(2);
+            showToast('Network unavailable. Loaded cached stock take products instead.', 'warning');
+            return;
+        }
+        showToast('Failed to load products for this stock take.', 'danger');
+    }
 }
 
 function buildCountTable() {
@@ -427,11 +464,27 @@ async function submitStockTake() {
         .filter(([,v]) => v !== null && v !== undefined)
         .map(([id,qty]) => ({ product_id: parseInt(id), counted_qty: qty }));
 
+    if (!counts_payload.length) {
+        showToast('Enter at least one counted quantity before submitting.', 'warning');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>Submit & Apply Stock';
+        return;
+    }
+
+    const payload = { joint_id: joint, notes, setup_notes: _stNotes, counts: counts_payload };
+
+    if (typeof OfflineManager !== 'undefined' && !OfflineManager.isOnline()) {
+        await OfflineManager.queueStockTake(payload);
+        showToast('Stock take queued offline. It will sync automatically when connection returns.', 'success');
+        setTimeout(() => window.location.href = '{% url "inventory:stock_take_list" %}', 1200);
+        return;
+    }
+
     try {
         const r = await fetch('{% url "inventory:api_stock_take_submit" %}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-            body: JSON.stringify({ joint_id: joint, notes, setup_notes: _stNotes, counts: counts_payload })
+            body: JSON.stringify(payload)
         });
         const d = await r.json();
         if (d.ok) {
@@ -443,6 +496,12 @@ async function submitStockTake() {
             btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>Submit & Apply Stock';
         }
     } catch(e) {
+        if (typeof OfflineManager !== 'undefined') {
+            await OfflineManager.queueStockTake(payload);
+            showToast('Network unavailable. Stock take was queued offline instead.', 'warning');
+            setTimeout(() => window.location.href = '{% url "inventory:stock_take_list" %}', 1200);
+            return;
+        }
         showToast('Network error', 'danger');
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>Submit & Apply Stock';

@@ -19,10 +19,23 @@ const GenX = (() => {
     const overlay = document.getElementById('sidebar-overlay');
     if (!sidebar) return;
 
-    const stored = localStorage.getItem('sidebar-collapsed');
-    if (stored === 'true') sidebar.classList.add('collapsed');
+    const syncSidebarMode = () => {
+      if (window.innerWidth >= 992) {
+        sidebar.classList.remove('collapsed');
+        overlay?.classList.remove('show');
+        localStorage.removeItem('sidebar-collapsed');
+        return;
+      }
+
+      const stored = localStorage.getItem('sidebar-collapsed');
+      if (stored === 'false') sidebar.classList.remove('collapsed');
+      else sidebar.classList.add('collapsed');
+    };
+
+    syncSidebarMode();
 
     toggle?.addEventListener('click', () => {
+      if (window.innerWidth >= 992) return;
       const collapsed = sidebar.classList.toggle('collapsed');
       localStorage.setItem('sidebar-collapsed', collapsed);
       if (overlay) overlay.classList.toggle('show', !collapsed && window.innerWidth < 992);
@@ -32,6 +45,8 @@ const GenX = (() => {
       sidebar.classList.add('collapsed');
       overlay.classList.remove('show');
     });
+
+    window.addEventListener('resize', syncSidebarMode);
 
     document.querySelectorAll('.sidebar-item[data-submenu]').forEach(item => {
       item.addEventListener('click', e => {

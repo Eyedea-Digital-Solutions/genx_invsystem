@@ -1,8 +1,10 @@
 const OfflineManager = (() => {
-  const DB_NAME    = 'genx-pos-v5';
-  const DB_VERSION = 2;
-  const STORE      = 'pending_sales';
-  const SYNC_TAG   = 'pos-offline-sales';
+  const DB_NAME = 'genx-pos-v6';
+  const DB_VERSION = 3;
+  const SALES_STORE = 'pending_sales';
+  const STOCK_TAKE_STORE = 'pending_stock_takes';
+  const INVENTORY_CACHE_STORE = 'inventory_cache';
+  const SYNC_TAG = 'genx-offline-sync';
 
   let _db = null;
   let _online = navigator.onLine;
@@ -14,203 +16,368 @@ const OfflineManager = (() => {
     await _registerSW();
     _listenSWMessages();
 
-    const cnt = await countPending();
-    if (cnt > 0) toast(`${cnt} offline sale(s) queued — will sync when online.`, 'warning');
+    const sales = await countPending();
+    const stockTakes = await countPendingStockTakes();
 
-    return { online: _online, pending: cnt };
+    if (sales > 0 || stockTakes > 0) {
+      toast(_buildPendingSummary(sales, stockTakes), 'warning');
+    }
+
+    return { online: _online, pending_sales: sales, pending_stock_takes: stockTakes };
   }
 
-  function isOnline() { return _online; }
+  function isOnline() {
+    return _online;
+  }
 
   async function queueSale(payload, csrf) {
-    const record = { payload, csrf, created_at: new Date().toISOString(), status: 'pending', retries: 0 };
-    const id = await _put(record);
+    const id = await _addRecord(SALES_STORE, {
+      payload,
+      csrf,
+      created_at: new Date().toISOString(),
+      status: 'pending',
+      retries: 0,
+    });
     _updateUI();
     toast(`Sale saved offline (ID: ${id}). Will sync when connected.`, 'warning');
     return id;
   }
 
+  async function queueStockTake(payload) {
+    const id = await _addRecord(STOCK_TAKE_STORE, {
+      payload,
+      csrf: _getCsrfToken(),
+      created_at: new Date().toISOString(),
+      status: 'pending',
+      retries: 0,
+    });
+    _updateUI();
+    toast(`Stock take saved offline (ID: ${id}). It will sync automatically when you're back online.`, 'warning');
+    return id;
+  }
+
+  async function cacheProductsForCount(key, products) {
+    if (!_db || !key) return;
+    await _putRecord(INVENTORY_CACHE_STORE, {
+      key,
+      products,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  async function getCachedProductsForCount(key) {
+    if (!_db || !key) return null;
+    return _getRecord(INVENTORY_CACHE_STORE, key);
+  }
+
+  async function countPending() {
+    return _countStore(SALES_STORE);
+  }
+
+  async function countPendingStockTakes() {
+    return _countStore(STOCK_TAKE_STORE);
+  }
+
   async function syncNow() {
-    if (!_online) { toast('Still offline — sync will happen automatically.', 'warning'); return; }
+    if (!_online) {
+      toast('Still offline. Pending work will sync automatically later.', 'warning');
+      return;
+    }
+
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
       try {
         const reg = await navigator.serviceWorker.ready;
         await reg.sync.register(SYNC_TAG);
-        toast('Sync started in background…', 'info');
-      } catch { await _manualReplay(); }
-    } else { await _manualReplay(); }
-  }
-
-  async function countPending() {
-    if (!_db) return 0;
-    return new Promise((res, rej) => {
-      const tx = _db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).count();
-      req.onsuccess = e => res(e.target.result);
-      req.onerror   = e => rej(e.target.error);
-    });
+        toast('Offline sync started in the background.', 'info');
+      } catch {
+        await _manualReplay();
+      }
+    } else {
+      await _manualReplay();
+    }
   }
 
   async function _manualReplay() {
-    const pending = await _getAll();
-    if (!pending.length) return;
-    let synced = 0, failed = 0;
-    for (const sale of pending) {
+    const sales = await _getAll(SALES_STORE);
+    const stockTakes = await _getAll(STOCK_TAKE_STORE);
+
+    let syncedSales = 0;
+    let failedSales = 0;
+    let syncedStockTakes = 0;
+    let failedStockTakes = 0;
+
+    for (const sale of sales) {
       try {
         const resp = await fetch('/sales/pos/complete/', {
-          method:  'POST',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': sale.csrf },
-          body: JSON.stringify(sale.payload)
+          body: JSON.stringify(sale.payload),
         });
-        const d = await resp.json();
-        if (d.success) { await _delete(sale.id); synced++; }
-        else { failed++; await _incrementRetry(sale); }
-      } catch { failed++; }
+        const data = await resp.json();
+        if (data.success) {
+          await _deleteRecord(SALES_STORE, sale.id);
+          syncedSales++;
+        } else {
+          failedSales++;
+          await _incrementRetry(SALES_STORE, sale.id);
+        }
+      } catch {
+        failedSales++;
+      }
     }
-    if (synced > 0) toast(`${synced} offline sale(s) synced!`, 'success');
-    if (failed > 0) toast(`${failed} sale(s) failed to sync.`, 'danger');
+
+    for (const stockTake of stockTakes) {
+      try {
+        const resp = await fetch('/inventory/api/stock-take/submit/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': stockTake.csrf || _getCsrfToken() },
+          body: JSON.stringify(stockTake.payload),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+          await _deleteRecord(STOCK_TAKE_STORE, stockTake.id);
+          syncedStockTakes++;
+        } else {
+          failedStockTakes++;
+          await _incrementRetry(STOCK_TAKE_STORE, stockTake.id);
+        }
+      } catch {
+        failedStockTakes++;
+      }
+    }
+
+    if (syncedSales || syncedStockTakes) {
+      toast(_buildSyncedSummary(syncedSales, syncedStockTakes), 'success');
+    }
+    if (failedSales || failedStockTakes) {
+      toast(_buildFailedSummary(failedSales, failedStockTakes), 'danger');
+    }
+
     _updateUI();
   }
 
-  function _openDB() {
-    return new Promise((res, rej) => {
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = e => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains(STORE)) {
-          const store = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
-          store.createIndex('created_at', 'created_at');
-          store.createIndex('status', 'status');
-        }
-      };
-      req.onsuccess = e => res(e.target.result);
-      req.onerror   = e => rej(e.target.error);
-    });
-  }
-
-  function _put(record) {
-    return new Promise((res, rej) => {
-      const tx  = _db.transaction(STORE, 'readwrite');
-      const req = tx.objectStore(STORE).add(record);
-      req.onsuccess = e => res(e.target.result);
-      req.onerror   = e => rej(e.target.error);
-    });
-  }
-
-  function _getAll() {
-    return new Promise((res, rej) => {
-      const tx  = _db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).getAll();
-      req.onsuccess = e => res(e.target.result);
-      req.onerror   = e => rej(e.target.error);
-    });
-  }
-
-  function _delete(id) {
-    return new Promise((res, rej) => {
-      const tx  = _db.transaction(STORE, 'readwrite');
-      const req = tx.objectStore(STORE).delete(id);
-      req.onsuccess = () => res();
-      req.onerror   = e => rej(e.target.error);
-    });
-  }
-
-  async function _incrementRetry(sale) {
-    try {
-      const tx    = _db.transaction(STORE, 'readwrite');
-      const store = tx.objectStore(STORE);
-      const req   = store.get(sale.id);
-      req.onsuccess = e => {
-        const rec = e.target.result;
-        if (rec) { rec.retries = (rec.retries || 0) + 1; store.put(rec); }
-      };
-    } catch {}
-  }
-
   function _setupListeners() {
-    window.addEventListener('online',  _onOnline);
+    window.addEventListener('online', _onOnline);
     window.addEventListener('offline', _onOffline);
   }
 
   async function _onOnline() {
-    _online = true; _updateUI();
-    toast('Connection restored — syncing offline sales…', 'info');
+    _online = true;
+    _updateUI();
+    toast('Connection restored. Syncing offline work…', 'info');
     await syncNow();
   }
 
   function _onOffline() {
-    _online = false; _updateUI();
-    toast('⚠ No connection — sales saved locally, will sync automatically.', 'warning');
+    _online = false;
+    _updateUI();
+    toast('Offline mode active. Sales and stock takes will be stored locally.', 'warning');
   }
 
   async function _registerSW() {
     if (!('serviceWorker' in navigator)) return;
     try {
       await navigator.serviceWorker.register('/static/js/sw.js', { scope: '/' });
-    } catch (err) { console.warn('[OfflineManager] SW registration failed:', err); }
+    } catch (err) {
+      console.warn('[OfflineManager] SW registration failed:', err);
+    }
   }
 
   function _listenSWMessages() {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.addEventListener('message', event => {
-      const { type, receipt_number, synced, failed } = event.data || {};
+      const { type, receipt_number, synced_sales, failed_sales, synced_stock_takes, failed_stock_takes } = event.data || {};
       if (type === 'SALE_SYNCED') {
-        toast(`✓ Offline sale synced: ${receipt_number}`, 'success');
-        _updateUI();
+        toast(`Offline sale synced: ${receipt_number}`, 'success');
+      } else if (type === 'STOCK_TAKE_SYNCED') {
+        toast('Offline stock take synced successfully.', 'success');
       } else if (type === 'SYNC_COMPLETE') {
-        if (synced > 0) toast(`${synced} sale(s) synced.`, 'success');
-        if (failed > 0) toast(`${failed} sale(s) failed.`, 'warning');
-        _updateUI();
+        if (synced_sales || synced_stock_takes) {
+          toast(_buildSyncedSummary(synced_sales || 0, synced_stock_takes || 0), 'success');
+        }
+        if (failed_sales || failed_stock_takes) {
+          toast(_buildFailedSummary(failed_sales || 0, failed_stock_takes || 0), 'warning');
+        }
       }
+      _updateUI();
     });
   }
 
   function _updateUI() {
-    countPending().then(cnt => {
-      const el = document.getElementById('pwa-status');
-      if (el) {
+    Promise.all([countPending(), countPendingStockTakes()]).then(([sales, stockTakes]) => {
+      const totalPending = sales + stockTakes;
+      const status = document.getElementById('pwa-status');
+      if (status) {
         if (!_online) {
-          el.textContent = '⚡ OFFLINE';
-          el.className   = 'offline';
-        } else if (cnt > 0) {
-          el.innerHTML = `<span class="sync-badge show"><i class="bi bi-arrow-repeat"></i>${cnt}</span> SYNCING`;
-          el.className = 'online';
+          status.textContent = `OFFLINE${totalPending ? ` • ${totalPending} QUEUED` : ''}`;
+          status.className = 'offline';
+        } else if (totalPending > 0) {
+          status.textContent = `${totalPending} QUEUED`;
+          status.className = 'online';
         } else {
-          el.textContent = '● ONLINE';
-          el.className   = 'online';
+          status.textContent = 'ONLINE';
+          status.className = 'online';
         }
       }
 
       const banner = document.getElementById('offline-banner');
-      if (banner) banner.classList.toggle('show', !_online);
+      if (banner) {
+        banner.classList.toggle('show', !_online || totalPending > 0);
+        const msg = banner.querySelector('span');
+        if (msg) {
+          if (!_online) {
+            msg.textContent = 'You are offline. Sales and stock takes will be saved locally and synced automatically.';
+          } else if (totalPending > 0) {
+            msg.textContent = _buildPendingSummary(sales, stockTakes);
+          } else {
+            msg.textContent = 'You are back online.';
+          }
+        }
+      }
 
       const sync = document.getElementById('sync-count');
-      if (sync) { sync.textContent = cnt > 0 ? cnt : ''; sync.classList.toggle('show', cnt > 0); }
+      if (sync) {
+        sync.textContent = totalPending > 0 ? totalPending : '';
+        sync.classList.toggle('show', totalPending > 0);
+      }
     });
   }
 
-  function toast(msg, type = 'info') {
-    if (typeof window.showToast === 'function') { window.showToast(msg, type); return; }
-    let stack = document.getElementById('genx-toast-stack');
-    if (!stack) {
-      stack = document.createElement('div');
-      stack.id = 'genx-toast-stack';
-      stack.style.cssText = 'position:fixed;top:60px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
-      document.body.appendChild(stack);
-    }
-    const colors = { success: ['rgba(0,214,143,.12)', 'rgba(0,214,143,.3)', '#86efac'], warning: ['rgba(245,158,11,.1)', 'rgba(245,158,11,.3)', '#fcd34d'], danger: ['rgba(229,25,58,.1)', 'rgba(229,25,58,.3)', '#fca5a5'], info: ['rgba(59,130,246,.1)', 'rgba(59,130,246,.3)', '#93c5fd'] };
-    const [bg, bdr, col] = colors[type] || colors.info;
-    const t = document.createElement('div');
-    t.style.cssText = `background:${bg};border:1px solid ${bdr};color:${col};padding:10px 14px;border-radius:10px;font-size:12px;font-weight:600;min-width:240px;max-width:360px;pointer-events:all;box-shadow:0 4px 20px rgba(0,0,0,.5);`;
-    t.textContent = msg;
-    stack.appendChild(t);
-    setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 5000);
+  function _buildPendingSummary(sales, stockTakes) {
+    const bits = [];
+    if (sales) bits.push(`${sales} sale${sales === 1 ? '' : 's'}`);
+    if (stockTakes) bits.push(`${stockTakes} stock take${stockTakes === 1 ? '' : 's'}`);
+    return `${bits.join(' and ')} queued for sync.`;
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  function _buildSyncedSummary(sales, stockTakes) {
+    const bits = [];
+    if (sales) bits.push(`${sales} sale${sales === 1 ? '' : 's'}`);
+    if (stockTakes) bits.push(`${stockTakes} stock take${stockTakes === 1 ? '' : 's'}`);
+    return `Synced ${bits.join(' and ')} successfully.`;
+  }
 
-  return { init, isOnline, queueSale, syncNow, countPending };
+  function _buildFailedSummary(sales, stockTakes) {
+    const bits = [];
+    if (sales) bits.push(`${sales} sale${sales === 1 ? '' : 's'}`);
+    if (stockTakes) bits.push(`${stockTakes} stock take${stockTakes === 1 ? '' : 's'}`);
+    return `Failed to sync ${bits.join(' and ')}.`;
+  }
+
+  function _getCsrfToken() {
+    return window.CSRF_TOKEN || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+  }
+
+  function _openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = event => {
+        const db = event.target.result;
+
+        if (!db.objectStoreNames.contains(SALES_STORE)) {
+          db.createObjectStore(SALES_STORE, { keyPath: 'id', autoIncrement: true });
+        }
+        if (!db.objectStoreNames.contains(STOCK_TAKE_STORE)) {
+          db.createObjectStore(STOCK_TAKE_STORE, { keyPath: 'id', autoIncrement: true });
+        }
+        if (!db.objectStoreNames.contains(INVENTORY_CACHE_STORE)) {
+          db.createObjectStore(INVENTORY_CACHE_STORE, { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = event => resolve(event.target.result);
+      req.onerror = event => reject(event.target.error);
+    });
+  }
+
+  function _countStore(storeName) {
+    if (!_db) return Promise.resolve(0);
+    return new Promise((resolve, reject) => {
+      const tx = _db.transaction(storeName, 'readonly');
+      const req = tx.objectStore(storeName).count();
+      req.onsuccess = event => resolve(event.target.result);
+      req.onerror = event => reject(event.target.error);
+    });
+  }
+
+  function _addRecord(storeName, record) {
+    return new Promise((resolve, reject) => {
+      const tx = _db.transaction(storeName, 'readwrite');
+      const req = tx.objectStore(storeName).add(record);
+      req.onsuccess = event => resolve(event.target.result);
+      req.onerror = event => reject(event.target.error);
+    });
+  }
+
+  function _putRecord(storeName, record) {
+    return new Promise((resolve, reject) => {
+      const tx = _db.transaction(storeName, 'readwrite');
+      const req = tx.objectStore(storeName).put(record);
+      req.onsuccess = () => resolve();
+      req.onerror = event => reject(event.target.error);
+    });
+  }
+
+  function _getRecord(storeName, key) {
+    return new Promise((resolve, reject) => {
+      const tx = _db.transaction(storeName, 'readonly');
+      const req = tx.objectStore(storeName).get(key);
+      req.onsuccess = event => resolve(event.target.result || null);
+      req.onerror = event => reject(event.target.error);
+    });
+  }
+
+  function _getAll(storeName) {
+    return new Promise((resolve, reject) => {
+      const tx = _db.transaction(storeName, 'readonly');
+      const req = tx.objectStore(storeName).getAll();
+      req.onsuccess = event => resolve(event.target.result || []);
+      req.onerror = event => reject(event.target.error);
+    });
+  }
+
+  function _deleteRecord(storeName, key) {
+    return new Promise((resolve, reject) => {
+      const tx = _db.transaction(storeName, 'readwrite');
+      const req = tx.objectStore(storeName).delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = event => reject(event.target.error);
+    });
+  }
+
+  async function _incrementRetry(storeName, key) {
+    try {
+      const existing = await _getRecord(storeName, key);
+      if (!existing) return;
+      existing.retries = (existing.retries || 0) + 1;
+      await _putRecord(storeName, existing);
+    } catch {}
+  }
+
+  function toast(msg, type = 'info') {
+    if (typeof window.showToast === 'function') {
+      window.showToast(msg, type);
+      return;
+    }
+    console.log(`[${type}] ${msg}`);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  return {
+    init,
+    isOnline,
+    queueSale,
+    queueStockTake,
+    cacheProductsForCount,
+    getCachedProductsForCount,
+    syncNow,
+    countPending,
+    countPendingStockTakes,
+  };
 })();
 
 window.OfflineManager = OfflineManager;
