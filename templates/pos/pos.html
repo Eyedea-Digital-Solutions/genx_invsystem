@@ -848,14 +848,21 @@
 
 <!-- ── JOINT SELECTOR ───────────────────────────── -->
 <div class="pos-joint-bar" id="joint-bar">
+  {% if not default_joint %}
   <button class="joint-btn active" data-joint="" onclick="POS.selectJoint(this)">
     <span class="joint-dot"></span>All Joints
   </button>
+  {% endif %}
   {% for joint in joints %}
-  <button class="joint-btn" data-joint="{{ joint.id }}" onclick="POS.selectJoint(this)">
+  <button class="joint-btn{% if default_joint and joint.id == default_joint.id %} active{% endif %}" data-joint="{{ joint.id }}" onclick="POS.selectJoint(this)">
     <span class="joint-dot"></span>{{ joint.display_name }}
   </button>
   {% endfor %}
+  {% if not default_joint %}
+  <button class="joint-btn" data-joint="" onclick="POS.selectJoint(this)">
+    <span class="joint-dot"></span>All Joints
+  </button>
+  {% endif %}
 </div>
 
 <!-- ── MAIN LAYOUT ───────────────────────────────── -->
@@ -1155,21 +1162,22 @@ const POS = (() => {
     const name  = el.dataset.name;
     const price = parseFloat(el.dataset.price);
     const stock = parseInt(el.dataset.stock);
+    const joint = el.dataset.joint;
 
     const existing = cart.find(i => i.id === id && !i.isCustom && !i.isFree);
     if (existing) {
       if (existing.qty >= stock) { _toast('Not enough stock', 'warning'); return; }
       existing.qty++;
     } else {
-      cart.push({ id, name, price, qty: 1, stock, isCustom: false, isFree: false });
+      cart.push({ id, name, price, qty: 1, stock, joint, isCustom: false, isFree: false });
     }
 
-    _applyFreeAccessories(id, 1);
+    _applyFreeAccessories(id, 1, joint);
     renderCart();
     updateTotals();
   }
 
-  function _applyFreeAccessories(productId, qty) {
+  function _applyFreeAccessories(productId, qty, joint) {
     const accs = FREE_ACCESSORIES[productId];
     if (!accs || !accs.length) return;
 
@@ -1186,6 +1194,7 @@ const POS = (() => {
           price: 0,
           qty: freeQty,
           stock: 9999,
+          joint,
           isCustom: false,
           isFree: true,
           label: acc.label || 'Free Gift',
@@ -1260,7 +1269,7 @@ const POS = (() => {
     if (isNaN(price) || price < 0) { document.getElementById('custom-price').focus(); return; }
 
     const id = 'custom-' + (++customItemCounter);
-    cart.push({ id, name, price, qty, stock: 99999, isCustom: true, isFree: false });
+    cart.push({ id, name, price, qty, stock: 99999, joint: currentJoint, isCustom: true, isFree: false });
     renderCart();
     updateTotals();
     closeCustomItem();
@@ -1415,6 +1424,7 @@ const POS = (() => {
     }
 
     const payload = {
+      joint_id: cart.length ? (cart[0].joint || currentJoint) : currentJoint,
       items: cart.map(i => ({
         product_id: i.isCustom ? null : i.id,
         custom_item_name: i.isCustom ? i.name : null,
