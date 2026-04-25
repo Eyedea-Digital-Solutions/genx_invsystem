@@ -572,36 +572,22 @@ td.today a { background: #dbeafe !important; color: var(--blue) !important; bord
 </style>
 <style>
 :root {
-  --accent: #9a6bff;
-  --accent-h: #8658f6;
-  --accent-bg: rgba(154,107,255,.14);
-  --purple: #c7b0ff;
-  --ink: #171322;
-  --ink2: #1d1730;
-  --ink3: #261d3c;
-  --ink4: #30254b;
-  --ink5: #392c58;
-  --border-d: rgba(210,189,255,.08);
-  --border-d2: rgba(210,189,255,.15);
-  --txt: rgba(250,246,255,.94);
-  --muted: rgba(220,208,245,.64);
-  --muted2: rgba(190,176,222,.34);
-  --surf: rgba(38, 30, 58, .82);
-  --surf-alt: rgba(30, 24, 47, .88);
-  --surf-bdr: rgba(210,189,255,.14);
-  --surf-hov: rgba(255,255,255,.03);
-  --surf-txt: rgba(250,246,255,.94);
-  --surf-sub: rgba(223,212,247,.68);
-  --surf-muted: rgba(193,180,225,.44);
-  --sans: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --mono: 'JetBrains Mono', monospace;
+  --admin-bg: #f6f2eb;
+  --admin-surface: rgba(255,255,255,.96);
+  --admin-surface-soft: rgba(248,244,238,.98);
+  --admin-border: rgba(122,68,232,.12);
+  --admin-border-strong: rgba(122,68,232,.20);
+  --admin-text: #231d32;
+  --admin-muted: #6f6684;
+  --admin-accent: #7a44e8;
+  --admin-accent-soft: rgba(122,68,232,.08);
 }
 
 body {
   background:
-    radial-gradient(circle at top left, rgba(183, 157, 255, .22), transparent 30%),
-    radial-gradient(circle at 85% 12%, rgba(126, 88, 246, .18), transparent 24%),
-    linear-gradient(160deg, #15111f 0%, #1d1730 36%, #241d39 100%) !important;
+    radial-gradient(circle at top left, rgba(122,68,232,.08), transparent 30%),
+    radial-gradient(circle at 85% 12%, rgba(50,119,216,.06), transparent 24%),
+    linear-gradient(180deg, #faf6ef 0%, #f4ede4 100%) !important;
 }
 
 #gx-header,
@@ -611,17 +597,24 @@ div.breadcrumbs,
 .change-form .module,
 .inline-group,
 .submit-row,
-#gx-footer {
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+#gx-footer,
+.results,
+.calendarbox,
+.clockbox {
+  background: linear-gradient(180deg, var(--admin-surface), var(--admin-surface-soft)) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 14px 34px rgba(46,31,84,.08) !important;
 }
 
 #gx-brand .gx-logomark,
 .gx-avatar,
 .gx-hbtn.accent,
 .submit-row .default {
-  background: linear-gradient(135deg, #9a6bff, #7b52ef) !important;
-  box-shadow: 0 12px 28px rgba(154,107,255,.24) !important;
+  background: linear-gradient(135deg, var(--admin-accent), #5f34ba) !important;
+  box-shadow: 0 12px 28px rgba(122,68,232,.18) !important;
 }
 
 #gx-brand .gx-wordmark,
@@ -630,17 +623,46 @@ div.breadcrumbs,
   font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif !important;
 }
 
+#gx-header *,
+#gx-footer *,
+div.breadcrumbs,
+div.breadcrumbs a,
+#nav-sidebar a,
+#content,
+#content-main,
+.module,
+.results,
+.paginator,
+.actions,
+.submit-row {
+  color: var(--admin-text) !important;
+}
+
 #changelist-search,
 .actions,
 .paginator,
 ul.toplinks,
-.submit-row {
-  background: rgba(255,255,255,.03) !important;
+.submit-row,
+#nav-sidebar a:hover,
+#nav-sidebar a.selected,
+#result_list tbody tr:hover {
+  background: var(--admin-accent-soft) !important;
 }
 
-#result_list tbody tr:hover,
-#nav-sidebar a:hover {
-  background: rgba(154,107,255,.08) !important;
+ul.object-tools li a:hover,
+.button:hover,
+input[type="submit"]:hover,
+button:hover,
+a.button:hover {
+  background: linear-gradient(135deg, var(--admin-accent), #5f34ba) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.calendar caption,
+#gx-footer {
+  background: linear-gradient(180deg, #efe8dd, #e8dece) !important;
+  color: var(--admin-text) !important;
 }
 </style>
 {% endblock %}
