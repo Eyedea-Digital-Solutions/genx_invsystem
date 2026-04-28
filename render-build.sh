@@ -1,16 +1,18 @@
-#!/usr/bin/env bash
-set -o errexit  # exit on any error
+#!/bin/bash
+# Render deployment script
+
+set -o errexit
 
 echo ">>> Installing dependencies..."
 pip install -r requirements.txt
 
 echo ">>> Collecting static files..."
-python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput --clear
 
 echo ">>> Running migrations..."
 python manage.py migrate
 
-echo ">>> Creating superuser..."
+echo ">>> Creating superuser if needed..."
 python manage.py shell << 'EOF'
 from django.contrib.auth import get_user_model
 

@@ -571,23 +571,32 @@ def pos_complete(request):
     if not joint_id or not items_data:
         return JsonResponse({'success': False, 'error': 'Joint and items are required.'})
 
-    # Normalize items: if a client marked an item as 'is_custom' but also
-    # provided a `product_id`, treat it as a regular product so stock will
-    # be deducted. Some POS flows add linked products via the Custom Item
-    # modal and may send them as custom — normalize here to keep server
-    # authoritative about stock changes.
+    def _item_qty(item):
+        return int(item.get('qty') or item.get('quantity') or 1)
+
+    # Normalize items from current and older POS clients.
     for itm in items_data:
         try:
-            if itm.get('product_id') and itm.get('is_custom'):
-                itm['is_custom'] = False
+            itm['qty'] = _item_qty(itm)
+
+            # Treat items with no linked product but with a custom name as custom
+            # even if the client forgot the explicit is_custom flag.
+            if not itm.get('product_id') and (itm.get('custom_item_name') or itm.get('name')):
+                itm['is_custom'] = True
+
         except Exception:
             pass
 
     # ── Separate item types ───────────────────────────────────────────────────
-    regular_items = [i for i in items_data if not i.get('bundle_id') and not i.get('is_free_gift') and not i.get('is_custom')]
+    regular_items = [
+        i for i in items_data
+        if not i.get('bundle_id')
+        and not i.get('is_free_gift')
+        and not (i.get('is_custom') and not i.get('product_id'))
+    ]
     free_items    = [i for i in items_data if i.get('is_free_gift') and not i.get('bundle_id') and not i.get('is_custom')]
     bundle_items  = [i for i in items_data if i.get('bundle_id')]
-    custom_items  = [i for i in items_data if i.get('is_custom')]
+    custom_items  = [i for i in items_data if i.get('is_custom') and not i.get('product_id')]
 
     # ── Stock validation — regular paid items ─────────────────────────────────
     pids     = [i['product_id'] for i in regular_items]
@@ -615,7 +624,7 @@ def pos_complete(request):
         if not p:
             continue
         available = p.current_stock
-        needed    = int(item['qty'])
+        needed    = item['qty']
         actual    = min(needed, available)
         if available == 0:
             sale_warnings.append(f"Free '{p.name}' was out of stock and not included.")
@@ -635,7 +644,7 @@ def pos_complete(request):
     }
     for bi in bundle_items:
         bundle     = bundles_by_id.get(bi['bundle_id'])
-        bundle_qty = int(bi.get('qty', 1))
+        bundle_qty = _item_qty(bi)
         if not bundle:
             return JsonResponse({'success': False, 'error': f"Bundle {bi['bundle_id']} not found."})
         if not bundle.is_available_in(joint_id):
@@ -657,7 +666,7 @@ def pos_complete(request):
         if not p or not p.category_id:
             continue
         unit_price = Decimal(str(item['unit_price']))
-        qty        = int(item['qty'])
+        qty        = item['qty']
         for rule in active_tier_rules:
             if rule.category_id != p.category_id:
                 continue
@@ -716,7 +725,7 @@ def pos_complete(request):
         # Regular paid items
         for item in regular_items:
             p          = products[item['product_id']]
-            qty        = int(item['qty'])
+            qty        = item['qty']
             unit_price = Decimal(str(item['unit_price']))
             SaleItem.objects.create(
                 sale=sale, product=p, quantity=qty,
@@ -742,56 +751,36 @@ def pos_complete(request):
             snapshot.append({'product_id': p.pk, 'product_name': p.name, 'quantity': qty,
                               'unit_price': '0.00', 'is_free_gift': True})
 
-        # Custom items (no stock deduction — these are ad-hoc services/items)
-        # In pos_complete, replace the custom_items handling section:
+        # Custom items (ad-hoc services/items without a linked product)
+        for item in custom_items:
+            price   = Decimal(str(item.get('unit_price', '0')))
+            qty     = item['qty']
+            is_free = price == Decimal('0')
 
-    # ── Custom items — deduct stock if linked to a real product ──────────
-    for item in custom_items:
-        price    = Decimal(str(item.get('unit_price', '0')))
-        qty      = int(item.get('qty', 1))
-        is_free  = price == Decimal('0')
-        
-        # If a product_id is supplied, link the sale item and deduct stock
-        linked_product = None
-        if item.get('product_id'):
-            try:
-                linked_product = Product.objects.select_related('stock').get(
-                    pk=item['product_id']
-                )
-            except Product.DoesNotExist:
-                pass
-        
-        SaleItem.objects.create(
-            sale=sale,
-            product=linked_product,                            # linked or None
-            custom_item_name=item.get('name', 'Custom Item'),  # always store name
-            quantity=qty,
-            unit_price=price,
-            is_free_gift=is_free,
-            promotion_label=item.get('promo_label', ''),
-            item_note=item.get('item_note', ''),
-        )
-        
-        # Deduct stock only if linked to a real product
-        if linked_product:
-            try:
-                linked_product.stock.deduct(qty)
-            except ValueError as e:
-                return JsonResponse({'success': False, 'error': str(e)})
-        
-        snapshot.append({
-            'custom_item_name': item.get('name', 'Custom Item'),
-            'product_id': linked_product.pk if linked_product else None,
-            'quantity': qty,
-            'unit_price': str(price),
-            'is_free_gift': is_free,
-            'item_note': item.get('item_note', ''),
-        })
+            SaleItem.objects.create(
+                sale=sale,
+                product=None,
+                custom_item_name=item.get('custom_item_name') or item.get('name', 'Custom Item'),
+                quantity=qty,
+                unit_price=price,
+                is_free_gift=is_free,
+                promotion_label=item.get('promo_label', ''),
+                item_note=item.get('item_note', ''),
+            )
+
+            snapshot.append({
+                'custom_item_name': item.get('custom_item_name') or item.get('name', 'Custom Item'),
+                'product_id': None,
+                'quantity': qty,
+                'unit_price': str(price),
+                'is_free_gift': is_free,
+                'item_note': item.get('item_note', ''),
+            })
 
         # Bundles — expand to individual SaleItems
         for bi in bundle_items:
             bundle      = bundles_by_id[bi['bundle_id']]
-            bundle_qty  = int(bi.get('qty', 1))
+            bundle_qty  = _item_qty(bi)
             bundle_price_total = bundle.price * bundle_qty
 
             non_free = [c for c in bundle.items.all() if not c.is_free]

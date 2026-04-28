@@ -1092,6 +1092,7 @@ const FREE_ACCESSORIES = {};
 <script>
 const POS = (() => {
   let cart = [];
+  let lastCompletedCart = [];
   let paymentMethod = 'cash';
   let numpadVal = '';
   let currentJoint = '';
@@ -1233,43 +1234,30 @@ const POS = (() => {
       });
   }
 
-  // In addCustomItem():
-  function addCustomItem() {
-      const name      = document.getElementById('custom-name').value.trim();
-      const price     = parseFloat(document.getElementById('custom-price').value);
-      const qty       = parseInt(document.getElementById('custom-qty').value) || 1;
-      const productId = document.getElementById('custom-product-id').value || null;
-      
-      if (!name) { document.getElementById('custom-name').focus(); return; }
-      if (isNaN(price) || price < 0) { document.getElementById('custom-price').focus(); return; }
-
-      const id = 'custom-' + (++customItemCounter);
-      cart.push({ 
-          id, name, price, qty, 
-          stock: productId ? 99999 : 99999,   // server validates real stock
-          isCustom: true, 
-          isFree: false,
-          product_id: productId              // ← pass through to server
-      });
-      renderCart();
-      updateTotals();
-      closeCustomItem();
-      _toast('Custom item added', 'success');
-  }
-
   function closeCustomItem() {
     document.getElementById('custom-modal').classList.remove('show');
   }
 
   function addCustomItem() {
-    const name  = document.getElementById('custom-name').value.trim();
-    const price = parseFloat(document.getElementById('custom-price').value);
-    const qty   = parseInt(document.getElementById('custom-qty').value) || 1;
+    const name      = document.getElementById('custom-name').value.trim();
+    const price     = parseFloat(document.getElementById('custom-price').value);
+    const qty       = parseInt(document.getElementById('custom-qty').value) || 1;
+    const productId = document.getElementById('custom-product-id').value || null;
     if (!name) { document.getElementById('custom-name').focus(); return; }
     if (isNaN(price) || price < 0) { document.getElementById('custom-price').focus(); return; }
 
     const id = 'custom-' + (++customItemCounter);
-    cart.push({ id, name, price, qty, stock: 99999, joint: currentJoint, isCustom: true, isFree: false });
+    cart.push({
+      id,
+      name,
+      price,
+      qty,
+      stock: 99999,
+      joint: currentJoint,
+      isCustom: true,
+      isFree: false,
+      product_id: productId,
+    });
     renderCart();
     updateTotals();
     closeCustomItem();
@@ -1426,10 +1414,13 @@ const POS = (() => {
     const payload = {
       joint_id: cart.length ? (cart[0].joint || currentJoint) : currentJoint,
       items: cart.map(i => ({
-        product_id: i.isCustom ? null : i.id,
+        product_id: i.isCustom ? (i.product_id || null) : i.id,
+        name: i.name,
         custom_item_name: i.isCustom ? i.name : null,
+        qty: i.qty,
         quantity: i.qty,
         unit_price: i.price,
+        is_custom: i.isCustom,
         is_free_gift: i.isFree,
       })),
       payment_method: paymentMethod,
@@ -1448,13 +1439,16 @@ const POS = (() => {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing…';
 
     if (typeof OfflineManager !== 'undefined' && !OfflineManager.isOnline()) {
+      const completedCart = cart.map(i => ({ ...i }));
       await OfflineManager.queueSale(payload, CSRF_TOKEN);
-      _showOfflineReceipt(total);
-      _resetCheckoutBtn(total);
+      lastCompletedCart = completedCart;
+      _showOfflineReceipt(total, completedCart);
+      newSale();
       return;
     }
 
     try {
+      const completedCart = cart.map(i => ({ ...i }));
       const resp = await fetch('/sales/pos/complete/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
@@ -1462,7 +1456,9 @@ const POS = (() => {
       });
       const data = await resp.json();
       if (data.success) {
-        _showReceipt(data);
+        lastCompletedCart = completedCart;
+        _showReceipt(data, completedCart);
+        newSale();
         _toast('Sale complete! #' + data.receipt_number, 'success');
       } else {
         _toast(data.error || 'Sale failed — please try again', 'danger');
@@ -1471,11 +1467,14 @@ const POS = (() => {
     } catch (err) {
       if (typeof OfflineManager !== 'undefined') {
         await OfflineManager.queueSale(payload, CSRF_TOKEN);
-        _showOfflineReceipt(total);
+        const completedCart = cart.map(i => ({ ...i }));
+        lastCompletedCart = completedCart;
+        _showOfflineReceipt(total, completedCart);
+        newSale();
       } else {
         _toast('Network error — please check connection', 'danger');
+        _resetCheckoutBtn(total);
       }
-      _resetCheckoutBtn(total);
     }
   }
 
@@ -1485,11 +1484,12 @@ const POS = (() => {
     btn.innerHTML = '<i class="bi bi-check-circle"></i> Charge $' + (total || 0).toFixed(2);
   }
 
-  function _showReceipt(data) {
-    const cartLines = cart.filter(i => !i.isFree).map(i =>
+  function _showReceipt(data, receiptCart) {
+    const items = receiptCart || lastCompletedCart || [];
+    const cartLines = items.filter(i => !i.isFree).map(i =>
       `<p>${_esc(i.name)} ×${i.qty} — $${(i.price * i.qty).toFixed(2)}</p>`
     ).join('');
-    const freeLines = cart.filter(i => i.isFree).map(i =>
+    const freeLines = items.filter(i => i.isFree).map(i =>
       `<p style="color:green">${_esc(i.name)} ×${i.qty} — FREE 🎁</p>`
     ).join('');
     const html = data.receipt_html ||
@@ -1503,8 +1503,9 @@ const POS = (() => {
     modal.show();
   }
 
-  function _showOfflineReceipt(total) {
-    const cartLines = cart.filter(i => !i.isFree).map(i =>
+  function _showOfflineReceipt(total, receiptCart) {
+    const items = receiptCart || lastCompletedCart || [];
+    const cartLines = items.filter(i => !i.isFree).map(i =>
       `<p>${_esc(i.name)} ×${i.qty} — $${(i.price * i.qty).toFixed(2)}</p>`
     ).join('');
     document.getElementById('receipt-content').innerHTML =
@@ -1523,8 +1524,10 @@ const POS = (() => {
     const cashEl = document.getElementById('cash-tendered');
     const discEl = document.getElementById('discount-input');
     const searchEl = document.getElementById('product-search');
+    const customerEl = document.getElementById('cart-customer');
     if (cashEl) cashEl.value = '';
     if (discEl) discEl.value = '';
+    if (customerEl) customerEl.value = '';
     if (searchEl) { searchEl.value = ''; searchEl.focus(); }
     _applyFilters();
   }

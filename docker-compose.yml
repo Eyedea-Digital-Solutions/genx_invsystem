@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=your-secret-key-here
+      - DATABASE_URL=sqlite:///db.sqlite3
+    volumes:
+      - .:/app
+      - ./db.sqlite3:/app/db.sqlite3
+    command: gunicorn inventory_system.wsgi:application --bind 0.0.0.0:8000
