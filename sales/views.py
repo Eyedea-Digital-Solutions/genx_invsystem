@@ -584,6 +584,10 @@ def pos_complete(request):
             if not itm.get('product_id') and (itm.get('custom_item_name') or itm.get('name')):
                 itm['is_custom'] = True
 
+            # Normalise product_id to int — JSON sends strings, DB keys are ints
+            if itm.get('product_id') is not None:
+                itm['product_id'] = int(itm['product_id'])
+
         except Exception:
             pass
 
@@ -592,9 +596,10 @@ def pos_complete(request):
         i for i in items_data
         if not i.get('bundle_id')
         and not i.get('is_free_gift')
-        and not (i.get('is_custom') and not i.get('product_id'))
+        and i.get('product_id')
+        and not i.get('is_custom')
     ]
-    free_items    = [i for i in items_data if i.get('is_free_gift') and not i.get('bundle_id') and not i.get('is_custom')]
+    free_items    = [i for i in items_data if i.get('is_free_gift') and not i.get('bundle_id') and not i.get('is_custom') and i.get('product_id')]
     bundle_items  = [i for i in items_data if i.get('bundle_id')]
     custom_items  = [i for i in items_data if i.get('is_custom') and not i.get('product_id')]
 
@@ -866,7 +871,6 @@ def pos_complete(request):
         'customer_name':           linked_customer.name if linked_customer else '',
         'customer_created':        bool(linked_customer and not customer_id),
     })
-
 
 @login_required
 @require_POST
